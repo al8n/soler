@@ -1,0 +1,36 @@
+[package]
+name = "lexsol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository = "https://github.com/al8n/soler"
+homepage = "https://github.com/al8n/soler"
+documentation = "https://docs.rs/lexsol"
+description = "Solidity lexer"
+
+[[bench]]
+path = "benches/foo.rs"
+name = "foo"
+harness = false
+
+[features]
+default = ["std"]
+alloc = []
+std = ["logos/default", "thiserror/default"]
+
+[dependencies]
+paste.workspace = true
+logos.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion = "0.7"
+tempfile = "3"
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
