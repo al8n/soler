@@ -25,6 +25,7 @@ paste = "1"
 logos = { version = "0.15", default-features = false, features = ["export_derive"] }
 logosky = { version = "0.3", default-features = false, path = "../logosky" }
 thiserror = { version = "2", default-features = false }
+derive_more = { version = "2", default-features = false, features = ["display", "from", "unwrap", "try_unwrap", "is_variant"] }
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn"

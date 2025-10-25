@@ -10,13 +10,17 @@ documentation = "https://docs.rs/lexyul"
 description = "Lexyul crate"
 
 [features]
-default = ["std"]
+default = ["std", "evm"]
 alloc = []
 std = []
 
+evm = []
+
 [dependencies]
 logosky.workspace = true
-paste = "1"
+paste.workspace = true
+thiserror.workspace = true
+derive_more.workspace = true
 
 [lints]
 workspace = true
