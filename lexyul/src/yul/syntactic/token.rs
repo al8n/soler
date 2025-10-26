@@ -1,24 +1,25 @@
 use logosky::{
   Lexable, Logos,
-  logos::Lexer,
   utils::{Span, recursion_tracker::RecursionLimitExceeded},
 };
 
 use super::Lit;
-use crate::string_lexer::LitRegularStr;
+use crate::{string_lexer::LitRegularStr, yul::LitHexStr};
 
 use crate::{
   utils::{Wrapper, sealed::{
     DoubleQuotedHexStrLexer, DoubleQuotedRegularStrLexer, SingleQuotedHexStrLexer,
     SingleQuotedRegularStrLexer,
   }},
-  yul::error,
+  yul::handlers,
+  error::yul as error,
 };
 
 #[cfg(feature = "evm")]
 use super::super::EvmBuiltinFunction;
 
-type StringError = error::StringError<char>;
+type StringError = crate::error::StringError<char>;
+type HexStringError = crate::error::HexStringError<char>;
 type Error = error::Error<char, RecursionLimitExceeded>;
 type Errors = error::Errors<char, RecursionLimitExceeded>;
 type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
@@ -26,9 +27,7 @@ type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 #[derive(Logos)]
 #[logos(
   crate = logosky::logos,
-  error(Errors, |lexer| {
-    todo!()
-  })
+  error(Errors, |l| Errors::from(handlers::str::default_error(l)))
 )]
 #[logos(skip r"[ \t\r\n\u{000C}]+|//[^\r\n]*|/\*([^*]|\*+[^*/])*\*+/")]
 #[logos(subpattern escape_sequence = r#"\\['"\\nrt\n\r]|\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{2}"#)]
@@ -41,6 +40,7 @@ type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 #[logos(subpattern hex_digit = "[0-9A-Fa-f]")]
 #[logos(subpattern hex_digit_pair = "(?&hex_digit){2}")]
 #[logos(subpattern hex_string_content = "(?&hex_digit_pair)(?:_(?&hex_digit_pair))*")]
+#[logos(subpattern digit = "[0-9]")]
 #[logos(subpattern decimal = "0|[1-9][0-9]*")]
 #[logos(subpattern hexadecimal = "0x(?&hex_digit)+")]
 enum Token<'a> {
@@ -87,18 +87,29 @@ enum Token<'a> {
 
   #[token("true", |lexer| Lit::lit_true(lexer.slice()))]
   #[token("false", |lexer| Lit::lit_false(lexer.slice()))]
-  #[regex("(?&decimal)", |lexer| Lit::lit_decimal(lexer.slice()))]
-  #[regex("(?&hexadecimal)", |lexer| Lit::lit_hexadecimal(lexer.slice()))]
+  #[regex("(?&decimal)", handlers::str::handle_decimal_suffix)]
+  #[regex("0(?&digit)+", handlers::str::handle_leading_zero_and_suffix)]
+  #[regex("(?&hexadecimal)", handlers::str::handle_hexadecimal_suffix)]
 
   // Double quoted hex string literal lexing
   #[regex("hex\"(?&hex_string_content)\"", |lexer| Lit::lit_double_quoted_hex_string(lexer.slice()))]
   // Error handling branches for double quoted hex string literal lexing
   #[token("hex\"(?&hex_string_content)\"", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
+  #[token("hex\"", |lexer| {
+    <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, char, HexStringError, Error>::from_mut(lexer))
+      .map(Into::into)
+      .map_err(Errors::from_underlying)
+  })]
 
   // Single quoted hex string literal lexing
   #[regex("hex'(?&hex_string_content)'", |lexer| Lit::lit_single_quoted_hex_string(lexer.slice()))]
   // Error handling branches for single quoted hex string literal lexing
   #[token("hex'(?&hex_string_content)'", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
+  #[token("hex'", |lexer| {
+    <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, char, HexStringError, Error>::from_mut(lexer))
+      .map(Into::into)
+      .map_err(Errors::from_underlying)
+  })]
 
   // Double quoted non-empty string literal lexing
   #[regex(r#""(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice()))]
@@ -208,42 +219,38 @@ enum Token<'a> {
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn empty_single_quoted_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
-  Err(Errors::from(Error::String(
-    error::StringError::empty_single_quoted_regular_str(span),
-  )))
+  Err(Error::empty_single_quote(span).into())
 }
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn empty_double_quoted_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
-  Err(Errors::from(Error::String(
-    error::StringError::empty_double_quoted_regular_str(span),
-  )))
+  Err(Error::empty_double_quote(span).into())
 }
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn unclosed_double_quoted_regular_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
   Err(Errors::from(Error::String(
-    error::StringError::unclosed_double_quoted_regular_str(span),
+    crate::error::StringError::unclosed_double_quote(span),
   )))
 }
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn unclosed_single_quoted_regular_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
   Err(Errors::from(Error::String(
-    error::StringError::unclosed_single_quoted_regular_str(span),
+    crate::error::StringError::unclosed_single_quote(span),
   )))
 }
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn unclosed_double_quoted_hex_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
-  Err(Errors::from(Error::String(
-    error::StringError::unclosed_double_quoted_hex_str(span),
+  Err(Errors::from(Error::HexString(
+    crate::error::HexStringError::unclosed_double_quote(span),
   )))
 }
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn unclosed_single_quoted_hex_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
-  Err(Errors::from(Error::String(
-    error::StringError::unclosed_single_quoted_hex_str(span),
+  Err(Errors::from(Error::HexString(
+    crate::error::HexStringError::unclosed_single_quote(span),
   )))
 }

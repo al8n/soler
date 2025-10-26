@@ -1,14 +1,50 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use logosky::utils::{Lexeme, PositionedChar, Span, human_display::DisplayHuman};
 
-pub use string::*;
+use crate::{error::{HexStringError, StringError}, string_lexer::LitStrDelimiterKind};
+use super::Message;
 
-mod string;
+/// The error type for empty regular string literal
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct EmptyStringError {
+  span: Span,
+  kind: LitStrDelimiterKind,
+}
 
-#[cfg(not(any(feature = "std", feature = "alloc")))]
-type Message = &'static str;
-#[cfg(any(feature = "std", feature = "alloc"))]
-type Message = std::borrow::Cow<'static, str>;
+impl core::fmt::Display for EmptyStringError {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    match self.kind {
+      LitStrDelimiterKind::Single => {
+        write!(f, "empty single-quoted string literal at {}", self.span)
+      }
+      LitStrDelimiterKind::Double => {
+        write!(f, "empty double-quoted string literal at {}", self.span)
+      }
+    }
+  }
+}
+
+impl core::error::Error for EmptyStringError {}
+
+impl EmptyStringError {
+  /// Create a new empty string literal error with the given delimiter kind.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new(span: Span, kind: LitStrDelimiterKind) -> Self {
+    Self { span, kind }
+  }
+
+  /// Get the span of the empty string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span(&self) -> Span {
+    self.span
+  }
+
+  /// Get the delimiter kind of the empty string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn kind(&self) -> LitStrDelimiterKind {
+    self.kind
+  }
+}
 
 /// The error type for hexadecimal literal lexing errors
 #[derive(Debug, PartialEq, Eq, Clone, IsVariant, Unwrap, TryUnwrap)]
@@ -117,8 +153,12 @@ pub enum Error<Char = char, StateError = ()> {
   Hexadecimal(HexadecimalError<Char>),
   /// Decimal literal error
   Decimal(DecimalError<Char>),
+  /// Empty string error
+  EmptyString(EmptyStringError),
   /// String literal error
   String(StringError<Char>),
+  /// Hex string literal error
+  HexString(HexStringError<Char>),
   /// Unknown character encountered during lexing
   #[from(skip)]
   UnknownCharacter(PositionedChar<Char>),
@@ -164,7 +204,9 @@ where
     match self {
       Self::Hexadecimal(err) => err.fmt(f),
       Self::Decimal(err) => err.fmt(f),
+      Self::EmptyString(err) => err.fmt(f),
       Self::String(err) => err.fmt(f),
+      Self::HexString(err) => err.fmt(f),
       Self::UnknownCharacter(pos_char) => {
         write!(
           f,
@@ -192,6 +234,8 @@ where
       Self::Hexadecimal(err) => Some(err),
       Self::Decimal(err) => Some(err),
       Self::String(err) => Some(err),
+      Self::HexString(err) => Some(err),
+      Self::EmptyString(err) => Some(err),
       Self::UnknownCharacter(_) => None,
       Self::UnexpectedEndOfInput(_) => None,
       Self::State(err) => Some(err),
@@ -220,6 +264,18 @@ impl<Char, StateError> Error<Char, StateError> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unexpected_eoi(pos: usize) -> Self {
     Self::UnexpectedEndOfInput(pos)
+  }
+
+  /// Creates a empty single-quoted string literal error.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn empty_single_quote(span: Span) -> Self {
+    Self::EmptyString(EmptyStringError::new(span, LitStrDelimiterKind::Single))
+  }
+
+  /// Creates a empty double-quoted string literal error.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn empty_double_quote(span: Span) -> Self {
+    Self::EmptyString(EmptyStringError::new(span, LitStrDelimiterKind::Double))
   }
 }
 

@@ -9,7 +9,7 @@ use super::Lit;
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum SyntacticToken<S> {
+pub enum Token<S> {
   /// ":="
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]

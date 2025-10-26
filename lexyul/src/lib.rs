@@ -20,6 +20,4 @@ pub mod error;
 /// Utility functions and types
 pub mod utils;
 
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
-
 mod string_lexer;

@@ -1,18 +1,11 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use crate::string_lexer::*;
-
 mod lossless;
 mod syntactic;
 
 mod handlers;
 
-
-/// The error type for Yul lexing
-pub mod error;
-
-
-
+pub use crate::string_lexer::{LitHexStr, LitRegularStr, LitStrDelimiterKind};
 
 /// The boolean literal of Yul
 ///

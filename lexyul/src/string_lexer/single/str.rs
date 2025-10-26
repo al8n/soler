@@ -7,6 +7,7 @@ use logosky::{
 use crate::{
   utils::sealed::SingleQuotedRegularStrLexer,
   string_lexer::{LitRegularStr, LitStrDelimiterKind},
+  error::StringError,
 };
 
 #[derive(Logos)]
@@ -58,7 +59,7 @@ enum StringToken {
 
 impl StringToken {
   #[inline]
-  pub(crate) fn lex_regular<'a, S, T, StringError, Error, Container>(
+  pub(crate) fn lex_regular<'a, S, T, Error, Container>(
     lexer: &mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
   ) -> Result<LitRegularStr<S::Slice<'a>>, Container>
   where
@@ -66,7 +67,6 @@ impl StringToken {
     S: Source + ?Sized + 'a,
     S::Slice<'a>: AsRef<str>,
     Error: From<StringError>,
-    StringError: crate::error::RegularStrError<char>,
     Container: Default + crate::utils::Container<Error>,
   {
     let lexer_span = lexer.span();
@@ -174,7 +174,7 @@ impl StringToken {
   }
 }
 
-impl<'a, S, T, StringError, Error, Container>
+impl<'a, S, T, Error, Container>
   Lexable<&mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>, Container>
   for LitRegularStr<S::Slice<'a>>
 where
@@ -183,7 +183,6 @@ where
   S::Slice<'a>: AsRef<str>,
   Container: Default + crate::utils::Container<Error>,
   Error: From<StringError>,
-  StringError: crate::error::RegularStrError<char>,
 {
   #[inline]
   fn lex(
