@@ -100,6 +100,7 @@ pub enum SyntacticToken<S> {
   EvmBuiltin(super::EvmBuiltinFunction),
 }
 
+/// The kind of Yul syntactic token.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 pub enum TokenKind {
   /// ":="

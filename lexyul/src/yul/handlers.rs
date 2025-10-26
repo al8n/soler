@@ -10,6 +10,9 @@
 
 // use crate::error::{BadStateError, UnterminatedSpreadOperatorError};
 
+pub mod slice;
+pub mod str;
+
 // #[inline(always)]
 // fn increase_token<'a, T>(lexer: &mut Lexer<'a, T>)
 // where

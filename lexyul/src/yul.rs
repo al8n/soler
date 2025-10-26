@@ -1,13 +1,16 @@
-use super::{LitHexStr, LitNonEmptyStr, LitStrDelimiterKind};
-use derive_more::{From, IsVariant, Unwrap, TryUnwrap};
+use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
+
+use crate::string_lexer::*;
 
 mod lossless;
 mod syntactic;
 
 mod handlers;
 
+
 /// The error type for Yul lexing
 pub mod error;
+
 
 
 
@@ -24,8 +27,6 @@ pub enum LitBool<S> {
   /// The `false` literal
   False(S),
 }
-
-
 
 /// The kind of string literal of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
@@ -77,12 +78,11 @@ impl<S> LitNumber<S> {
   }
 }
 
-
 /// The kind of string literal of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 pub enum LitStrKind {
   /// Non-empty string literal
-  NonEmpty,
+  Regular,
   /// Hex string literal
   Hex,
 }
@@ -92,13 +92,13 @@ pub enum LitStrKind {
 /// Spec:
 /// - [Yul string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulStringLiteral)
 /// - [hex string](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexString)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, Unwrap, TryUnwrap)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, From, IsVariant, Unwrap, TryUnwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
 pub enum LitStr<S> {
   /// Non-empty string literal
-  NonEmpty(LitNonEmptyStr<S>),
+  Regular(LitRegularStr<S>),
   /// Hex string literal
   Hex(LitHexStr<S>),
 }
@@ -122,7 +122,7 @@ impl<S> LitStr<S> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn delimiter_kind(&self) -> LitStrDelimiterKind {
     match self {
-      Self::NonEmpty(non_empty) => non_empty.delimiter_kind(),
+      Self::Regular(non_empty) => non_empty.delimiter_kind(),
       Self::Hex(hex) => hex.delimiter_kind(),
     }
   }
@@ -131,7 +131,7 @@ impl<S> LitStr<S> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn kind(&self) -> LitStrKind {
     match self {
-      Self::NonEmpty(_) => LitStrKind::NonEmpty,
+      Self::Regular(_) => LitStrKind::Regular,
       Self::Hex(_) => LitStrKind::Hex,
     }
   }
@@ -151,6 +151,20 @@ pub enum Lit<S> {
   String(LitStr<S>),
   /// The number literal
   Number(LitNumber<S>),
+}
+
+impl<S> From<LitRegularStr<S>> for Lit<S> {
+  #[inline]
+  fn from(lit: LitRegularStr<S>) -> Self {
+    Self::String(lit.into())
+  }
+}
+
+impl<S> From<LitHexStr<S>> for Lit<S> {
+  #[inline]
+  fn from(lit: LitHexStr<S>) -> Self {
+    Self::String(lit.into())
+  }
 }
 
 impl<S> Lit<S> {
@@ -174,13 +188,13 @@ impl<S> Lit<S> {
   }
 
   #[inline]
-  pub(super) const fn lit_single_quoted_non_empty_string(s: S) -> Self {
-    Self::String(LitStr::NonEmpty(LitNonEmptyStr::single(s)))
+  pub(super) const fn lit_single_quoted_regular_string(s: S) -> Self {
+    Self::String(LitStr::Regular(LitRegularStr::single(s)))
   }
 
   #[inline]
-  pub(super) const fn lit_double_quoted_non_empty_string(s: S) -> Self {
-    Self::String(LitStr::NonEmpty(LitNonEmptyStr::double(s)))
+  pub(super) const fn lit_double_quoted_regular_string(s: S) -> Self {
+    Self::String(LitStr::Regular(LitRegularStr::double(s)))
   }
 
   #[inline]

@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
   "lexyul",
   "lexsol",
@@ -8,13 +8,13 @@ members = [
 
 [workspace.package]
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/al8n/soler"
 homepage = "https://github.com/al8n/soler"
 documentation = "https://docs.rs/soler"
 description = "A template for creating Rust open-source repo on GitHub"
 license = "MIT OR Apache-2.0"
-rust-version = "1.73"
+rust-version = "1.85"
 
 [workspace.package.metadata.docs.rs]
 all-features = true
@@ -25,7 +25,7 @@ paste = "1"
 logos = { version = "0.15", default-features = false, features = ["export_derive"] }
 logosky = { version = "0.3", default-features = false, path = "../logosky" }
 thiserror = { version = "2", default-features = false }
-derive_more = { version = "2", default-features = false, features = ["display", "from", "unwrap", "try_unwrap", "is_variant"] }
+derive_more = { version = "2", default-features = false, features = ["display", "from", "unwrap", "try_unwrap", "is_variant", "deref_mut"] }
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn"
