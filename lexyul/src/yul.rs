@@ -1,7 +1,10 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-mod lossless;
-mod syntactic;
+
+/// The lossless lexer for Yul
+pub mod lossless;
+/// The syntactic lexer for Yul
+pub mod syntactic;
 
 mod handlers;
 
@@ -208,36 +211,36 @@ pub use evm::*;
 #[cfg(feature = "evm")]
 mod evm {
   macro_rules! builtin {
-  ($($name:ident),+$(,)?) => {
-    paste::paste! {
-      /// The built-in functions of Yul
-      ///
-      /// Spec: [Yul built-in functions](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEVMBuiltin)
-      #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::IsVariant)]
-      #[non_exhaustive]
-      #[cfg(feature = "evm")]
-      #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-      pub enum EvmBuiltinFunction {
-        $(
-          #[doc = "'" $name "'"]
-          [<$name:camel>],
-        )+
-      }
+    ($($name:ident),+$(,)?) => {
+      paste::paste! {
+        /// The built-in functions of Yul
+        ///
+        /// Spec: [Yul built-in functions](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEVMBuiltin)
+        #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::IsVariant)]
+        #[non_exhaustive]
+        #[cfg(feature = "evm")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
+        pub enum EvmBuiltinFunction {
+          $(
+            #[doc = "'" $name "'"]
+            [<$name:camel>],
+          )+
+        }
 
-      impl EvmBuiltinFunction {
-        /// Returns the string representation of the built-in function
-        #[cfg_attr(not(tarpaulin), inline(always))]
-        pub const fn as_str(&self) -> &'static str {
-          match self {
-            $(
-              Self::[<$name:camel>] => stringify!($name),
-            )+
+        impl EvmBuiltinFunction {
+          /// Returns the string representation of the built-in function
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          pub const fn as_str(&self) -> &'static str {
+            match self {
+              $(
+                Self::[<$name:camel>] => stringify!($name),
+              )+
+            }
           }
         }
       }
-    }
-  };
-}
+    };
+  }
 
   builtin!(
     stop,

@@ -56,7 +56,7 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-fn handle_suffix_inner<'a, S, T, Extras, E>(
+fn handle_suffix_inner<'a, S, T, E>(
   lexer: &mut Lexer<'a, T>,
   unexpected_suffix: impl FnOnce(Lexeme<u8>) -> E,
 ) -> Result<(), E>
@@ -114,7 +114,7 @@ where
   let mut errs: Errors<u8, Extras> = Errors::default();
   errs.push(err);
 
-  match handle_suffix_inner::<_, _, Extras, DecimalError<u8>>(lexer, DecimalError::UnexpectedSuffix) {
+  match handle_suffix_inner::<_, _, DecimalError<u8>>(lexer, DecimalError::UnexpectedSuffix) {
     Ok(_) => Err(errs),
     Err(e) => {
       errs.push(e.into());
@@ -136,7 +136,7 @@ where
   S::Slice<'a>: AsRef<[u8]>,
   Error<u8, Extras>: From<E>,
 {
-  handle_suffix_inner::<_, _, Extras, E>(lexer, unexpected_suffix).map(|_| from_slice(lexer.slice())).map_err(Into::into)
+  handle_suffix_inner::<_, _, E>(lexer, unexpected_suffix).map(|_| from_slice(lexer.slice())).map_err(Into::into)
 }
 
 #[allow(clippy::result_large_err)]

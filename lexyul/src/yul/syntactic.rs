@@ -1,6 +1,10 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
 
+use token::token;
+
 mod token;
+mod str;
+mod bytes;
 
 use super::Lit;
 
@@ -153,4 +157,35 @@ pub enum TokenKind {
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
   EvmBuiltin,
+}
+
+impl<S> Token<S> {
+  /// Get the kind of the syntactic token
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn kind(&self) -> TokenKind {
+    match self {
+      Self::Assign => TokenKind::Assign,
+      Self::ThinArrow => TokenKind::ThinArrow,
+      Self::LBrace => TokenKind::LBrace,
+      Self::RBrace => TokenKind::RBrace,
+      Self::LParen => TokenKind::LParen,
+      Self::RParen => TokenKind::RParen,
+      Self::Dot => TokenKind::Dot,
+      Self::Comma => TokenKind::Comma,
+      Self::Leave => TokenKind::Leave,
+      Self::Continue => TokenKind::Continue,
+      Self::Break => TokenKind::Break,
+      Self::Switch => TokenKind::Switch,
+      Self::Case => TokenKind::Case,
+      Self::Default => TokenKind::Default,
+      Self::Function => TokenKind::Function,
+      Self::Let => TokenKind::Let,
+      Self::If => TokenKind::If,
+      Self::For => TokenKind::For,
+      Self::Identifier(_) => TokenKind::Identifier,
+      Self::Lit(_) => TokenKind::Lit,
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(_) => TokenKind::EvmBuiltin,
+    }
+  }
 }

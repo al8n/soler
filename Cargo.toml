@@ -27,6 +27,9 @@ logosky = { version = "0.3", default-features = false, path = "../logosky" }
 thiserror = { version = "2", default-features = false }
 derive_more = { version = "2", default-features = false, features = ["display", "from", "unwrap", "try_unwrap", "is_variant", "deref_mut"] }
 
+hipstr = { version = "0.8", default-features = false }
+bytes = { version = "1", default-features = false }
+
 [workspace.lints.rust]
 rust_2018_idioms = "warn"
 single_use_lifetimes = "warn"
