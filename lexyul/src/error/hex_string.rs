@@ -1,6 +1,9 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use logosky::utils::{Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedLexeme, human_display::DisplayHuman};
+use logosky::utils::{
+  Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedLexeme,
+  human_display::DisplayHuman,
+};
 
 use crate::string_lexer::LitStrDelimiterKind;
 
@@ -35,7 +38,7 @@ pub enum HexStringError<Char = char> {
   ConsecutiveUnderscores(Span),
 
   /// Unpaired hex found in hexadecimal string literal.
-  /// 
+  ///
   /// e.g. `hex"f"`, `hex"fe_f"`, or `hex'abc'`, which is invalid.
   #[from(skip)]
   Unpaired(PositionedChar<Char>),
@@ -51,7 +54,6 @@ pub enum HexStringError<Char = char> {
 }
 
 impl<Char> HexStringError<Char> {
-
   /// Create a new unclosed hex string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unclosed(span: Span, kind: LitStrDelimiterKind) -> Self {
@@ -137,15 +139,30 @@ where
 {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     match self {
-      Self::Unclosed(err) => {
-        match err.delimiter_ref() {
-          LitStrDelimiterKind::Single => write!(f, "unclosed single-quoted hex string literal at {}", err.span()),
-          LitStrDelimiterKind::Double => write!(f, "unclosed double-quoted hex string literal at {}", err.span()),
-        }
+      Self::Unclosed(err) => match err.delimiter_ref() {
+        LitStrDelimiterKind::Single => write!(
+          f,
+          "unclosed single-quoted hex string literal at {}",
+          err.span()
+        ),
+        LitStrDelimiterKind::Double => write!(
+          f,
+          "unclosed double-quoted hex string literal at {}",
+          err.span()
+        ),
       },
       Self::Unsupported(lexeme) => match lexeme {
-        Lexeme::Span(span) => write!(f, "unsupported characters found in hex string literal at {}", span),
-        Lexeme::Char(ch) => write!(f, "unsupported character '{}' found in hex string literal at {}", ch.char_ref().display(), ch.position()),
+        Lexeme::Span(span) => write!(
+          f,
+          "unsupported characters found in hex string literal at {}",
+          span
+        ),
+        Lexeme::Char(ch) => write!(
+          f,
+          "unsupported character '{}' found in hex string literal at {}",
+          ch.char_ref().display(),
+          ch.position()
+        ),
       },
       Self::UnexpectedLineTerminator(err) => {
         write!(
@@ -153,18 +170,41 @@ where
           "unexpected line terminator '{}' in hex string literal",
           err.hint(),
         )
+      }
+      Self::LeadingUnderscore(lexeme) => match lexeme {
+        Lexeme::Span(span) => write!(
+          f,
+          "leading underscores found in hex string literal at {}",
+          span
+        ),
+        Lexeme::Char(ch) => write!(
+          f,
+          "leading underscore found in hex string literal at {}",
+          ch.position()
+        ),
       },
-      Self::LeadingUnderscore(lexeme) => {
-        match lexeme {
-          Lexeme::Span(span) => write!(f, "leading underscores found in hex string literal at {}", span),
-          Lexeme::Char(ch) => write!(f, "leading underscore found in hex string literal at {}", ch.position()),
-        }
-      },
-      Self::ConsecutiveUnderscores(span) => write!(f, "consecutive underscores found in hex string literal at {}", span),
-      Self::Unpaired(ch) => write!(f, "unpaired hex character '{}' found in hex string literal at {}", ch.char_ref().display(), ch.position()),
+      Self::ConsecutiveUnderscores(span) => write!(
+        f,
+        "consecutive underscores found in hex string literal at {}",
+        span
+      ),
+      Self::Unpaired(ch) => write!(
+        f,
+        "unpaired hex character '{}' found in hex string literal at {}",
+        ch.char_ref().display(),
+        ch.position()
+      ),
       Self::TrailingUnderscore(lexeme) => match lexeme {
-        Lexeme::Span(span) => write!(f, "trailing underscores found in hex string literal at {}", span),
-        Lexeme::Char(ch) => write!(f, "trailing underscore found in hex string literal at {}", ch.position()),
+        Lexeme::Span(span) => write!(
+          f,
+          "trailing underscores found in hex string literal at {}",
+          span
+        ),
+        Lexeme::Char(ch) => write!(
+          f,
+          "trailing underscore found in hex string literal at {}",
+          ch.position()
+        ),
       },
       Self::Other(message) => message.fmt(f),
     }

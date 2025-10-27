@@ -128,7 +128,7 @@ macro_rules! token {
 
         // Double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice()))]
-        // Error handling branches for double quoted non-empty string literal lexing 
+        // Error handling branches for double quoted non-empty string literal lexing
         #[token(r#""""#, |lexer| empty_double_quoted_string_error(lexer.span().into()))]
         #[regex(r#""(?&double_quoted_chars)"#, |lexer| unclosed_double_quoted_regular_string_error(lexer.span().into()))]
         #[token("\"", |lexer| {

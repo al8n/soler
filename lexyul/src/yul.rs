@@ -1,6 +1,5 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-
 /// The lossless lexer for Yul
 pub mod lossless;
 /// The syntactic lexer for Yul

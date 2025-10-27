@@ -1,8 +1,11 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use logosky::utils::{Lexeme, PositionedChar, Span, human_display::DisplayHuman};
 
-use crate::{error::{HexStringError, StringError}, string_lexer::LitStrDelimiterKind};
 use super::Message;
+use crate::{
+  error::{HexStringError, StringError},
+  string_lexer::LitStrDelimiterKind,
+};
 
 /// The error type for empty regular string literal
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]

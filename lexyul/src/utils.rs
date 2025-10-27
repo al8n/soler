@@ -161,7 +161,6 @@ pub(super) mod sealed {
   // lit_str_lexer!(DoubleQuotedUnicodeStrLexer);
 }
 
-
 /// A collection of error types used in the lexer
 pub trait Container<T> {
   /// The iterator type for the container.
@@ -171,13 +170,16 @@ pub trait Container<T> {
   where
     Self: 'a,
     T: 'a;
-  
+
   /// Create a new, empty container.
   fn new() -> Self;
 
   /// Create a new container with a specified capacity.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn with_capacity(_: usize) -> Self where Self: Sized {
+  fn with_capacity(_: usize) -> Self
+  where
+    Self: Sized,
+  {
     Self::new()
   }
 

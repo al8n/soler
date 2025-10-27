@@ -1,6 +1,13 @@
-use logosky::{Logos, Source, logos::Lexer, utils::{Lexeme, PositionedChar, Span}};
+use logosky::{
+  Logos, Source,
+  logos::Lexer,
+  utils::{Lexeme, PositionedChar, Span},
+};
 
-use crate::{error::yul::{DecimalError, Error, Errors, HexadecimalError}, yul::Lit};
+use crate::{
+  error::yul::{DecimalError, Error, Errors, HexadecimalError},
+  yul::Lit,
+};
 
 #[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn default_error<'a, S, T, Extras>(lexer: &mut Lexer<'a, T>) -> Error<u8, Extras>
@@ -16,9 +23,7 @@ where
 }
 
 #[inline]
-fn leading_zero_error<'a, S, T, Extras>(
-  lexer: &mut Lexer<'a, T>,
-) -> Error<u8, Extras>
+fn leading_zero_error<'a, S, T, Extras>(lexer: &mut Lexer<'a, T>) -> Error<u8, Extras>
 where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
@@ -66,7 +71,7 @@ where
   S::Slice<'a>: AsRef<[u8]>,
 {
   let remainder = lexer.remainder();
- 
+
   let mut end = 0;
   let mut first = None;
   for (idx, ch) in remainder.as_ref().iter().copied().enumerate() {
@@ -136,7 +141,9 @@ where
   S::Slice<'a>: AsRef<[u8]>,
   Error<u8, Extras>: From<E>,
 {
-  handle_suffix_inner::<_, _, E>(lexer, unexpected_suffix).map(|_| from_slice(lexer.slice())).map_err(Into::into)
+  handle_suffix_inner::<_, _, E>(lexer, unexpected_suffix)
+    .map(|_| from_slice(lexer.slice()))
+    .map_err(Into::into)
 }
 
 #[allow(clippy::result_large_err)]
@@ -149,8 +156,12 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
 {
-  handle_suffix::<_, _, Extras, DecimalError<u8>>(lexer, Lit::lit_decimal, DecimalError::UnexpectedSuffix)
-    .map_err(Into::into)
+  handle_suffix::<_, _, Extras, DecimalError<u8>>(
+    lexer,
+    Lit::lit_decimal,
+    DecimalError::UnexpectedSuffix,
+  )
+  .map_err(Into::into)
 }
 
 #[allow(clippy::result_large_err)]
@@ -163,7 +174,10 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
 {
-  handle_suffix::<_, _, Extras, HexadecimalError<u8>>(lexer, Lit::lit_hexadecimal, HexadecimalError::UnexpectedSuffix)
-    .map_err(Into::into)
+  handle_suffix::<_, _, Extras, HexadecimalError<u8>>(
+    lexer,
+    Lit::lit_hexadecimal,
+    HexadecimalError::UnexpectedSuffix,
+  )
+  .map_err(Into::into)
 }
-

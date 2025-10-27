@@ -1,12 +1,25 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
+use logosky::{Token as TokenT, utils::tracker::LimitExceeded};
+
+use token::token;
+
+use super::Lit;
+
+use crate::error::yul as error;
 
 mod bytes;
 mod str;
 mod token;
 
-use token::token;
+/// The lossless lexer for Yul.
+pub type Lexer<'a, S = &'a str> = logosky::TokenStream<'a, Token<S>>;
 
-use super::Lit;
+/// The char type used for the lossless token.
+pub type TokenChar<'a, S> = <Token<S> as TokenT<'a>>::Char;
+/// The error type for lexing based on lossless [`Token`].
+pub type Error<'a, S> = error::Error<<Token<S> as TokenT<'a>>::Char, LimitExceeded>;
+/// A collection of errors for lossless [`Token`].
+pub type Errors<'a, S> = error::Errors<<Token<S> as TokenT<'a>>::Char, LimitExceeded>;
 
 /// The lossless token of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, TryUnwrap, Unwrap)]
@@ -251,4 +264,3 @@ impl<S> Token<S> {
     }
   }
 }
-

@@ -1,6 +1,7 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use logosky::utils::{
-  Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedLexeme, human_display::DisplayHuman
+  Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedLexeme,
+  human_display::DisplayHuman,
 };
 
 use crate::string_lexer::LitStrDelimiterKind;

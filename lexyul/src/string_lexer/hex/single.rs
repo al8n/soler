@@ -1,3 +1,2 @@
-
-mod str;
 mod bytes;
+mod str;

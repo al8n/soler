@@ -1,8 +1,6 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use logosky::utils::{PositionedChar, Span, human_display::DisplayHuman};
 
-
-
 /// Hexadecimal escape sequence error
 #[derive(Debug, PartialEq, Eq, Clone, IsVariant, Unwrap, TryUnwrap)]
 #[non_exhaustive]

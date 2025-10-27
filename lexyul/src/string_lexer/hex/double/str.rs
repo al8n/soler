@@ -5,9 +5,9 @@ use logosky::{
 };
 
 use crate::{
-  utils::sealed::DoubleQuotedHexStrLexer,
-  string_lexer::{LitHexStr, LitStrDelimiterKind},
   error::HexStringError,
+  string_lexer::{LitHexStr, LitStrDelimiterKind},
+  utils::sealed::DoubleQuotedHexStrLexer,
 };
 
 #[derive(Logos, Copy, Clone)]
@@ -70,13 +70,18 @@ impl StringToken {
       match string_token {
         Err(_) => {
           lexer.bump(string_lexer.span().end);
-          errs
-            .push(HexStringError::other("unknown double quoted hex string lexing error").into());
+          errs.push(HexStringError::other("unknown double quoted hex string lexing error").into());
           return Err(errs);
         }
         Ok(StringToken::Underscore) => {
           if string_lexer.extras.is_none() {
-            errs.push(HexStringError::leading_underscore(PositionedChar::with_position('_', lexer_span.end)).into());
+            errs.push(
+              HexStringError::leading_underscore(PositionedChar::with_position(
+                '_',
+                lexer_span.end,
+              ))
+              .into(),
+            );
           }
         }
         Ok(StringToken::Continue) => {}

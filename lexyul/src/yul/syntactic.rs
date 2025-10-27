@@ -1,12 +1,25 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
+use logosky::{Token as TokenT, utils::recursion_tracker::RecursionLimitExceeded};
 
 use token::token;
 
-mod token;
-mod str;
-mod bytes;
-
 use super::Lit;
+
+use crate::error::yul as error;
+
+mod bytes;
+mod str;
+mod token;
+
+/// The syntactic lexer for Yul.
+pub type Lexer<'a, S = &'a str> = logosky::TokenStream<'a, Token<S>>;
+
+/// The char type used for the syntactic token.
+pub type TokenChar<'a, S> = <Token<S> as TokenT<'a>>::Char;
+/// The error type for lexing based on syntactic [`Token`].
+pub type Error<'a, S> = error::Error<<Token<S> as TokenT<'a>>::Char, RecursionLimitExceeded>;
+/// A collection of errors for syntactic [`Token`].
+pub type Errors<'a, S> = error::Errors<<Token<S> as TokenT<'a>>::Char, RecursionLimitExceeded>;
 
 /// The syntactic token of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, TryUnwrap, Unwrap)]

@@ -5,8 +5,8 @@ use logosky::{
 };
 
 use crate::{
-  utils::sealed::DoubleQuotedRegularStrLexer,
   string_lexer::{LitRegularStr, LitStrDelimiterKind},
+  utils::sealed::DoubleQuotedRegularStrLexer,
 };
 
 type StringError = crate::error::StringError<u8>;

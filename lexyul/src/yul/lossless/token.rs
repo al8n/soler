@@ -242,7 +242,7 @@ macro_rules! token {
         #[regex(r#""(?&double_quoted_chars)""#, |lexer| {
           increase_token_and_check_on_token_with(lexer, |l| Lit::lit_double_quoted_regular_string(l.slice()))
         })]
-        // Error handling branches for double quoted non-empty string literal lexing 
+        // Error handling branches for double quoted non-empty string literal lexing
         #[token(r#""""#, empty_double_quoted_string_error)]
         #[regex(r#""(?&double_quoted_chars)"#, unclosed_double_quoted_regular_string_error)]
         #[token("\"", |lexer| {

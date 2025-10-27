@@ -5,9 +5,9 @@ use logosky::{
 };
 
 use crate::{
-  utils::sealed::SingleQuotedRegularStrLexer,
-  string_lexer::{LitRegularStr, LitStrDelimiterKind},
   error::StringError,
+  string_lexer::{LitRegularStr, LitStrDelimiterKind},
+  utils::sealed::SingleQuotedRegularStrLexer,
 };
 
 #[derive(Logos)]
