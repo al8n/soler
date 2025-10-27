@@ -1,7 +1,5 @@
 use core::mem::MaybeUninit;
 
-use logosky::utils::recursion_tracker::RecursionLimiter;
-
 /// The default container for no-alloc environments, which can hold at most N elements.
 #[derive(Debug)]
 pub struct GenericVec<T, const N: usize> {
@@ -159,8 +157,8 @@ pub(super) mod sealed {
   lit_str_lexer!(DoubleQuotedRegularStrLexer);
   lit_str_lexer!(SingleQuotedHexStrLexer);
   lit_str_lexer!(DoubleQuotedHexStrLexer);
-  lit_str_lexer!(SingleQuotedUnicodeStrLexer);
-  lit_str_lexer!(DoubleQuotedUnicodeStrLexer);
+  // lit_str_lexer!(SingleQuotedUnicodeStrLexer);
+  // lit_str_lexer!(DoubleQuotedUnicodeStrLexer);
 }
 
 
@@ -173,6 +171,15 @@ pub trait Container<T> {
   where
     Self: 'a,
     T: 'a;
+  
+  /// Create a new, empty container.
+  fn new() -> Self;
+
+  /// Create a new container with a specified capacity.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn with_capacity(_: usize) -> Self where Self: Sized {
+    Self::new()
+  }
 
   /// Push an error into the collection.
   fn push(&mut self, error: T);
@@ -202,6 +209,11 @@ impl<T> Container<T> for Option<T> {
     = core::option::Iter<'a, T>
   where
     T: 'a;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn new() -> Self {
+    None
+  }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn push(&mut self, error: T) {
@@ -244,6 +256,16 @@ const _: () = {
       T: 'a;
 
     #[cfg_attr(not(tarpaulin), inline(always))]
+    fn new() -> Self {
+      Self::new()
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn with_capacity(capacity: usize) -> Self {
+      Self::with_capacity(capacity)
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
     fn push(&mut self, error: T) {
       self.push(error);
     }
@@ -280,6 +302,17 @@ const _: () = {
     where
       T: 'a,
       Self: 'a;
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn new() -> Self {
+      Self::new()
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn with_capacity(capacity: usize) -> Self {
+      Self::with_capacity(capacity)
+    }
+
     #[cfg_attr(not(tarpaulin), inline(always))]
     fn push(&mut self, error: T) {
       self.push_back(error);

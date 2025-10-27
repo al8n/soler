@@ -388,6 +388,15 @@ impl<Char, StateError, Container> Errors<Char, StateError, Container> {
     }
   }
 
+  /// Create a new error collection with the given capacity.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn with_capacity(capacity: usize) -> Self
+  where
+    Container: crate::utils::Container<Error<Char, StateError>>,
+  {
+    Self::new(Container::with_capacity(capacity))
+  }
+
   /// Consumes the `Errors`, returning the underlying container.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn into_inner(self) -> Container {

@@ -1,6 +1,10 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
 
-// mod token;
+mod bytes;
+mod str;
+mod token;
+
+use token::token;
 
 use super::Lit;
 
@@ -10,26 +14,30 @@ use super::Lit;
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
 pub enum Token<S> {
-  /// ' ', only produced in lossless lexing
+  /// ' '
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
   Space,
-  /// '\t', only produced in lossless lexing
+  /// '\t'
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
   Tab,
-  /// '\n', only produced in lossless lexing
+  /// '\n'
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
   NewLine,
-  /// '\r', only produced in lossless lexing
+  /// '\r'
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
   CarriageReturn,
-  /// '\r\n', only produced in lossless lexing
+  /// '\r\n'
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
   CarriageReturnNewLine,
+  /// '\f'
+  #[unwrap(ignore)]
+  #[try_unwrap(ignore)]
+  FormFeed,
 
   /// ":="
   #[unwrap(ignore)]
@@ -129,17 +137,20 @@ pub enum Token<S> {
 
 /// The kind of Yul lossless token
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[non_exhaustive]
 pub enum TokenKind {
-  /// ' ', only produced in lossless lexing
+  /// ' '
   Space,
-  /// '\t', only produced in lossless lexing
+  /// '\t'
   Tab,
-  /// '\n', only produced in lossless lexing
+  /// '\n'
   NewLine,
-  /// '\r', only produced in lossless lexing
+  /// '\r'
   CarriageReturn,
-  /// '\r\n', only produced in lossless lexing
+  /// '\r\n'
   CarriageReturnNewLine,
+  /// '\f'
+  FormFeed,
 
   /// ":="
   Assign,
@@ -201,3 +212,43 @@ pub enum TokenKind {
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
   EvmBuiltin,
 }
+
+impl<S> Token<S> {
+  /// Get the kind of this token
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn kind(&self) -> TokenKind {
+    match self {
+      Self::FormFeed => TokenKind::FormFeed,
+      Self::Space => TokenKind::Space,
+      Self::Tab => TokenKind::Tab,
+      Self::NewLine => TokenKind::NewLine,
+      Self::CarriageReturn => TokenKind::CarriageReturn,
+      Self::CarriageReturnNewLine => TokenKind::CarriageReturnNewLine,
+      Self::Assign => TokenKind::Assign,
+      Self::ThinArrow => TokenKind::ThinArrow,
+      Self::LBrace => TokenKind::LBrace,
+      Self::RBrace => TokenKind::RBrace,
+      Self::LParen => TokenKind::LParen,
+      Self::RParen => TokenKind::RParen,
+      Self::Dot => TokenKind::Dot,
+      Self::Comma => TokenKind::Comma,
+      Self::Leave => TokenKind::Leave,
+      Self::Continue => TokenKind::Continue,
+      Self::Break => TokenKind::Break,
+      Self::Switch => TokenKind::Switch,
+      Self::Case => TokenKind::Case,
+      Self::Default => TokenKind::Default,
+      Self::Function => TokenKind::Function,
+      Self::Let => TokenKind::Let,
+      Self::If => TokenKind::If,
+      Self::For => TokenKind::For,
+      Self::LineComment(_) => TokenKind::LineComment,
+      Self::MultiLineComment(_) => TokenKind::MultiLineComment,
+      Self::Identifier(_) => TokenKind::Identifier,
+      Self::Lit(_) => TokenKind::Lit,
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(_) => TokenKind::EvmBuiltin,
+    }
+  }
+}
+

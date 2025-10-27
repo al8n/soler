@@ -1,7 +1,3 @@
-use logosky::utils::{LineTerminator, PositionedChar, Span, UnexpectedLexeme};
-
-use crate::string_lexer::LitStrDelimiterKind;
-
 pub use escape_sequence::*;
 pub use hex_string::*;
 pub use string::*;

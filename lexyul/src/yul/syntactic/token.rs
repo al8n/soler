@@ -109,7 +109,7 @@ macro_rules! token {
         // Double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)\"", |lexer| Lit::lit_double_quoted_hex_string(lexer.slice()))]
         // Error handling branches for double quoted hex string literal lexing
-        #[token("hex\"(?&hex_string_content)\"", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
+        #[regex("hex\"(?&hex_string_content)", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex\"", |lexer| {
           <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
@@ -119,7 +119,7 @@ macro_rules! token {
         // Single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)'", |lexer| Lit::lit_single_quoted_hex_string(lexer.slice()))]
         // Error handling branches for single quoted hex string literal lexing
-        #[token("hex'(?&hex_string_content)'", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
+        #[regex("hex'(?&hex_string_content)", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex'", |lexer| {
           <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
