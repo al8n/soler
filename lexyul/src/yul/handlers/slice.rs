@@ -115,11 +115,12 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
 {
+  let span = lexer.span();
   let err = leading_zero_error(lexer);
   let mut errs: Errors<u8, Extras> = Errors::default();
   errs.push(err);
 
-  match handle_suffix_inner::<_, _, DecimalError<u8>>(lexer, DecimalError::UnexpectedSuffix) {
+  match handle_suffix_inner::<_, _, DecimalError<u8>>(lexer, |l| DecimalError::unexpected_suffix(span.into(), l),) {
     Ok(_) => Err(errs),
     Err(e) => {
       errs.push(e.into());
@@ -156,12 +157,35 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
 {
+  let span = lexer.span();
   handle_suffix::<_, _, Extras, DecimalError<u8>>(
     lexer,
     Lit::lit_decimal,
-    DecimalError::UnexpectedSuffix,
+    |l| DecimalError::unexpected_suffix(span.into(), l),
   )
   .map_err(Into::into)
+}
+
+#[allow(clippy::result_large_err)]
+#[cfg_attr(not(tarpaulin), inline(always))]
+pub(crate) fn handle_malformed_decimal_suffix<'a, S, T, Extras>(
+  lexer: &mut Lexer<'a, T>,
+) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+where
+  T: Logos<'a, Source = S>,
+  S: ?Sized + Source,
+  S::Slice<'a>: AsRef<[u8]>,
+{
+  let span: Span = lexer.span().into();
+  let malformed = Error::from(DecimalError::malformed(span));
+  match handle_suffix::<_, _, Extras, DecimalError<u8>>(
+    lexer,
+    Lit::lit_decimal,
+    |l| DecimalError::unexpected_suffix(span, l),
+  ) {
+    Ok(_) => Err(malformed.into()),
+    Err(e) => Err([e, malformed].into_iter().collect()),
+  }
 }
 
 #[allow(clippy::result_large_err)]
@@ -174,10 +198,45 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
 {
+  let span = lexer.span();
   handle_suffix::<_, _, Extras, HexadecimalError<u8>>(
     lexer,
     Lit::lit_hexadecimal,
-    HexadecimalError::UnexpectedSuffix,
+    |l| HexadecimalError::unexpected_suffix(span.into(), l),
   )
   .map_err(Into::into)
 }
+
+#[allow(clippy::result_large_err)]
+#[cfg_attr(not(tarpaulin), inline(always))]
+pub(crate) fn handle_hexadecimal_prefix_with_invalid_following<'a, S, T, Extras>(
+  lexer: &mut Lexer<'a, T>,
+) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+where
+  T: Logos<'a, Source = S>,
+  S: ?Sized + Source,
+  S::Slice<'a>: AsRef<[u8]>,
+{
+  let remainder = lexer.remainder();
+  let remainder_slice = remainder.as_ref();
+  if remainder_slice.is_empty() {
+    let err = HexadecimalError::<u8>::incomplete(lexer.span().into());
+    return Err(Error::from(err).into());
+  }
+
+  let mut end = 0;
+  for (idx, ch) in remainder_slice.iter().enumerate() {
+    match *ch {
+      b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'$' => {
+        end = idx + 1;
+        continue;
+      }
+      _ => break,
+    }
+  }
+
+  lexer.bump(end);
+
+  Err(Error::from(HexadecimalError::malformed(lexer.span().into())).into())
+}
+

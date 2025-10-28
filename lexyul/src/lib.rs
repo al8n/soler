@@ -14,6 +14,9 @@ extern crate std;
 /// Yul lexer
 pub mod yul;
 
+/// Solidity lexer
+pub mod sol;
+
 /// The error types for the lexer.
 pub mod error;
 

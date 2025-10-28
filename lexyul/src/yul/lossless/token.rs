@@ -38,7 +38,7 @@ macro_rules! token {
       }
 
       #[doc(hidden)]
-      #[derive(Logos, Clone)]
+      #[derive(Logos, Clone, Debug)]
       #[logos(
         crate = logosky::logos,
         source = $source,
@@ -148,6 +148,24 @@ macro_rules! token {
             },
           }
         })]
+        #[regex("[1-9][0-9_]+]", |lexer| {
+          match handlers::$handlers::handle_malformed_decimal_suffix(lexer) {
+            Ok(lit) => {
+              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
+              Ok(lit)
+            },
+            Err(e) => {
+              match lexer.increase_token_and_check() {
+                Ok(_) => Err(Errors::from(e)),
+                Err(state_err) => {
+                  let mut errs = Errors::from(e);
+                  errs.push(Error::State(state_err));
+                  Err(errs)
+                }
+              }
+            },
+          }
+        })]
         #[regex("0(?&digit)+", |lexer| {
           match handlers::$handlers::handle_leading_zero_and_suffix(lexer) {
             Ok(_) => {
@@ -165,6 +183,7 @@ macro_rules! token {
             },
           }
         })]
+        
         #[regex("(?&hexadecimal)", |lexer| {
           match handlers::$handlers::handle_hexadecimal_suffix(lexer) {
             Ok(lit) => {
@@ -182,7 +201,27 @@ macro_rules! token {
               }
             },
           }
+        }, priority = 7)]
+        #[token("0x", |lexer| {
+          match handlers::$handlers::handle_hexadecimal_prefix_with_invalid_following(lexer) {
+            Ok(_) => {
+              unreachable!("regex guarantees no valid literal can be formed with incomplete hexadecimal literal")
+            },
+            Err(e) => {
+              match lexer.increase_token_and_check() {
+                Ok(_) => Err(Errors::from(e)),
+                Err(state_err) => {
+                  let mut errs = Errors::from(e);
+                  errs.push(Error::State(state_err));
+                  Err(errs)
+                }
+              }
+            },
+          }
         })]
+        #[regex("0x[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
+        #[regex("0X[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
+        #[regex("0[xX]{2,}[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
 
         // Double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)\"", |lexer| {
@@ -455,6 +494,13 @@ macro_rules! token {
       fn unclosed_single_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
         increase_token_and_check_on_error_token(lexer, |l| {
           crate::error::HexStringError::unclosed_single_quote(l.span().into()).into()
+        })
+      }
+
+      #[cfg_attr(not(tarpaulin), inline(always))]
+      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+        increase_token_and_check_on_error_token(lexer, |l| {
+          crate::error::yul::HexadecimalError::malformed(l.span().into()).into()
         })
       }
 

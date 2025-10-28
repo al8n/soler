@@ -16,6 +16,7 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<str>,
 {
+  println!("{}", lexer.slice().as_ref());
   match lexer.slice().as_ref().chars().next() {
     Some(ch) => Error::unknown_char(ch, lexer.span().start),
     None => Error::unexpected_eoi(lexer.span().end),
@@ -115,11 +116,12 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<str>,
 {
+  let span = lexer.span();
   let err = leading_zero_error(lexer);
   let mut errs: Errors<char, Extras> = Errors::default();
   errs.push(err);
 
-  match handle_suffix_inner::<_, _, DecimalError>(lexer, DecimalError::UnexpectedSuffix) {
+  match handle_suffix_inner::<_, _, DecimalError>(lexer, |l| DecimalError::unexpected_suffix(span.into(), l)) {
     Ok(_) => Err(errs),
     Err(e) => {
       errs.push(e.into());
@@ -156,12 +158,35 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<str>,
 {
+  let span = lexer.span();
   handle_suffix::<_, _, Extras, DecimalError>(
     lexer,
     Lit::lit_decimal,
-    DecimalError::UnexpectedSuffix,
+    |l| DecimalError::unexpected_suffix(span.into(), l),
   )
   .map_err(Into::into)
+}
+
+#[allow(clippy::result_large_err)]
+#[cfg_attr(not(tarpaulin), inline(always))]
+pub(crate) fn handle_malformed_decimal_suffix<'a, S, T, Extras>(
+  lexer: &mut Lexer<'a, T>,
+) -> Result<Lit<S::Slice<'a>>, Errors<char, Extras>>
+where
+  T: Logos<'a, Source = S>,
+  S: ?Sized + Source,
+  S::Slice<'a>: AsRef<str>,
+{
+  let span: Span = lexer.span().into();
+  let malformed = Error::from(DecimalError::malformed(span));
+  match handle_suffix::<_, _, Extras, DecimalError>(
+    lexer,
+    Lit::lit_decimal,
+    |l| DecimalError::unexpected_suffix(span, l),
+  ) {
+    Ok(_) => Err(malformed.into()),
+    Err(e) => Err([e, malformed].into_iter().collect()),
+  }
 }
 
 #[allow(clippy::result_large_err)]
@@ -174,10 +199,44 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<str>,
 {
+  let span = lexer.span();
   handle_suffix::<_, _, Extras, HexadecimalError>(
     lexer,
     Lit::lit_hexadecimal,
-    HexadecimalError::UnexpectedSuffix,
+    |l| HexadecimalError::unexpected_suffix(span.into(), l),
   )
   .map_err(Into::into)
+}
+
+#[allow(clippy::result_large_err)]
+#[cfg_attr(not(tarpaulin), inline(always))]
+pub(crate) fn handle_hexadecimal_prefix_with_invalid_following<'a, S, T, Extras>(
+  lexer: &mut Lexer<'a, T>,
+) -> Result<Lit<S::Slice<'a>>, Errors<char, Extras>>
+where
+  T: Logos<'a, Source = S>,
+  S: ?Sized + Source,
+  S::Slice<'a>: AsRef<str>,
+{
+  let remainder = lexer.remainder();
+  let remainder_str = remainder.as_ref();
+  if remainder_str.is_empty() {
+    let err = HexadecimalError::<char>::incomplete(lexer.span().into());
+    return Err(Error::from(err).into());
+  }
+
+  let mut end = 0;
+  for (idx, ch) in remainder_str.char_indices() {
+    match ch {
+      '0'..='9' | 'a'..='z' | 'A'..='Z' | '_' | '$' => {
+        end = idx + 1;
+        continue;
+      }
+      _ => break,
+    }
+  }
+
+  lexer.bump(end);
+
+  Err(Error::from(HexadecimalError::malformed(lexer.span().into())).into())
 }

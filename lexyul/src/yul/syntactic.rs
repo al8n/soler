@@ -202,3 +202,11 @@ impl<S> Token<S> {
     }
   }
 }
+
+#[test]
+fn t() {
+  let src = "123_456";
+  let mut lexer: Lexer<'_> = Lexer::new(src);
+  let token = lexer.iter().next().unwrap();
+  println!("{:?}", token);
+}

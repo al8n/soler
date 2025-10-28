@@ -1,5 +1,6 @@
 macro_rules! token {
   ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
+    #[allow(single_use_lifetimes)]
     mod $mod {
       use logosky::{
         Lexable, Logos,
@@ -37,7 +38,7 @@ macro_rules! token {
       }
 
       #[doc(hidden)]
-      #[derive(Logos, Clone)]
+      #[derive(Logos, Clone, Debug)]
       #[logos(
         crate = logosky::logos,
         source = $source,
@@ -103,8 +104,13 @@ macro_rules! token {
         #[token("true", |lexer| Lit::lit_true(lexer.slice()))]
         #[token("false", |lexer| Lit::lit_false(lexer.slice()))]
         #[regex("(?&decimal)", handlers::$handlers::handle_decimal_suffix)]
+        #[regex("[1-9][0-9_]+", handlers::$handlers::handle_malformed_decimal_suffix)]
         #[regex("0(?&digit)+", handlers::$handlers::handle_leading_zero_and_suffix)]
-        #[regex("(?&hexadecimal)", handlers::$handlers::handle_hexadecimal_suffix)]
+        #[regex("(?&hexadecimal)", handlers::$handlers::handle_hexadecimal_suffix, priority = 7)]
+        #[regex("0x[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
+        #[regex("0X[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
+        #[regex("0[xX]{2,}[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
+        #[token("0x", handlers::$handlers::handle_hexadecimal_prefix_with_invalid_following)]
 
         // Double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)\"", |lexer| Lit::lit_double_quoted_hex_string(lexer.slice()))]
@@ -298,6 +304,11 @@ macro_rules! token {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_single_quote(span),
         )))
+      }
+
+      #[cfg_attr(not(tarpaulin), inline(always))]
+      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut logosky::logos::Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+        Err(Error::from(crate::error::yul::HexadecimalError::malformed(lexer.span().into())).into())
       }
     }
   }
