@@ -32,6 +32,214 @@ mod ty;
 #[logos(subpattern unicode_double_quoted_chars = r#"(?&unicode_double_quoted_char)*"#)]
 #[logos(subpattern unicode_single_quoted_chars = r#"(?&unicode_single_quoted_char)*"#)]
 enum Token<'a> {
+  #[token("abstract")]
+  Abstract,
+  #[token("address")]
+  Address,
+  #[token("anonymous")]
+  Anonymous,
+  #[token("as")]
+  As,
+  #[token("assembly")]
+  Assembly,
+  #[token("bool")]
+  Bool,
+  #[token("break")]
+  Break,
+  #[token("bytes")]
+  Bytes,
+  #[token("calldata")]
+  Calldata,
+  #[token("catch")]
+  Catch,
+  #[token("constant")]
+  Constant,
+  #[token("constructor")]
+  Constructor,
+  #[token("continue")]
+  Continue,
+  #[token("contract")]
+  Contract,
+  #[token("delete")]
+  Delete,
+  #[token("do")]
+  Do,
+  #[token("else")]
+  Else,
+  #[token("emit")]
+  Emit,
+  #[token("enum")]
+  Enum,
+  #[token("event")]
+  Event,
+  #[token("external")]
+  External,
+  #[token("fallback")]
+  Fallback,
+  #[token("for")]
+  For,
+  #[token("function")]
+  Function,
+  #[token("if")]
+  If,
+  #[token("immutable")]
+  Immutable,
+  #[token("import")]
+  Import,
+  #[token("indexed")]
+  Indexed,
+  #[token("interface")]
+  Interface,
+  #[token("internal")]
+  Internal,
+  #[token("is")]
+  Is,
+  #[token("library")]
+  Library,
+  #[token("mapping")]
+  Mapping,
+  #[token("memory")]
+  Memory,
+  #[token("modifier")]
+  Modifier,
+  #[token("new")]
+  New,
+  #[token("override")]
+  Override,
+  #[token("payable")]
+  Payable,
+  #[token("private")]
+  Private,
+  #[token("public")]
+  Public,
+  #[token("pure")]
+  Pure,
+  #[token("receive")]
+  Receive,
+  #[token("return")]
+  Return,
+  #[token("returns")]
+  Returns,
+  #[token("storage")]
+  Storage,
+  #[token("string")]
+  String,
+  #[token("struct")]
+  Struct,
+  #[token("try")]
+  Try,
+  #[token("type")]
+  Type,
+  #[token("unchecked")]
+  Unchecked,
+  #[token("using")]
+  Using,
+  #[token("view")]
+  View,
+  #[token("virtual")]
+  Virtual,
+  #[token("while")]
+  While,
+
+  #[token("(")]
+  LParen,
+  #[token(")")]
+  RParen,
+  #[token("[")]
+  LBracket,
+  #[token("]")]
+  RBracket,
+  #[token("{")]
+  LBrace,
+  #[token("}")]
+  RBrace,
+  #[token(":")]
+  Colon,
+  #[token(";")]
+  Semicolon,
+  #[token(".")]
+  Dot,
+  #[token("?")]
+  Question,
+  #[token("=>")]
+  FatArrow,
+  #[token("->")]
+  ThinArrow,
+  #[token("=")]
+  Assign,
+  #[token("|=")]
+  BitOrAssign,
+  #[token("&=")]
+  BitAndAssign,
+  #[token("^=")]
+  BitXorAssign,
+  #[token("<<=")]
+  ShlAssign,
+  #[token(">>=")]
+  SarAssign,
+  #[token(">>>=")]
+  ShrAssign,
+  #[token("+=")]
+  AddAssign,
+  #[token("-=")]
+  SubAssign,
+  #[token("*=")]
+  MulAssign,
+  #[token("/=")]
+  DivAssign,
+  #[token("%=")]
+  ModAssign,
+  #[token(",")]
+  Comma,
+  #[token("||")]
+  Or,
+  #[token("&&")]
+  And,
+  #[token("|")]
+  BitOr,
+  #[token("&")]
+  BitAnd,
+  #[token("^")]
+  BitXor,
+  #[token("<<")]
+  Shl,
+  #[token(">>")]
+  Sar,
+  #[token(">>>")]
+  Shr,
+  #[token("+")]
+  Add,
+  #[token("-")]
+  Sub,
+  #[token("*")]
+  Mul,
+  #[token("/")]
+  Div,
+  #[token("%")]
+  Mod,
+  #[token("**")]
+  Exp,
+  #[token("==")]
+  Eq,
+  #[token("!=")]
+  Ne,
+  #[token("<")]
+  Lt,
+  #[token("<=")]
+  Le,
+  #[token(">")]
+  Gt,
+  #[token(">=")]
+  Ge,
+  #[token("!")]
+  Not,
+  #[token("~")]
+  BitNot,
+  #[token("++")]
+  Inc,
+  #[token("--")]
+  Dec,
+
   #[token("bytes1", |_| FixedBytes::BYTES1)]
   #[token("bytes2", |_| FixedBytes::BYTES2)]
   #[token("bytes3", |_| FixedBytes::BYTES3)]
@@ -147,15 +355,15 @@ enum Token<'a> {
   #[token("uint", |_| Uint::U256)]
   Uint(Uint),
 
-  #[regex("hex\"(?:[0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2})*)\"", |lexer| LitStr::DoubleQuotedHex(lexer.slice()))]
-  #[regex("hex'(?:[0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2})*)'", |lexer| LitStr::SingleQuotedHex(lexer.slice()))]
-  #[regex("\"(?&double_quoted_chars)\"", |lexer| LitStr::DoubleQuoted(lexer.slice()))]
-  #[regex("'(?&single_quoted_chars)'", |lexer| LitStr::SingleQuoted(lexer.slice()))]
-  #[regex("unicode\"(?&unicode_double_quoted_chars)\"", |lexer| LitStr::DoubleQuotedUnicode(lexer.slice()))]
-  #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| LitStr::SingleQuotedUnicode(lexer.slice()))]
-  #[token("\"\"", |lexer| LitStr::EmptyDoubleQuoted(lexer.slice()))]
-  #[token("''", |lexer| LitStr::EmptySingleQuoted(lexer.slice()))]
-  String(LitStr<&'a str>),
+  // #[regex("hex\"(?:[0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2})*)\"", |lexer| LitStr::DoubleQuotedHex(lexer.slice()))]
+  // #[regex("hex'(?:[0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2})*)'", |lexer| LitStr::SingleQuotedHex(lexer.slice()))]
+  // #[regex("\"(?&double_quoted_chars)\"", |lexer| LitStr::DoubleQuoted(lexer.slice()))]
+  // #[regex("'(?&single_quoted_chars)'", |lexer| LitStr::SingleQuoted(lexer.slice()))]
+  // #[regex("unicode\"(?&unicode_double_quoted_chars)\"", |lexer| LitStr::DoubleQuotedUnicode(lexer.slice()))]
+  // #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| LitStr::SingleQuotedUnicode(lexer.slice()))]
+  // #[token("\"\"", |lexer| LitStr::EmptyDoubleQuoted(lexer.slice()))]
+  // #[token("''", |lexer| LitStr::EmptySingleQuoted(lexer.slice()))]
+  // String(LitStr<&'a str>),
 
   #[regex("0x[0-9a-fA-F_]+")]
   HexNumber(&'a str),

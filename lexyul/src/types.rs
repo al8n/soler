@@ -80,6 +80,8 @@ pub enum LitStrDelimiterKind {
 }
 
 /// The hex string literal
+/// 
+/// Spec: [hex string](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexString)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LitHexStr<S> {
   delimiter: LitStrDelimiterKind,
@@ -125,6 +127,10 @@ impl<S> LitHexStr<S> {
 }
 
 /// The non-empty string literal
+/// 
+/// Spec:
+/// - [Solidity non-empty string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.NonEmptyStringLiteral)
+/// - [Yul string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulStringLiteral)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LitRegularStr<S> {
   delimiter: LitStrDelimiterKind,
