@@ -4,7 +4,7 @@ use logosky::utils::{IncompleteToken, Lexeme, MalformedLiteral, PositionedChar, 
 use super::Message;
 use crate::{
   error::{HexStringError, StringError},
-  string_lexer::LitStrDelimiterKind,
+  types::LitStrDelimiterKind,
 };
 
 /// The error type for empty regular string literal

@@ -6,7 +6,7 @@ use logosky::{
 
 use crate::{
   error::HexStringError,
-  string_lexer::{LitHexStr, LitStrDelimiterKind},
+  types::{LitHexStr, LitStrDelimiterKind},
   utils::sealed::DoubleQuotedHexStrLexer,
 };
 

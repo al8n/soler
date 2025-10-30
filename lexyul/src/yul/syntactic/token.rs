@@ -12,7 +12,8 @@ macro_rules! token {
           DoubleQuotedHexStrLexer, DoubleQuotedRegularStrLexer, SingleQuotedHexStrLexer,
           SingleQuotedRegularStrLexer,
         }},
-        yul::{handlers, Lit, LitHexStr, LitRegularStr, syntactic},
+        yul::{handlers, Lit, syntactic},
+        types::{LitHexStr, LitRegularStr},
         error::yul as error,
       };
 

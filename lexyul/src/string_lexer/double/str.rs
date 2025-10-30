@@ -6,7 +6,7 @@ use logosky::{
 
 use crate::{
   error::StringError,
-  string_lexer::{LitRegularStr, LitStrDelimiterKind},
+  types::{LitRegularStr, LitStrDelimiterKind},
   utils::sealed::DoubleQuotedRegularStrLexer,
 };
 

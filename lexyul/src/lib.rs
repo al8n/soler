@@ -24,3 +24,6 @@ pub mod error;
 pub mod utils;
 
 mod string_lexer;
+
+/// The types used in the lexer.
+pub mod types;

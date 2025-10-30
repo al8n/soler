@@ -4,7 +4,7 @@ use logosky::utils::{
   human_display::DisplayHuman,
 };
 
-use crate::string_lexer::LitStrDelimiterKind;
+use crate::types::LitStrDelimiterKind;
 
 use super::{EscapeSequenceError, HexEscapeSequenceError, UnicodeEscapeSequenceError};
 

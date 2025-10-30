@@ -5,7 +5,7 @@ use logosky::{
 };
 
 use crate::{
-  string_lexer::{LitHexStr, LitStrDelimiterKind},
+  types::{LitHexStr, LitStrDelimiterKind},
   utils::sealed::DoubleQuotedHexStrLexer,
 };
 
