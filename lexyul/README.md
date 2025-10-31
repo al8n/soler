@@ -1,3 +1,0 @@
-# Lexyul
-
-Lexyul crate

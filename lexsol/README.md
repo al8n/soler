@@ -1,3 +1,3 @@
-# Lexsol
+# Lexyul
 
-Solidity lexer
+Lexyul crate
