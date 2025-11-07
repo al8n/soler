@@ -6,20 +6,19 @@ use logosky::{
 };
 
 use crate::{
-  error::StringError,
-  types::{LitRegularStr, LitStrDelimiterKind},
-  utils::sealed::SingleQuotedRegularStrLexer,
+  error::sol::UnicodeStringError, sol::LitUnicodeStr, types::LitStrDelimiterKind,
+  utils::sealed::DoubleQuotedUnicodeStrLexer,
 };
 
-#[derive(Logos)]
+#[derive(Logos, Copy, Clone)]
 #[logos(
   crate = logosky::logos,
+  extras = Option<StringToken>,
+  source = [u8],
 )]
-#[logos(subpattern single_quoted_printable = "[\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]")]
-#[logos(subpattern single_quoted_char = "(?&single_quoted_printable)")]
-#[logos(subpattern single_quoted_chars = r#"(?&single_quoted_char)+"#)]
+#[logos(subpattern character = r#"[^"\r\n\\]"#)]
 enum StringToken {
-  #[token("'")]
+  #[token("\"")]
   Quote,
 
   #[token("\r\n", priority = 5)]
@@ -49,25 +48,20 @@ enum StringToken {
   #[regex(r#"\\u([0-9a-fA-F]{0,3})"#)]
   IncompleteUnicodeEscapeSequence,
 
-  #[regex(r#"[^'\\\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]{2,}"#)]
-  UnsupportedCharacters,
-  #[regex(r#"[^'\\\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]"#)]
-  UnsupportedCharacter,
-
-  #[regex("(?&single_quoted_chars)")]
+  #[regex("(?&character)*")]
   Continue,
 }
 
 impl StringToken {
   #[inline]
-  pub(crate) fn lex_regular<'a, S, T, Error, Container>(
-    lexer: &mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
-  ) -> Result<LitRegularStr<S::Slice<'a>>, Container>
+  pub(crate) fn lex_unicode<'a, S, T, Error, Container>(
+    lexer: &mut DoubleQuotedUnicodeStrLexer<Lexer<'a, T>, u8, UnicodeStringError<u8>, Error>,
+  ) -> Result<LitUnicodeStr<S::Slice<'a>>, Container>
   where
     T: Logos<'a, Source = S>,
     S: Source + ?Sized + 'a,
-    S::Slice<'a>: AsRef<str>,
-    Error: From<StringError>,
+    S::Slice<'a>: AsRef<[u8]>,
+    Error: From<UnicodeStringError<u8>>,
     Container: Default + crate::utils::Container<Error>,
   {
     let lexer_span = lexer.span();
@@ -80,8 +74,13 @@ impl StringToken {
       match string_token {
         Err(_) => {
           lexer.bump(string_lexer.span().end);
-          errs
-            .push(StringError::other("unknown single quoted non-empty string lexing error").into());
+          errs.push(
+            UnicodeStringError::other(
+              lexer.span().into(),
+              "unknown single quoted unicode string lexing error",
+            )
+            .into(),
+          );
           return Err(errs);
         }
         Ok(StringToken::Quote) => {
@@ -91,13 +90,13 @@ impl StringToken {
           }
 
           let src = lexer.slice();
-          return Ok(LitRegularStr::single(src));
+          return Ok(LitUnicodeStr::single(src));
         }
         Ok(StringToken::NewLine) => {
           let pos = lexer_span.end + string_lexer.span().start;
           errs.push(
-            StringError::unexpected_line_terminator(UnexpectedLexeme::new(
-              Lexeme::Char(PositionedChar::with_position('\n', pos)),
+            UnicodeStringError::unexpected_line_terminator(UnexpectedLexeme::new(
+              Lexeme::Char(PositionedChar::with_position(b'\n', pos)),
               LineTerminator::NewLine,
             ))
             .into(),
@@ -106,8 +105,8 @@ impl StringToken {
         Ok(StringToken::CarriageReturn) => {
           let pos = lexer_span.end + string_lexer.span().start;
           errs.push(
-            StringError::unexpected_line_terminator(UnexpectedLexeme::new(
-              Lexeme::Char(PositionedChar::with_position('\r', pos)),
+            UnicodeStringError::unexpected_line_terminator(UnexpectedLexeme::new(
+              Lexeme::Char(PositionedChar::with_position(b'\r', pos)),
               LineTerminator::CarriageReturn,
             ))
             .into(),
@@ -116,7 +115,7 @@ impl StringToken {
         Ok(StringToken::CarriageReturnNewLine) => {
           let pos = lexer_span.end + string_lexer.span().start;
           errs.push(
-            StringError::unexpected_line_terminator(UnexpectedLexeme::new(
+            UnicodeStringError::unexpected_line_terminator(UnexpectedLexeme::new(
               Lexeme::Range((pos..pos + 2).into()),
               LineTerminator::CarriageReturnNewLine,
             ))
@@ -131,9 +130,9 @@ impl StringToken {
           let slash_pos = lexer_span.end + string_lexer.span().start;
           let pos = slash_pos + 1;
           errs.push(
-            StringError::unsupported_escape_character(
+            UnicodeStringError::unsupported_escape_character(
               (slash_pos..pos + 1).into(),
-              PositionedChar::with_position(string_lexer.slice().chars().last().unwrap(), pos),
+              PositionedChar::with_position(string_lexer.slice().last().copied().unwrap(), pos),
             )
             .into(),
           );
@@ -142,57 +141,44 @@ impl StringToken {
           let span = string_lexer.span();
           let pos = lexer_span.end + span.start;
           let end = lexer_span.end + span.end;
-          errs.push(StringError::incomplete_hex_escape_sequence((pos..end).into()).into());
+          errs.push(UnicodeStringError::incomplete_hex_escape_sequence((pos..end).into()).into());
         }
         Ok(StringToken::IncompleteUnicodeEscapeSequence) => {
           let span = string_lexer.span();
           let pos = lexer_span.end + span.start;
           let end = lexer_span.end + span.end;
-          errs.push(StringError::incomplete_unicode_escape_sequence((pos..end).into()).into());
-        }
-        Ok(StringToken::UnsupportedCharacters) => {
-          let span = string_lexer.span();
-          let pos = lexer_span.end + span.start;
-          let end = lexer_span.end + span.end;
-          errs.push(StringError::unsupported_characters((pos..end).into()).into());
-        }
-        Ok(StringToken::UnsupportedCharacter) => {
-          let span = string_lexer.span();
-          let pos = lexer_span.end + span.start;
-          errs.push(
-            StringError::unsupported_character(PositionedChar::with_position(
-              string_lexer.slice().chars().next().unwrap(),
-              pos,
-            ))
-            .into(),
-          );
+          errs
+            .push(UnicodeStringError::incomplete_unicode_escape_sequence((pos..end).into()).into());
         }
       }
     }
 
     lexer.bump(string_lexer.span().end);
-    errs.push(StringError::unclosed(lexer.span().into(), LitStrDelimiterKind::Single).into());
+    errs
+      .push(UnicodeStringError::unclosed(lexer.span().into(), LitStrDelimiterKind::Double).into());
     Err(errs)
   }
 }
 
 impl<'a, S, T, Error, Container>
-  Lexable<&mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>, Container>
-  for LitRegularStr<S::Slice<'a>>
+  Lexable<
+    &mut DoubleQuotedUnicodeStrLexer<Lexer<'a, T>, u8, UnicodeStringError<u8>, Error>,
+    Container,
+  > for LitUnicodeStr<S::Slice<'a>>
 where
   T: Logos<'a, Source = S>,
   S: Source + ?Sized + 'a,
-  S::Slice<'a>: AsRef<str>,
+  S::Slice<'a>: AsRef<[u8]>,
   Container: Default + crate::utils::Container<Error>,
-  Error: From<StringError>,
+  Error: From<UnicodeStringError<u8>>,
 {
   #[inline]
   fn lex(
-    lexer: &mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
+    lexer: &mut DoubleQuotedUnicodeStrLexer<Lexer<'a, T>, u8, UnicodeStringError<u8>, Error>,
   ) -> Result<Self, Container>
   where
     Self: Sized,
   {
-    StringToken::lex_regular(lexer)
+    StringToken::lex_unicode(lexer)
   }
 }

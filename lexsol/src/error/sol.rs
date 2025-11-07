@@ -5,8 +5,8 @@ use logosky::{
     IncompleteHexEscape, Unclosed, UnexpectedEot, UnexpectedLexeme, UnknownLexeme,
   },
   utils::{
-    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman,
-    knowledge::LineTerminator,
+    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, Spanned,
+    human_display::DisplayHuman, knowledge::LineTerminator,
   },
 };
 
@@ -39,14 +39,7 @@ pub enum UnicodeStringError<Char = char> {
   /// Escape sequence error found in string literal.
   EscapeSequenceError(EscapeSequenceError<Char>),
   /// ... other string literal errors can be added here
-  Other(Message),
-}
-
-impl<Char> Default for UnicodeStringError<Char> {
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn default() -> Self {
-    Self::Other("unknown string literal error".into())
-  }
+  Other(Spanned<Message>),
 }
 
 impl<Char> core::fmt::Display for UnicodeStringError<Char>
@@ -141,8 +134,8 @@ impl<Char> UnicodeStringError<Char> {
 
   /// Create a other string literal error with the given message.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn other(message: impl Into<Message>) -> Self {
-    Self::Other(message.into())
+  pub fn other(span: Span, message: impl Into<Message>) -> Self {
+    Self::Other(Spanned::new(span, message.into()))
   }
 }
 

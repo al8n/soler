@@ -1,3 +1,3 @@
-mod double;
 mod hex;
-mod single;
+mod regular;
+mod unicode;

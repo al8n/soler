@@ -157,8 +157,8 @@ pub(super) mod sealed {
   lit_str_lexer!(DoubleQuotedRegularStrLexer);
   lit_str_lexer!(SingleQuotedHexStrLexer);
   lit_str_lexer!(DoubleQuotedHexStrLexer);
-  // lit_str_lexer!(SingleQuotedUnicodeStrLexer);
-  // lit_str_lexer!(DoubleQuotedUnicodeStrLexer);
+  lit_str_lexer!(SingleQuotedUnicodeStrLexer);
+  lit_str_lexer!(DoubleQuotedUnicodeStrLexer);
 }
 
 /// A collection of error types used in the lexer

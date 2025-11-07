@@ -79,12 +79,12 @@ impl<S> LitUnicodeStr<S> {
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub(super) const fn single(lit: S) -> Self {
+  pub(crate) const fn single(lit: S) -> Self {
     Self::new(LitStrDelimiterKind::Single, lit)
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub(super) const fn double(lit: S) -> Self {
+  pub(crate) const fn double(lit: S) -> Self {
     Self::new(LitStrDelimiterKind::Double, lit)
   }
 

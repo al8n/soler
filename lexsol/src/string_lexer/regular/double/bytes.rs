@@ -83,8 +83,13 @@ impl StringToken {
       match string_token {
         Err(_) => {
           lexer.bump(string_lexer.span().end);
-          errs
-            .push(StringError::other("unknown double quoted non-empty string lexing error").into());
+          errs.push(
+            StringError::other(
+              lexer.span().into(),
+              "unknown double quoted non-empty string lexing error",
+            )
+            .into(),
+          );
           return Err(errs);
         }
         Ok(StringToken::Quote) => {

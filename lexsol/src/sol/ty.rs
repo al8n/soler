@@ -48,6 +48,20 @@ impl<S> core::convert::From<LitHexStr<S>> for Lit<S> {
   }
 }
 
+impl<S> core::convert::From<LitEmptyStr<S>> for Lit<S> {
+  #[inline]
+  fn from(lit: LitEmptyStr<S>) -> Self {
+    Self::String(lit.into())
+  }
+}
+
+impl<S> core::convert::From<LitUnicodeStr<S>> for Lit<S> {
+  #[inline]
+  fn from(lit: LitUnicodeStr<S>) -> Self {
+    Self::String(lit.into())
+  }
+}
+
 impl<S> Lit<S> {
   #[inline]
   pub(super) const fn lit_true(s: S) -> Self {

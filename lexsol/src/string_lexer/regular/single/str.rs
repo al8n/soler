@@ -8,18 +8,18 @@ use logosky::{
 use crate::{
   error::StringError,
   types::{LitRegularStr, LitStrDelimiterKind},
-  utils::sealed::DoubleQuotedRegularStrLexer,
+  utils::sealed::SingleQuotedRegularStrLexer,
 };
 
 #[derive(Logos)]
 #[logos(
   crate = logosky::logos,
 )]
-#[logos(subpattern double_quoted_printable = "[\u{0020}-\u{0021}\u{0023}-\u{005B}\u{005D}-\u{007E}]")]
-#[logos(subpattern double_quoted_char = "(?&double_quoted_printable)")]
-#[logos(subpattern double_quoted_chars = r#"(?&double_quoted_char)+"#)]
+#[logos(subpattern single_quoted_printable = "[\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]")]
+#[logos(subpattern single_quoted_char = "(?&single_quoted_printable)")]
+#[logos(subpattern single_quoted_chars = r#"(?&single_quoted_char)+"#)]
 enum StringToken {
-  #[token("\"")]
+  #[token("'")]
   Quote,
 
   #[token("\r\n", priority = 5)]
@@ -49,20 +49,19 @@ enum StringToken {
   #[regex(r#"\\u([0-9a-fA-F]{0,3})"#)]
   IncompleteUnicodeEscapeSequence,
 
-  #[regex(r#"[^"\\\u{0020}-\u{0021}\u{0023}-\u{005B}\u{005D}-\u{007E}]"#)]
+  #[regex(r#"[^'\\\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]{2,}"#)]
+  UnsupportedCharacters,
+  #[regex(r#"[^'\\\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]"#)]
   UnsupportedCharacter,
 
-  #[regex(r#"[^"\\\u{0020}-\u{0021}\u{0023}-\u{005B}\u{005D}-\u{007E}]{2,}"#)]
-  UnsupportedCharacters,
-
-  #[regex("(?&double_quoted_chars)")]
+  #[regex("(?&single_quoted_chars)")]
   Continue,
 }
 
 impl StringToken {
   #[inline]
   pub(crate) fn lex_regular<'a, S, T, Error, Container>(
-    lexer: &mut DoubleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
+    lexer: &mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
   ) -> Result<LitRegularStr<S::Slice<'a>>, Container>
   where
     T: Logos<'a, Source = S>,
@@ -81,8 +80,13 @@ impl StringToken {
       match string_token {
         Err(_) => {
           lexer.bump(string_lexer.span().end);
-          errs
-            .push(StringError::other("unknown double quoted non-empty string lexing error").into());
+          errs.push(
+            StringError::other(
+              lexer.span().into(),
+              "unknown single quoted non-empty string lexing error",
+            )
+            .into(),
+          );
           return Err(errs);
         }
         Ok(StringToken::Quote) => {
@@ -92,7 +96,7 @@ impl StringToken {
           }
 
           let src = lexer.slice();
-          return Ok(LitRegularStr::double(src));
+          return Ok(LitRegularStr::single(src));
         }
         Ok(StringToken::NewLine) => {
           let pos = lexer_span.end + string_lexer.span().start;
@@ -172,13 +176,13 @@ impl StringToken {
     }
 
     lexer.bump(string_lexer.span().end);
-    errs.push(StringError::unclosed(lexer.span().into(), LitStrDelimiterKind::Double).into());
+    errs.push(StringError::unclosed(lexer.span().into(), LitStrDelimiterKind::Single).into());
     Err(errs)
   }
 }
 
 impl<'a, S, T, Error, Container>
-  Lexable<&mut DoubleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>, Container>
+  Lexable<&mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>, Container>
   for LitRegularStr<S::Slice<'a>>
 where
   T: Logos<'a, Source = S>,
@@ -189,7 +193,7 @@ where
 {
   #[inline]
   fn lex(
-    lexer: &mut DoubleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
+    lexer: &mut SingleQuotedRegularStrLexer<Lexer<'a, T>, char, StringError, Error>,
   ) -> Result<Self, Container>
   where
     Self: Sized,
