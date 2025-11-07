@@ -1,7 +1,7 @@
 use logosky::{
   Logos, Source,
   logos::Lexer,
-  utils::{PositionedChar, UnexpectedEot, UnknownLexeme},
+  error::{UnexpectedEot, UnknownLexeme},
 };
 
 use crate::Lxr;
@@ -23,13 +23,14 @@ where
   let mut chars = slice_str.char_indices();
 
   match chars.next() {
-    None => E::from(UnexpectedEot::EOT),
+    None => E::from(UnexpectedEot::eot(span.into())),
     Some((idx, first)) => {
       match first {
         '0'..='9' | 'a'..='z' | 'A'..='Z' | '_' | '$' => {}
         _ => {
           return UnknownLexeme::from_char(
-            PositionedChar::with_position(first, lexer.span().start + idx),
+            lexer.span().start + idx,
+            first,
             L::INIT,
           )
           .into();
@@ -37,7 +38,7 @@ where
       }
 
       match chars.next() {
-        Some((_, _)) => UnknownLexeme::from_span(span, L::INIT).into(),
+        Some((_, _)) => UnknownLexeme::from_range(span, L::INIT).into(),
         None => {
           let start = span.start;
           let mut cur = 0;
@@ -57,7 +58,8 @@ where
 
           if cur == 0 {
             return UnknownLexeme::from_char(
-              PositionedChar::with_position(first, span.end),
+              span.end,
+              first,
               L::INIT,
             )
             .into();
@@ -65,7 +67,7 @@ where
 
           lexer.bump(cur);
 
-          UnknownLexeme::from_span(start..span.end + cur, L::INIT).into()
+          UnknownLexeme::from_range(start..span.end + cur, L::INIT).into()
         }
       }
     }

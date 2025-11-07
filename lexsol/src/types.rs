@@ -1,4 +1,4 @@
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
+use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 
 /// The boolean literal
 ///
@@ -71,11 +71,13 @@ impl<S> LitNumber<S> {
 }
 
 /// The string literal delimiter kind
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, Display)]
 pub enum LitStrDelimiterKind {
   /// `'` single quote
+  #[display("'")]
   Single,
   /// `"` double quote
+  #[display("\"")]
   Double,
 }
 

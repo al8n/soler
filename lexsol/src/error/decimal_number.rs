@@ -1,7 +1,7 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::utils::{
-  Lexeme, MalformedLiteral, Span, UnexpectedSuffix, human_display::DisplayHuman,
-};
+use logosky::{utils::{
+  Lexeme, Span, human_display::DisplayHuman,
+}, error::{Malformed, UnexpectedSuffix}};
 
 use crate::Lxr;
 
@@ -43,7 +43,7 @@ pub enum DecimalError<L, Char = char> {
   ///
   /// For example,
   /// - `12_34`, where underscores are not allowed in Yul decimal literals.
-  Malformed(MalformedLiteral<DecimalLiteral<L>>),
+  Malformed(Malformed<DecimalLiteral<L>>),
   /// Unexpected suffix found after decimal literal.
   ///
   /// Returned when there are invalid characters following a valid decimal literal.
@@ -66,7 +66,7 @@ where
   /// Create a malformed decimal literal error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn malformed(span: Span) -> Self {
-    Self::Malformed(MalformedLiteral::with_knowledge(span, DecimalLiteral::INIT))
+    Self::Malformed(Malformed::with_knowledge(span, DecimalLiteral::INIT))
   }
 }
 
@@ -94,7 +94,7 @@ where
             suffix.token(),
           )
         }
-        Lexeme::Span(span) => {
+        Lexeme::Range(span) => {
           write!(
             f,
             "unexpected suffix after decimal literal at {} after decimal literal at {}",

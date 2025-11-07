@@ -1,12 +1,9 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::utils::{
-  Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedLexeme,
-  human_display::DisplayHuman,
-};
+use logosky::{error::{FixedUnicodeEscapeError, HexEscapeError, IncompleteFixedUnicodeEscape, IncompleteHexEscape, Unclosed, UnexpectedLexeme}, utils::{
+  CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator
+}};
 
-use crate::types::LitStrDelimiterKind;
-
-use super::{EscapeSequenceError, HexEscapeSequenceError, UnicodeEscapeSequenceError};
+use crate::{error::EscapeSequenceError, types::LitStrDelimiterKind};
 
 /// The error type for string literal lexing errors
 #[derive(Debug, PartialEq, Eq, Clone, From, IsVariant, Unwrap, TryUnwrap)]
@@ -24,7 +21,7 @@ pub enum StringError<Char = char> {
   /// Escape sequence error found in string literal.
   EscapeSequenceError(EscapeSequenceError<Char>),
   /// ... other string literal errors can be added here
-  Other(super::Message),
+  Other(Message),
 }
 
 impl<Char> Default for StringError<Char> {
@@ -36,7 +33,7 @@ impl<Char> Default for StringError<Char> {
 
 impl<Char> core::fmt::Display for StringError<Char>
 where
-  Char: DisplayHuman,
+  Char: DisplayHuman + CharLen,
 {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     match self {
@@ -65,7 +62,7 @@ where
             pc.position()
           )
         }
-        Lexeme::Span(span) => {
+        Lexeme::Range(span) => {
           write!(f, "unsupported characters in string literal at {}", span)
         }
       },
@@ -74,7 +71,7 @@ where
   }
 }
 
-impl<Char> core::error::Error for StringError<Char> where Char: DisplayHuman + core::fmt::Debug {}
+impl<Char> core::error::Error for StringError<Char> where Char: DisplayHuman + core::fmt::Debug + CharLen {}
 
 impl<Char> StringError<Char> {
   /// Create a new unclosed string literal error.
@@ -103,15 +100,15 @@ impl<Char> StringError<Char> {
 
   /// Create a unsupported escape character error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unsupported_escape_character(char: PositionedChar<Char>) -> Self {
-    Self::EscapeSequenceError(EscapeSequenceError::Unsupported(char))
+  pub const fn unsupported_escape_character(span: Span, char: PositionedChar<Char>) -> Self {
+    Self::EscapeSequenceError(EscapeSequenceError::unsupported(EscapedLexeme::from_positioned_char(span, char)))
   }
 
   /// Create a incomplete hexadecimal escape sequence error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn incomplete_hex_escape_sequence(span: Span) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::Hexadecimal(
-      HexEscapeSequenceError::Incomplete(span),
+      HexEscapeError::Incomplete(IncompleteHexEscape::new(span)),
     ))
   }
 
@@ -119,7 +116,7 @@ impl<Char> StringError<Char> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn incomplete_unicode_escape_sequence(span: Span) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::Unicode(
-      UnicodeEscapeSequenceError::Incomplete(span),
+      FixedUnicodeEscapeError::Incomplete(IncompleteFixedUnicodeEscape::new(span)),
     ))
   }
 
@@ -132,12 +129,12 @@ impl<Char> StringError<Char> {
   /// Create a unsupported characters error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unsupported_characters(span: Span) -> Self {
-    Self::Unsupported(Lexeme::Span(span))
+    Self::Unsupported(Lexeme::Range(span))
   }
 
   /// Create a other string literal error with the given message.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn other(message: impl Into<super::Message>) -> Self {
+  pub fn other(message: impl Into<Message>) -> Self {
     Self::Other(message.into())
   }
 }

@@ -1,7 +1,8 @@
 use logosky::{
   Lexable, Logos, Source,
   logos::Lexer,
-  utils::{Lexeme, LineTerminator, PositionedChar, UnexpectedLexeme},
+  utils::{Lexeme, knowledge::LineTerminator, PositionedChar},
+  error::UnexpectedLexeme,
 };
 
 use crate::{
@@ -116,7 +117,7 @@ impl StringToken {
           let pos = lexer_span.end + string_lexer.span().start;
           errs.push(
             StringError::unexpected_line_terminator(UnexpectedLexeme::new(
-              Lexeme::Span((pos..pos + 2).into()),
+              Lexeme::Range((pos..pos + 2).into()),
               LineTerminator::CarriageReturnNewLine,
             ))
             .into(),
@@ -127,9 +128,10 @@ impl StringToken {
         Ok(StringToken::EscapedHex) => {}
         Ok(StringToken::EscapedCharacter) => {}
         Ok(StringToken::UnsupportedEscapeCharacter) => {
-          let pos = lexer_span.end + string_lexer.span().start + 1;
+          let slash_pos = lexer_span.end + string_lexer.span().start;
+          let pos = slash_pos + 1;
           errs.push(
-            StringError::unsupported_escape_character(PositionedChar::with_position(
+            StringError::unsupported_escape_character((slash_pos..pos + 1).into(), PositionedChar::with_position(
               string_lexer.slice().chars().last().unwrap(),
               pos,
             ))

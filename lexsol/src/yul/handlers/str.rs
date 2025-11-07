@@ -50,7 +50,7 @@ where
     let pc = PositionedChar::with_position('0', zero_start_at);
     Lexeme::Char(pc)
   } else {
-    Lexeme::Span(Span::new(zero_start_at, zero_start_at + zeros))
+    Lexeme::Range(Span::new(zero_start_at, zero_start_at + zeros))
   };
 
   DecimalError::LeadingZeros(l).into()
@@ -94,7 +94,7 @@ where
     len => {
       let span_start = lexer.span().end;
       let span_end = span_start + len;
-      unexpected_suffix(Lexeme::Span(Span::new(span_start, span_end)))
+      unexpected_suffix(Lexeme::Range(Span::new(span_start, span_end)))
     }
   };
 

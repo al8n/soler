@@ -11,8 +11,8 @@ description = "Lexsol crate"
 
 [features]
 default = ["std", "evm"]
-alloc = []
-std = []
+alloc = ["logosky/alloc"]
+std = ["logosky/std"]
 
 evm = []
 

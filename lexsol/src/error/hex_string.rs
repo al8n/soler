@@ -1,13 +1,10 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use logosky::utils::{
-  Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedLexeme,
-  human_display::DisplayHuman,
-};
+use logosky::{error::{Unclosed, UnexpectedLexeme}, utils::{
+  Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator
+}};
 
 use crate::types::LitStrDelimiterKind;
-
-use super::Message;
 
 /// The hex string literal lexing error
 #[derive(Debug, PartialEq, Eq, Clone, From, IsVariant, Unwrap, TryUnwrap)]
@@ -87,13 +84,13 @@ impl<Char> HexStringError<Char> {
   /// Create a unsupported characters error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unsupported_characters(span: Span) -> Self {
-    Self::Unsupported(Lexeme::Span(span))
+    Self::Unsupported(Lexeme::Range(span))
   }
 
   /// Create a leading underscores error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn leading_underscores(span: Span) -> Self {
-    Self::LeadingUnderscore(Lexeme::Span(span))
+    Self::LeadingUnderscore(Lexeme::Range(span))
   }
 
   /// Create a leading underscore error.
@@ -111,7 +108,7 @@ impl<Char> HexStringError<Char> {
   /// Create a trailing underscores error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn trailing_underscores(span: Span) -> Self {
-    Self::TrailingUnderscore(Lexeme::Span(span))
+    Self::TrailingUnderscore(Lexeme::Range(span))
   }
 
   /// Create a trailing underscore error.
@@ -152,7 +149,7 @@ where
         ),
       },
       Self::Unsupported(lexeme) => match lexeme {
-        Lexeme::Span(span) => write!(
+        Lexeme::Range(span) => write!(
           f,
           "unsupported characters found in hex string literal at {}",
           span
@@ -172,7 +169,7 @@ where
         )
       }
       Self::LeadingUnderscore(lexeme) => match lexeme {
-        Lexeme::Span(span) => write!(
+        Lexeme::Range(span) => write!(
           f,
           "leading underscores found in hex string literal at {}",
           span
@@ -195,7 +192,7 @@ where
         ch.position()
       ),
       Self::TrailingUnderscore(lexeme) => match lexeme {
-        Lexeme::Span(span) => write!(
+        Lexeme::Range(span) => write!(
           f,
           "trailing underscores found in hex string literal at {}",
           span

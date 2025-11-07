@@ -12,7 +12,7 @@ mod str;
 mod token;
 
 /// The syntactic lexer for Yul.
-pub type Lexer<'a, S = &'a str> = logosky::TokenStream<'a, Token<S>>;
+pub type Lexer<'a, S = &'a str> = logosky::Tokenizer<'a, Token<S>>;
 
 /// The char type used for the syntactic token.
 pub type TokenChar<'a, S> = <Token<S> as TokenT<'a>>::Char;

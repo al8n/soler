@@ -14,9 +14,3 @@ pub mod yul;
 
 /// The error types for Solidity lexer.
 pub mod sol;
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-type Message = std::borrow::Cow<'static, str>;
-
-#[cfg(not(any(feature = "std", feature = "alloc")))]
-type Message = &'static str;

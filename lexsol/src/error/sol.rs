@@ -1,14 +1,12 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::utils::{
-  Lexeme, LineTerminator, PositionedChar, Span, Unclosed, UnexpectedEot, UnexpectedLexeme,
-  UnknownLexeme, human_display::DisplayHuman,
-};
+use logosky::{error::{DefaultContainer, FixedUnicodeEscapeError, HexEscapeError, IncompleteFixedUnicodeEscape, IncompleteHexEscape, Unclosed, UnexpectedEot, UnexpectedLexeme, UnknownLexeme}, utils::{
+  CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator
+}};
 
-use super::Message;
+
 use crate::{
   error::{
-    EscapeSequenceError, HexEscapeSequenceError, HexStringError, StringError,
-    UnicodeEscapeSequenceError,
+    EscapeSequenceError, HexStringError, StringError,
   },
   sol::SOLIDITY,
   types::LitStrDelimiterKind,
@@ -37,7 +35,7 @@ pub enum UnicodeStringError<Char = char> {
   /// Escape sequence error found in string literal.
   EscapeSequenceError(EscapeSequenceError<Char>),
   /// ... other string literal errors can be added here
-  Other(super::Message),
+  Other(Message),
 }
 
 impl<Char> Default for UnicodeStringError<Char> {
@@ -49,7 +47,7 @@ impl<Char> Default for UnicodeStringError<Char> {
 
 impl<Char> core::fmt::Display for UnicodeStringError<Char>
 where
-  Char: DisplayHuman,
+  Char: DisplayHuman + CharLen,
 {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     match self {
@@ -75,8 +73,16 @@ where
 }
 
 impl<Char> core::error::Error for UnicodeStringError<Char> where
-  Char: DisplayHuman + core::fmt::Debug
+  Char: DisplayHuman + core::fmt::Debug + CharLen + 'static,
 {
+  fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+    match self {
+      Self::UnexpectedLineTerminator(err) => Some(err),
+      Self::Unclosed(err) => Some(err),
+      Self::EscapeSequenceError(err) => Some(err),
+      Self::Other(_) => None,
+    }
+  }
 }
 
 impl<Char> UnicodeStringError<Char> {
@@ -106,15 +112,15 @@ impl<Char> UnicodeStringError<Char> {
 
   /// Create a unsupported escape character error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unsupported_escape_character(char: PositionedChar<Char>) -> Self {
-    Self::EscapeSequenceError(EscapeSequenceError::Unsupported(char))
+  pub const fn unsupported_escape_character(span: Span, char: PositionedChar<Char>) -> Self {
+    Self::EscapeSequenceError(EscapeSequenceError::unsupported(EscapedLexeme::from_positioned_char(span, char)))
   }
 
   /// Create a incomplete hexadecimal escape sequence error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn incomplete_hex_escape_sequence(span: Span) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::Hexadecimal(
-      HexEscapeSequenceError::Incomplete(span),
+      HexEscapeError::Incomplete(IncompleteHexEscape::new(span)),
     ))
   }
 
@@ -122,13 +128,13 @@ impl<Char> UnicodeStringError<Char> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn incomplete_unicode_escape_sequence(span: Span) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::Unicode(
-      UnicodeEscapeSequenceError::Incomplete(span),
+      FixedUnicodeEscapeError::Incomplete(IncompleteFixedUnicodeEscape::new(span)),
     ))
   }
 
   /// Create a other string literal error with the given message.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn other(message: impl Into<super::Message>) -> Self {
+  pub fn other(message: impl Into<Message>) -> Self {
     Self::Other(message.into())
   }
 }
@@ -172,7 +178,7 @@ impl<Char, StateError> Default for Error<Char, StateError> {
 impl<Char, StateError> From<&'static str> for Error<Char, StateError> {
   #[inline]
   fn from(s: &'static str) -> Self {
-    Self::Other(std::borrow::Cow::Borrowed(s))
+    Self::Other(Message::from_static(s))
   }
 }
 
@@ -180,13 +186,13 @@ impl<Char, StateError> From<&'static str> for Error<Char, StateError> {
 impl<Char, StateError> From<std::string::String> for Error<Char, StateError> {
   #[inline]
   fn from(s: String) -> Self {
-    Self::Other(std::borrow::Cow::Owned(s))
+    Self::Other(Message::from(s))
   }
 }
 
 impl<Char, StateError> core::fmt::Display for Error<Char, StateError>
 where
-  Char: DisplayHuman,
+  Char: DisplayHuman + CharLen,
   StateError: core::fmt::Display,
 {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -205,7 +211,7 @@ where
             pc.position()
           )
         }
-        Lexeme::Span(span) => {
+        Lexeme::Range(span) => {
           write!(f, "unknown lexeme encountered at {}", span)
         }
       },
@@ -220,7 +226,7 @@ where
 
 impl<Char, StateError> core::error::Error for Error<Char, StateError>
 where
-  Char: DisplayHuman + core::fmt::Debug + 'static,
+  Char: DisplayHuman + CharLen + core::fmt::Debug + 'static,
   StateError: core::error::Error + 'static,
 {
   fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
@@ -252,7 +258,8 @@ impl<Char, StateError> Error<Char, StateError> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_char(ch: Char, pos: usize) -> Self {
     Self::Unknown(UnknownLexeme::from_char(
-      PositionedChar::with_position(ch, pos),
+      pos,
+      ch,
       SOLIDITY(()),
     ))
   }
@@ -260,12 +267,174 @@ impl<Char, StateError> Error<Char, StateError> {
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_lexeme(span: Span) -> Self {
-    Self::Unknown(UnknownLexeme::new(Lexeme::Span(span), SOLIDITY(())))
+    Self::Unknown(UnknownLexeme::new(Lexeme::Range(span), SOLIDITY(())))
   }
 
   /// Creates an unexpected end of input error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unexpected_eoi() -> Self {
-    Self::UnexpectedEndOfInput(UnexpectedEot::EOT)
+  pub const fn unexpected_eoi(span: Span) -> Self {
+    Self::UnexpectedEndOfInput(UnexpectedEot::eot(span))
+  }
+}
+
+/// A collection of errors
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Errors<Char = char, StateError = (), Container = DefaultContainer<Error<Char, StateError>>>
+{
+  errors: Container,
+  _m: core::marker::PhantomData<Error<Char, StateError>>,
+}
+
+impl<Char, StateError, Container> Default for Errors<Char, StateError, Container>
+where
+  Container: Default,
+{
+  #[inline]
+  fn default() -> Self {
+    Self {
+      errors: Container::default(),
+      _m: core::marker::PhantomData,
+    }
+  }
+}
+
+impl<Char, StateError, Container> From<Error<Char, StateError>>
+  for Errors<Char, StateError, Container>
+where
+  Container: FromIterator<Error<Char, StateError>>,
+{
+  #[inline]
+  fn from(error: Error<Char, StateError>) -> Self {
+    Self {
+      errors: Container::from_iter([error]),
+      _m: core::marker::PhantomData,
+    }
+  }
+}
+
+impl<Char, StateError, Container> IntoIterator for Errors<Char, StateError, Container>
+where
+  Container: IntoIterator<Item = Error<Char, StateError>>,
+{
+  type Item = Error<Char, StateError>;
+  type IntoIter = Container::IntoIter;
+
+  #[inline]
+  fn into_iter(self) -> Self::IntoIter {
+    self.errors.into_iter()
+  }
+}
+
+impl<Char, StateError, Container> core::ops::Deref for Errors<Char, StateError, Container> {
+  type Target = Container;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn deref(&self) -> &Self::Target {
+    &self.errors
+  }
+}
+
+impl<Char, StateError, Container> core::ops::DerefMut for Errors<Char, StateError, Container> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.errors
+  }
+}
+
+impl<Char, StateError, Container> AsRef<[Error<Char, StateError>]>
+  for Errors<Char, StateError, Container>
+where
+  Container: AsRef<[Error<Char, StateError>]>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_ref(&self) -> &[Error<Char, StateError>] {
+    self.as_slice()
+  }
+}
+
+impl<Char, StateError, Container> AsMut<[Error<Char, StateError>]>
+  for Errors<Char, StateError, Container>
+where
+  Container: AsMut<[Error<Char, StateError>]>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_mut(&mut self) -> &mut [Error<Char, StateError>] {
+    self.as_mut_slice()
+  }
+}
+
+impl<Char, StateError, Container> FromIterator<Error<Char, StateError>>
+  for Errors<Char, StateError, Container>
+where
+  Container: FromIterator<Error<Char, StateError>>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn from_iter<I: IntoIterator<Item = Error<Char, StateError>>>(iter: I) -> Self {
+    Self::new(Container::from_iter(iter))
+  }
+}
+
+impl<Char, StateError, Container> Errors<Char, StateError, Container> {
+  /// Create a new error collection with the given span.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new(errors: Container) -> Self {
+    Self {
+      errors,
+      _m: core::marker::PhantomData,
+    }
+  }
+
+  /// Create a new error collection with the given capacity.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn with_capacity(capacity: usize) -> Self
+  where
+    Container: crate::utils::Container<Error<Char, StateError>>,
+  {
+    Self::new(Container::with_capacity(capacity))
+  }
+
+  /// Consumes the `Errors`, returning the underlying container.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_inner(self) -> Container {
+    self.errors
+  }
+
+  /// Returns a reference to the internal error container.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn errors(&self) -> &Container {
+    &self.errors
+  }
+
+  /// Returns a mutable reference to the internal error container.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn errors_mut(&mut self) -> &mut Container {
+    &mut self.errors
+  }
+
+  /// Returns a slice of all errors in the collection.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn as_slice(&self) -> &[Error<Char, StateError>]
+  where
+    Container: AsRef<[Error<Char, StateError>]>,
+  {
+    self.errors().as_ref()
+  }
+
+  /// Returns a mutable slice of all errors in the collection.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn as_mut_slice(&mut self) -> &mut [Error<Char, StateError>]
+  where
+    Container: AsMut<[Error<Char, StateError>]>,
+  {
+    self.errors_mut().as_mut()
+  }
+}
+
+impl<Char, StateError, Container> crate::utils::Wrapper for Errors<Char, StateError, Container> {
+  type Underlying = Container;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn from_underlying(underlying: Self::Underlying) -> Self {
+    Self::new(underlying)
   }
 }

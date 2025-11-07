@@ -1,9 +1,9 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::utils::{
-  Lexeme, PositionedChar, Span, UnexpectedEot, UnknownLexeme, human_display::DisplayHuman,
-};
+use logosky::{error::{DefaultContainer, UnexpectedEot, UnknownLexeme}, utils::{
+  CharLen, Lexeme, Message, Span, human_display::DisplayHuman
+}};
 
-use super::Message;
+
 use crate::{
   error::{HexStringError, StringError},
   types::LitStrDelimiterKind,
@@ -100,7 +100,7 @@ impl<Char, StateError> Default for Error<Char, StateError> {
 impl<Char, StateError> From<&'static str> for Error<Char, StateError> {
   #[inline]
   fn from(s: &'static str) -> Self {
-    Self::Other(std::borrow::Cow::Borrowed(s))
+    Self::Other(Message::from_static(s))
   }
 }
 
@@ -108,13 +108,13 @@ impl<Char, StateError> From<&'static str> for Error<Char, StateError> {
 impl<Char, StateError> From<std::string::String> for Error<Char, StateError> {
   #[inline]
   fn from(s: String) -> Self {
-    Self::Other(std::borrow::Cow::Owned(s))
+    Self::Other(Message::from_string(s))
   }
 }
 
 impl<Char, StateError> core::fmt::Display for Error<Char, StateError>
 where
-  Char: DisplayHuman,
+  Char: DisplayHuman + CharLen,
   StateError: core::fmt::Display,
 {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -133,7 +133,7 @@ where
             pc.position()
           )
         }
-        Lexeme::Span(span) => {
+        Lexeme::Range(span) => {
           write!(f, "unknown lexeme encountered at {}", span)
         }
       },
@@ -148,7 +148,7 @@ where
 
 impl<Char, StateError> core::error::Error for Error<Char, StateError>
 where
-  Char: DisplayHuman + core::fmt::Debug + 'static,
+  Char: DisplayHuman + CharLen + core::fmt::Debug + 'static,
   StateError: core::error::Error + 'static,
 {
   fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
@@ -180,7 +180,8 @@ impl<Char, StateError> Error<Char, StateError> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_char(ch: Char, pos: usize) -> Self {
     Self::Unknown(UnknownLexeme::from_char(
-      PositionedChar::with_position(ch, pos),
+      pos,
+      ch,
       YUL(()),
     ))
   }
@@ -188,13 +189,13 @@ impl<Char, StateError> Error<Char, StateError> {
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_lexeme(span: Span) -> Self {
-    Self::Unknown(UnknownLexeme::new(Lexeme::Span(span), YUL(())))
+    Self::Unknown(UnknownLexeme::new(Lexeme::Range(span), YUL(())))
   }
 
   /// Creates an unexpected end of input error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unexpected_eoi() -> Self {
-    Self::UnexpectedEndOfInput(UnexpectedEot::EOT)
+  pub const fn unexpected_eoi(span: Span) -> Self {
+    Self::UnexpectedEndOfInput(UnexpectedEot::eot(span))
   }
 
   /// Creates a empty single-quoted string literal error.
@@ -212,20 +213,7 @@ impl<Char, StateError> Error<Char, StateError> {
 
 /// A collection of errors
 #[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg(not(any(feature = "std", feature = "alloc")))]
-pub struct Errors<
-  Char = char,
-  StateError = (),
-  Container = crate::utils::GenericVec<Error<Char, StateError>, 2>,
-> {
-  errors: Container,
-  _m: core::marker::PhantomData<Error<Char, StateError>>,
-}
-
-/// A collection of errors
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub struct Errors<Char = char, StateError = (), Container = std::vec::Vec<Error<Char, StateError>>>
+pub struct Errors<Char = char, StateError = (), Container = DefaultContainer<Error<Char, StateError>>>
 {
   errors: Container,
   _m: core::marker::PhantomData<Error<Char, StateError>>,

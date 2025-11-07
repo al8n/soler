@@ -1,7 +1,7 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::utils::{
-  IncompleteToken, Lexeme, MalformedLiteral, Span, UnexpectedSuffix, human_display::DisplayHuman,
-};
+use logosky::{utils::{
+  Lexeme, Span, human_display::DisplayHuman,
+}, error::{IncompleteToken, Malformed, UnexpectedSuffix}};
 
 use crate::Lxr;
 
@@ -51,7 +51,7 @@ pub enum HexadecimalError<L, Char = char> {
   /// - `0x12_34`, where underscores are not allowed in Yul hexadecimal literals.
   /// - `0X1264`, where `0X` is not avalid hexadecimal prefix in Yul (should be `0x`).
   /// - `0xx1234`, where multiple `x` characters are not allowed in the prefix.
-  Malformed(MalformedLiteral<HexadecimalLiteral<L>>),
+  Malformed(Malformed<HexadecimalLiteral<L>>),
   /// Unexpected suffix found after hexadecimal literal.
   ///
   /// Returned when there are invalid characters following a valid hexadecimal literal.
@@ -82,7 +82,7 @@ where
             suffix.token(),
           )
         }
-        Lexeme::Span(span) => {
+        Lexeme::Range(span) => {
           write!(
             f,
             "unexpected suffix after hexadecimal literal at {} after hexadecimal literal at {}",
@@ -126,7 +126,7 @@ where
   /// Create a malformed hexadecimal literal error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn malformed(span: Span) -> Self {
-    Self::Malformed(MalformedLiteral::with_knowledge(
+    Self::Malformed(Malformed::with_knowledge(
       span,
       HexadecimalLiteral::INIT,
     ))
