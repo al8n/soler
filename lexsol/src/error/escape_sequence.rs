@@ -1,5 +1,8 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{error::{FixedUnicodeEscapeError, HexEscapeError}, utils::{CharLen, EscapedLexeme, Lexeme, human_display::DisplayHuman}};
+use logosky::{
+  error::{FixedUnicodeEscapeError, HexEscapeError},
+  utils::{CharLen, EscapedLexeme, Lexeme, human_display::DisplayHuman},
+};
 
 /// Escape sequence error
 #[derive(Debug, PartialEq, Eq, Clone, From, IsVariant, Unwrap, TryUnwrap)]
@@ -34,30 +37,24 @@ where
     match self {
       Self::Hexadecimal(err) => err.fmt(f),
       Self::Unicode(err) => err.fmt(f),
-      Self::Unsupported(escaped_lexeme) => {
-        match escaped_lexeme.lexeme_ref() {
-          Lexeme::Char(pc) => {
-            write!(
-              f,
-              "unsupported escape character '{}' at {}",
-              pc.char_ref().display(),
-              pc.position()
-            )
-          },
-          Lexeme::Range(span) => {
-            write!(
-              f,
-              "unsupported escape sequence at {}",
-              span,
-            )
-          },
+      Self::Unsupported(escaped_lexeme) => match escaped_lexeme.lexeme_ref() {
+        Lexeme::Char(pc) => {
+          write!(
+            f,
+            "unsupported escape character '{}' at {}",
+            pc.char_ref().display(),
+            pc.position()
+          )
         }
-      }
+        Lexeme::Range(span) => {
+          write!(f, "unsupported escape sequence at {}", span,)
+        }
+      },
     }
   }
 }
 
 impl<Char> core::error::Error for EscapeSequenceError<Char> where
-  Char: DisplayHuman + core::fmt::Debug + CharLen,
+  Char: DisplayHuman + core::fmt::Debug + CharLen
 {
 }

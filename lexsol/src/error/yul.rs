@@ -1,8 +1,8 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{error::{DefaultContainer, UnexpectedEot, UnknownLexeme}, utils::{
-  CharLen, Lexeme, Message, Span, human_display::DisplayHuman
-}};
-
+use logosky::{
+  error::{DefaultContainer, UnexpectedEot, UnknownLexeme},
+  utils::{CharLen, Lexeme, Message, Span, human_display::DisplayHuman},
+};
 
 use crate::{
   error::{HexStringError, StringError},
@@ -179,11 +179,7 @@ impl<Char, StateError> Error<Char, StateError> {
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_char(ch: Char, pos: usize) -> Self {
-    Self::Unknown(UnknownLexeme::from_char(
-      pos,
-      ch,
-      YUL(()),
-    ))
+    Self::Unknown(UnknownLexeme::from_char(pos, ch, YUL(())))
   }
 
   /// Creates an unknown lexeme error.
@@ -213,8 +209,11 @@ impl<Char, StateError> Error<Char, StateError> {
 
 /// A collection of errors
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Errors<Char = char, StateError = (), Container = DefaultContainer<Error<Char, StateError>>>
-{
+pub struct Errors<
+  Char = char,
+  StateError = (),
+  Container = DefaultContainer<Error<Char, StateError>>,
+> {
   errors: Container,
   _m: core::marker::PhantomData<Error<Char, StateError>>,
 }

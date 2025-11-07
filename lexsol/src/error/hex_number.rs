@@ -1,7 +1,8 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{utils::{
-  Lexeme, Span, human_display::DisplayHuman,
-}, error::{IncompleteToken, Malformed, UnexpectedSuffix}};
+use logosky::{
+  error::{IncompleteToken, Malformed, UnexpectedSuffix},
+  utils::{Lexeme, Span, human_display::DisplayHuman},
+};
 
 use crate::Lxr;
 
@@ -126,10 +127,7 @@ where
   /// Create a malformed hexadecimal literal error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn malformed(span: Span) -> Self {
-    Self::Malformed(Malformed::with_knowledge(
-      span,
-      HexadecimalLiteral::INIT,
-    ))
+    Self::Malformed(Malformed::with_knowledge(span, HexadecimalLiteral::INIT))
   }
 
   /// Create an incomplete hexadecimal literal error with the given span.

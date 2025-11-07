@@ -19,30 +19,46 @@ pub enum LitStrKind {
 /// Spec:
 /// - [Solidity empty string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.EmptyStringLiteral)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitEmptyStr {
+pub struct LitEmptyStr<S> {
   delimiter: LitStrDelimiterKind,
+  source: S,
 }
 
-impl LitEmptyStr {
+impl<S> LitEmptyStr<S> {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  const fn new(delimiter: LitStrDelimiterKind) -> Self {
-    Self { delimiter }
+  const fn new(source: S, delimiter: LitStrDelimiterKind) -> Self {
+    Self { delimiter, source }
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub(super) const fn single() -> Self {
-    Self::new(LitStrDelimiterKind::Single)
+  pub(super) const fn single(source: S) -> Self {
+    Self::new(source, LitStrDelimiterKind::Single)
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub(super) const fn double() -> Self {
-    Self::new(LitStrDelimiterKind::Double)
+  pub(super) const fn double(source: S) -> Self {
+    Self::new(source, LitStrDelimiterKind::Double)
   }
 
   /// Get the delimiter kind of the non-empty string literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn delimiter_kind(&self) -> LitStrDelimiterKind {
     self.delimiter
+  }
+
+  /// Returns the source of the empty string literal, source will be `""` or `''`, delimiters included
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn source_ref(&self) -> &S {
+    &self.source
+  }
+
+  /// Returns the source of the empty string literal, source will be `""` or `''`, delimiters included
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn source(self) -> S
+  where
+    S: Copy,
+  {
+    self.source
   }
 }
 
@@ -105,7 +121,7 @@ impl<S> LitUnicodeStr<S> {
 #[try_unwrap(ref, ref_mut)]
 pub enum LitStr<S> {
   /// The empty string literal
-  Empty(LitEmptyStr),
+  Empty(LitEmptyStr<S>),
   /// Non-empty string literal
   Regular(LitRegularStr<S>),
   /// Hex string literal
@@ -149,76 +165,5 @@ impl<S> LitStr<S> {
       Self::Empty(_) => LitStrKind::Empty,
       Self::Unicode(_) => LitStrKind::Unicode,
     }
-  }
-}
-
-/// The literal of Solidity
-///
-/// Spec: [Solidity literals](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulLiteral)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, Unwrap, TryUnwrap)]
-#[non_exhaustive]
-#[unwrap(ref, ref_mut)]
-#[try_unwrap(ref, ref_mut)]
-pub enum Lit<S> {
-  /// The boolean literal
-  Boolean(LitBool<S>),
-  /// The string literal
-  String(LitStr<S>),
-  /// The number literal
-  Number(LitNumber<S>),
-}
-
-impl<S> From<LitRegularStr<S>> for Lit<S> {
-  #[inline]
-  fn from(lit: LitRegularStr<S>) -> Self {
-    Self::String(lit.into())
-  }
-}
-
-impl<S> From<LitHexStr<S>> for Lit<S> {
-  #[inline]
-  fn from(lit: LitHexStr<S>) -> Self {
-    Self::String(lit.into())
-  }
-}
-
-impl<S> Lit<S> {
-  #[inline]
-  pub(super) const fn lit_true(s: S) -> Self {
-    Self::Boolean(LitBool::True(s))
-  }
-  #[inline]
-  pub(super) const fn lit_false(s: S) -> Self {
-    Self::Boolean(LitBool::False(s))
-  }
-
-  #[inline]
-  pub(super) const fn lit_decimal(s: S) -> Self {
-    Self::Number(LitNumber::Decimal(s))
-  }
-
-  #[inline]
-  pub(super) const fn lit_hexadecimal(s: S) -> Self {
-    Self::Number(LitNumber::Hexadecimal(s))
-  }
-
-  #[inline]
-  pub(super) const fn lit_single_quoted_regular_string(s: S) -> Self {
-    Self::String(LitStr::Regular(LitRegularStr::single(s)))
-  }
-
-  #[inline]
-  pub(super) const fn lit_double_quoted_regular_string(s: S) -> Self {
-    Self::String(LitStr::Regular(LitRegularStr::double(s)))
-  }
-
-  #[inline]
-  pub(super) const fn lit_single_quoted_hex_string(s: S) -> Self {
-    Self::String(LitStr::Hex(LitHexStr::single(s)))
-  }
-
-  #[inline]
-  pub(super) const fn lit_double_quoted_hex_string(s: S) -> Self {
-    Self::String(LitStr::Hex(LitHexStr::double(s)))
   }
 }

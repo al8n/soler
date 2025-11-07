@@ -1,7 +1,8 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{utils::{
-  Lexeme, Span, human_display::DisplayHuman,
-}, error::{Malformed, UnexpectedSuffix}};
+use logosky::{
+  error::{Malformed, UnexpectedSuffix},
+  utils::{Lexeme, Span, human_display::DisplayHuman},
+};
 
 use crate::Lxr;
 

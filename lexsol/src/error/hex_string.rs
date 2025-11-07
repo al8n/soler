@@ -1,8 +1,11 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use logosky::{error::{Unclosed, UnexpectedLexeme}, utils::{
-  Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator
-}};
+use logosky::{
+  error::{Unclosed, UnexpectedLexeme},
+  utils::{
+    Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator,
+  },
+};
 
 use crate::types::LitStrDelimiterKind;
 

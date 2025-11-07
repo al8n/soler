@@ -1,8 +1,8 @@
 use logosky::{
   Lexable, Logos, Source,
-  logos::Lexer,
-  utils::{Lexeme, knowledge::LineTerminator, PositionedChar},
   error::UnexpectedLexeme,
+  logos::Lexer,
+  utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
 use crate::{
@@ -133,10 +133,10 @@ impl StringToken {
           let slash_pos = lexer_span.end + string_lexer.span().start;
           let pos = slash_pos + 1;
           errs.push(
-            StringError::unsupported_escape_character((slash_pos..pos + 1).into(), PositionedChar::with_position(
-              string_lexer.slice().last().copied().unwrap(),
-              pos,
-            ))
+            StringError::unsupported_escape_character(
+              (slash_pos..pos + 1).into(),
+              PositionedChar::with_position(string_lexer.slice().last().copied().unwrap(), pos),
+            )
             .into(),
           );
         }

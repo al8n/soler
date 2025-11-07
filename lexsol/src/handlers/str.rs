@@ -1,7 +1,7 @@
 use logosky::{
   Logos, Source,
-  logos::Lexer,
   error::{UnexpectedEot, UnknownLexeme},
+  logos::Lexer,
 };
 
 use crate::Lxr;
@@ -28,12 +28,7 @@ where
       match first {
         '0'..='9' | 'a'..='z' | 'A'..='Z' | '_' | '$' => {}
         _ => {
-          return UnknownLexeme::from_char(
-            lexer.span().start + idx,
-            first,
-            L::INIT,
-          )
-          .into();
+          return UnknownLexeme::from_char(lexer.span().start + idx, first, L::INIT).into();
         }
       }
 
@@ -57,12 +52,7 @@ where
           }
 
           if cur == 0 {
-            return UnknownLexeme::from_char(
-              span.end,
-              first,
-              L::INIT,
-            )
-            .into();
+            return UnknownLexeme::from_char(span.end, first, L::INIT).into();
           }
 
           lexer.bump(cur);

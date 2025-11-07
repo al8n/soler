@@ -1,13 +1,17 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{error::{DefaultContainer, FixedUnicodeEscapeError, HexEscapeError, IncompleteFixedUnicodeEscape, IncompleteHexEscape, Unclosed, UnexpectedEot, UnexpectedLexeme, UnknownLexeme}, utils::{
-  CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator
-}};
-
+use logosky::{
+  error::{
+    DefaultContainer, FixedUnicodeEscapeError, HexEscapeError, IncompleteFixedUnicodeEscape,
+    IncompleteHexEscape, Unclosed, UnexpectedEot, UnexpectedLexeme, UnknownLexeme,
+  },
+  utils::{
+    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman,
+    knowledge::LineTerminator,
+  },
+};
 
 use crate::{
-  error::{
-    EscapeSequenceError, HexStringError, StringError,
-  },
+  error::{EscapeSequenceError, HexStringError, StringError},
   sol::SOLIDITY,
   types::LitStrDelimiterKind,
 };
@@ -72,7 +76,8 @@ where
   }
 }
 
-impl<Char> core::error::Error for UnicodeStringError<Char> where
+impl<Char> core::error::Error for UnicodeStringError<Char>
+where
   Char: DisplayHuman + core::fmt::Debug + CharLen + 'static,
 {
   fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
@@ -113,7 +118,9 @@ impl<Char> UnicodeStringError<Char> {
   /// Create a unsupported escape character error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unsupported_escape_character(span: Span, char: PositionedChar<Char>) -> Self {
-    Self::EscapeSequenceError(EscapeSequenceError::unsupported(EscapedLexeme::from_positioned_char(span, char)))
+    Self::EscapeSequenceError(EscapeSequenceError::unsupported(
+      EscapedLexeme::from_positioned_char(span, char),
+    ))
   }
 
   /// Create a incomplete hexadecimal escape sequence error.
@@ -257,11 +264,7 @@ impl<Char, StateError> Error<Char, StateError> {
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_char(ch: Char, pos: usize) -> Self {
-    Self::Unknown(UnknownLexeme::from_char(
-      pos,
-      ch,
-      SOLIDITY(()),
-    ))
+    Self::Unknown(UnknownLexeme::from_char(pos, ch, SOLIDITY(())))
   }
 
   /// Creates an unknown lexeme error.
@@ -279,8 +282,11 @@ impl<Char, StateError> Error<Char, StateError> {
 
 /// A collection of errors
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Errors<Char = char, StateError = (), Container = DefaultContainer<Error<Char, StateError>>>
-{
+pub struct Errors<
+  Char = char,
+  StateError = (),
+  Container = DefaultContainer<Error<Char, StateError>>,
+> {
   errors: Container,
   _m: core::marker::PhantomData<Error<Char, StateError>>,
 }

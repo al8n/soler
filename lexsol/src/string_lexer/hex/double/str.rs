@@ -1,8 +1,8 @@
 use logosky::{
   Lexable, Logos, Source,
-  logos::Lexer,
-  utils::{Lexeme, knowledge::LineTerminator, PositionedChar},
   error::UnexpectedLexeme,
+  logos::Lexer,
+  utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
 use crate::{
