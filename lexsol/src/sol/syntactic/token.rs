@@ -384,13 +384,13 @@ enum Token<'a> {
   #[regex("ufixed[1-9][0-9]*x[1-9][0-9]*")]
   UFixed(&'a str),
 
-  // ------- Boolean literals -------
+  // ==================================== Boolean literals ====================================
   #[token("true", |lexer| Lit::lit_true(lexer.slice()))]
   #[token("false", |lexer| Lit::lit_false(lexer.slice()))]
-  // ------- Empty quoted string literals -------
+  // ==================================== Empty quoted string literals ====================================
   #[token("\"\"", |lexer| Lit::lit_empty_double_quoted_string(lexer.slice()))]
   #[token("''", |lexer| Lit::lit_empty_single_quoted_string(lexer.slice()))]
-  // ------- Regular string literals -------
+  // ==================================== Regular string literals ====================================
   // Double quoted non-empty string literal lexing
   #[regex(r#""(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice()))]
   // Error handling branches for double quoted non-empty string literal lexing
@@ -409,7 +409,7 @@ enum Token<'a> {
         .map(Into::into)
         .map_err(Errors::from_underlying)
   })]
-  // ------- Hex string literals -------
+  // ==================================== Hex string literals ====================================
   // Double quoted hex string literal lexing
   #[regex("hex\"(?&hex_string_content)\"", |lexer| Lit::lit_double_quoted_hex_string(lexer.slice()))]
   // Error handling branches for double quoted hex string literal lexing
@@ -428,7 +428,7 @@ enum Token<'a> {
       .map(Into::into)
       .map_err(Errors::from_underlying)
   })]
-  // ------- Unicode string literals -------
+  // ==================================== Unicode string literals ====================================
   // Double quoted unicode string literal lexing
   #[regex(r#"unicode"(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice()))]
   // Error handling branches for double quoted unicode string literal lexing
