@@ -2,6 +2,7 @@ use logosky::{
   Logos, Source,
   error::{UnexpectedEot, UnknownLexeme},
   logos::Lexer,
+  utils::{Lexeme, PositionedChar, Span},
 };
 
 use crate::Lxr;
@@ -62,4 +63,50 @@ where
       }
     }
   }
+}
+
+#[allow(clippy::result_large_err)]
+#[cfg_attr(not(tarpaulin), inline(always))]
+pub(crate) fn handle_number_suffix<'a, S, T, E>(
+  lexer: &mut Lexer<'a, T>,
+  unexpected_suffix: impl FnOnce(Lexeme<u8>) -> E,
+) -> Result<(), E>
+where
+  T: Logos<'a, Source = S>,
+  S: ?Sized + Source,
+  S::Slice<'a>: AsRef<[u8]>,
+{
+  let remainder = lexer.remainder();
+
+  let mut end = 0;
+  let mut first = None;
+  for (idx, ch) in remainder.as_ref().iter().copied().enumerate() {
+    match ch {
+      b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'$' => {
+        end = idx + 1;
+        if idx == 0 {
+          first = Some(ch);
+        }
+        continue;
+      }
+      _ => break,
+    }
+  }
+
+  let l = match end {
+    0 => return Ok(()),
+    1 => {
+      let ch = first.unwrap();
+      let pc = PositionedChar::with_position(ch, lexer.span().end);
+      unexpected_suffix(Lexeme::Char(pc))
+    }
+    len => {
+      let span_start = lexer.span().end;
+      let span_end = span_start + len;
+      unexpected_suffix(Lexeme::Range(Span::new(span_start, span_end)))
+    }
+  };
+
+  lexer.bump(end);
+  Err(l)
 }

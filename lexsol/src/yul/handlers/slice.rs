@@ -1,5 +1,6 @@
 use logosky::{
   Logos, Source,
+  error::ErrorContainer,
   logos::Lexer,
   utils::{Lexeme, PositionedChar, Span},
 };
@@ -58,52 +59,6 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-fn handle_suffix_inner<'a, S, T, E>(
-  lexer: &mut Lexer<'a, T>,
-  unexpected_suffix: impl FnOnce(Lexeme<u8>) -> E,
-) -> Result<(), E>
-where
-  T: Logos<'a, Source = S>,
-  S: ?Sized + Source,
-  S::Slice<'a>: AsRef<[u8]>,
-{
-  let remainder = lexer.remainder();
-
-  let mut end = 0;
-  let mut first = None;
-  for (idx, ch) in remainder.as_ref().iter().copied().enumerate() {
-    match ch {
-      b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'$' => {
-        end = idx + 1;
-        if idx == 0 {
-          first = Some(ch);
-        }
-        continue;
-      }
-      _ => break,
-    }
-  }
-
-  let l = match end {
-    0 => return Ok(()),
-    1 => {
-      let ch = first.unwrap();
-      let pc = PositionedChar::with_position(ch, lexer.span().end);
-      unexpected_suffix(Lexeme::Char(pc))
-    }
-    len => {
-      let span_start = lexer.span().end;
-      let span_end = span_start + len;
-      unexpected_suffix(Lexeme::Range(Span::new(span_start, span_end)))
-    }
-  };
-
-  lexer.bump(end);
-  Err(l)
-}
-
-#[allow(clippy::result_large_err)]
-#[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn handle_leading_zero_and_suffix<'a, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
 ) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
@@ -117,7 +72,7 @@ where
   let mut errs: Errors<u8, Extras> = Errors::default();
   errs.push(err);
 
-  match handle_suffix_inner::<_, _, DecimalError<u8>>(lexer, |l| {
+  match crate::handlers::slice::handle_number_suffix::<_, _, DecimalError<u8>>(lexer, |l| {
     DecimalError::unexpected_suffix(span.into(), l)
   }) {
     Ok(_) => Err(errs),
@@ -141,7 +96,7 @@ where
   S::Slice<'a>: AsRef<[u8]>,
   Error<u8, Extras>: From<E>,
 {
-  handle_suffix_inner::<_, _, E>(lexer, unexpected_suffix)
+  crate::handlers::slice::handle_number_suffix::<_, _, E>(lexer, unexpected_suffix)
     .map(|_| from_slice(lexer.slice()))
     .map_err(Into::into)
 }

@@ -5,6 +5,7 @@ macro_rules! token {
       use logosky::{
         Lexable, Logos, logos::Lexer,
         utils::tracker::{LimitExceeded, Limiter, Tracker},
+        error::ErrorContainer,
       };
 
       use crate::{

@@ -1,4 +1,4 @@
-use crate::types::{LitBool, LitHexStr, LitNumber, LitRegularStr, LitStrDelimiterKind};
+use crate::types::{LitHexStr, LitRegularStr, LitStrDelimiterKind};
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
 /// The kind of string literal of Solidity
