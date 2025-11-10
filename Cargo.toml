@@ -1,29 +1,41 @@
-[package]
-name = "template-rs"
+[workspace]
+resolver = "3"
+members = [
+  "lexsol",
+  "soler",
+]
+
+[workspace.package]
 version = "0.0.0"
-edition = "2021"
-repository = "https://github.com/al8n/template-rs"
-homepage = "https://github.com/al8n/template-rs"
-documentation = "https://docs.rs/template-rs"
+edition = "2024"
+repository = "https://github.com/al8n/soler"
+homepage = "https://github.com/al8n/soler"
+documentation = "https://docs.rs/soler"
 description = "A template for creating Rust open-source repo on GitHub"
 license = "MIT OR Apache-2.0"
-rust-version = "1.73"
+rust-version = "1.85"
 
-[[bench]]
-path = "benches/foo.rs"
-name = "foo"
-harness = false
+[workspace.package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
-[features]
-default = ["std"]
-alloc = []
-std = []
+[workspace.dependencies]
+paste = "1"
+logos = { version = "0.15", default-features = false, features = ["export_derive"] }
+logosky = { version = "0.3", default-features = false, path = "../logosky" }
+thiserror = { version = "2", default-features = false }
+derive_more = { version = "2", default-features = false, features = ["display", "from", "unwrap", "try_unwrap", "is_variant", "deref_mut"] }
 
-[dependencies]
+hipstr = { version = "0.8", default-features = false }
+bytes = { version = "1", default-features = false }
 
-[dev-dependencies]
-criterion = "0.7"
-tempfile = "3"
+[workspace.lints.rust]
+rust_2018_idioms = "warn"
+single_use_lifetimes = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(all_tests)',
+  'cfg(tarpaulin)',
+] }
 
 [profile.bench]
 opt-level = 3
@@ -34,15 +46,3 @@ incremental = false
 debug-assertions = false
 overflow-checks = false
 rpath = false
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
-
-[lints.rust]
-rust_2018_idioms = "warn"
-single_use_lifetimes = "warn"
-unexpected_cfgs = { level = "warn", check-cfg = [
-  'cfg(all_tests)',
-  'cfg(tarpaulin)',
-] }

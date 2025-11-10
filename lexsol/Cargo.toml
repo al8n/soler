@@ -1,0 +1,32 @@
+[package]
+name = "lexsol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/lexsol"
+description = "Lexsol crate"
+
+[features]
+default = ["std", "evm"]
+alloc = ["logosky/alloc"]
+std = ["logosky/std"]
+
+evm = []
+
+bytes = ["dep:bytes", "logosky/bytes"]
+hipstr = ["dep:hipstr", "logosky/hipstr"]
+
+[dependencies]
+logosky.workspace = true
+paste.workspace = true
+thiserror.workspace = true
+derive_more.workspace = true
+
+bytes = { workspace = true, optional = true }
+hipstr = { workspace = true, optional = true }
+
+[lints]
+workspace = true

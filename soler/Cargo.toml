@@ -1,0 +1,24 @@
+[package]
+name = "soler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository = "https://github.com/al8n/soler"
+homepage = "https://github.com/al8n/soler"
+documentation = "https://docs.rs/soler"
+description = "Solidity compiler"
+
+[features]
+default = ["std"]
+alloc = []
+std = []
+
+[dependencies]
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
