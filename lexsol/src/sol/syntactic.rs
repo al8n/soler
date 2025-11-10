@@ -182,6 +182,10 @@ pub enum Token<S> {
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
   Pure,
+  /// The `pragma` keyword.
+  #[unwrap(ignore)]
+  #[try_unwrap(ignore)]
+  Pragma,
   /// The `receive` keyword.
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
@@ -567,6 +571,8 @@ pub enum TokenKind {
   Public,
   /// The `pure` state mutability keyword.
   Pure,
+  /// The `pragma` keyword.
+  Pragma,
   /// The `receive` keyword.
   Receive,
   /// The `return` keyword.
@@ -786,6 +792,7 @@ impl<S> Token<S> {
       Self::Private => TokenKind::Private,
       Self::Public => TokenKind::Public,
       Self::Pure => TokenKind::Pure,
+      Self::Pragma => TokenKind::Pragma,
       Self::Receive => TokenKind::Receive,
       Self::Return => TokenKind::Return,
       Self::Returns => TokenKind::Returns,

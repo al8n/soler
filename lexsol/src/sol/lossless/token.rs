@@ -178,6 +178,8 @@ macro_rules! token {
         Public,
         #[token("pure", increase_token_and_check_on_token)]
         Pure,
+        #[token("pragma", increase_token_and_check_on_token)]
+        Pragma,
         #[token("receive", increase_token_and_check_on_token)]
         Receive,
         #[token("return", increase_token_and_check_on_token)]
@@ -745,6 +747,7 @@ macro_rules! token {
             Token::Private => Self::Private,
             Token::Public => Self::Public,
             Token::Pure => Self::Pure,
+            Token::Pragma => Self::Pragma,
             Token::Receive => Self::Receive,
             Token::Return => Self::Return,
             Token::Returns => Self::Returns,
