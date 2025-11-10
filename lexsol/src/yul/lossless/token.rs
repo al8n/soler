@@ -150,7 +150,7 @@ macro_rules! token {
             },
           }
         })]
-        #[regex("[1-9][0-9_]+]", |lexer| {
+        #[regex("[1-9][0-9_]+", |lexer| {
           match handlers::$handlers::handle_malformed_decimal_suffix(lexer) {
             Ok(lit) => {
               lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;

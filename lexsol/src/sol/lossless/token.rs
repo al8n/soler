@@ -549,9 +549,8 @@ macro_rules! token {
         })]
         // ==================================== Unicode string literals ====================================
         // Double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&double_quoted_chars)""#, |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice())))]
+        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice())))]
         // Error handling branches for double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&double_quoted_chars)"#, unclosed_double_quoted_unicode_string_error)]
         #[token("unicode\"", |lexer| {
             match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
               DoubleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
@@ -574,9 +573,8 @@ macro_rules! token {
             }
         })]
         // Single quoted unicode string literal lexing
-        #[regex("unicode'(?&single_quoted_chars)'", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice())))]
+        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice())))]
         // Error handling branches for single quoted unicode string literal lexing
-        #[regex("unicode'(?&single_quoted_chars)", unclosed_single_quoted_unicode_string_error)]
         #[token("unicode\'", |lexer| {
             match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
               SingleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
@@ -864,24 +862,6 @@ macro_rules! token {
       ) -> Result<Lit<$slice>, Errors> {
         increase_token_and_check_on_error_token(lexer, |l| {
           Error::HexString(crate::error::HexStringError::unclosed_single_quote(l.span().into()))
-        })
-      }
-
-      #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_unicode_string_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
-          Error::UnicodeString(crate::error::sol::UnicodeStringError::unclosed_double_quote(l.span().into()))
-        })
-      }
-
-      #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_unicode_string_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
-          Error::UnicodeString(crate::error::sol::UnicodeStringError::unclosed_single_quote(l.span().into()))
         })
       }
 

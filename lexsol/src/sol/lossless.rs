@@ -518,129 +518,251 @@ pub enum TokenKind {
   /// '\f'
   FormFeed,
 
-  // Keywords
-  Abstract,
-  Address,
-  Anonymous,
-  As,
-  Assembly,
-  Bool,
-  Break,
-  Bytes,
-  Calldata,
-  Catch,
-  Constant,
-  Constructor,
-  Continue,
-  Contract,
-  Delete,
-  Do,
-  Else,
-  Emit,
-  Enum,
-  Event,
-  External,
-  Fallback,
-  For,
-  Function,
-  If,
-  Immutable,
-  Import,
-  Indexed,
-  Interface,
-  Internal,
-  Is,
-  Library,
-  Mapping,
-  Memory,
-  Modifier,
-  New,
-  Override,
-  Payable,
-  Private,
-  Public,
-  Pure,
-  Receive,
-  Return,
-  Returns,
-  Storage,
-  String,
-  Struct,
-  Try,
-  Type,
-  Unchecked,
-  Using,
-  View,
-  Virtual,
-  While,
-
-  // Delimiters
-  LParen,
-  RParen,
-  LBracket,
-  RBracket,
-  LBrace,
-  RBrace,
-
-  // Punctuation & operators
-  Colon,
-  Semicolon,
-  Dot,
-  Question,
-  FatArrow,
-  ThinArrow,
-  Assign,
-  BitOrAssign,
-  BitAndAssign,
-  BitXorAssign,
-  ShlAssign,
-  SarAssign,
-  ShrAssign,
-  AddAssign,
-  SubAssign,
-  MulAssign,
-  DivAssign,
-  ModAssign,
-  Comma,
-  Or,
-  And,
-  BitOr,
-  BitAnd,
-  BitXor,
-  Shl,
-  Sar,
-  Shr,
-  Add,
-  Sub,
-  Mul,
-  Div,
-  Mod,
-  Exp,
-  Eq,
-  Ne,
-  Lt,
-  Le,
-  Gt,
-  Ge,
-  Not,
-  BitNot,
-  Inc,
-  Dec,
-
-  // Type-like payload categories
-  FixedBytes,
-  Denomination,
-  Int,
-  Uint,
-  Fixed,
-  UFixed,
-
-  // Trivia
+  // ----- Comments -----
+  /// Solidity line comment.
   LineComment,
+  /// Solidity multi-line comment.
   MultiLineComment,
 
-  // Literals & identifiers
+  // ----- Keywords -----
+  /// The `abstract` keyword.
+  Abstract,
+  /// The `address` type keyword.
+  Address,
+  /// The `anonymous` keyword.
+  Anonymous,
+  /// The `as` keyword.
+  As,
+  /// The `assembly` keyword.
+  Assembly,
+  /// The `bool` type keyword.
+  Bool,
+  /// The `break` keyword.
+  Break,
+  /// The `bytes` keyword (dynamic byte array type).
+  Bytes,
+  /// The `calldata` data location keyword.
+  Calldata,
+  /// The `catch` keyword.
+  Catch,
+  /// The `constant` keyword (legacy).
+  Constant,
+  /// The `constructor` keyword.
+  Constructor,
+  /// The `continue` keyword.
+  Continue,
+  /// The `contract` keyword.
+  Contract,
+  /// The `delete` keyword.
+  Delete,
+  /// The `do` keyword.
+  Do,
+  /// The `else` keyword.
+  Else,
+  /// The `emit` keyword.
+  Emit,
+  /// The `enum` keyword.
+  Enum,
+  /// The `event` keyword.
+  Event,
+  /// The `external` visibility keyword.
+  External,
+  /// The `fallback` keyword.
+  Fallback,
+  /// The `for` keyword.
+  For,
+  /// The `function` keyword.
+  Function,
+  /// The `if` keyword.
+  If,
+  /// The `immutable` keyword.
+  Immutable,
+  /// The `import` keyword.
+  Import,
+  /// The `indexed` event parameter modifier.
+  Indexed,
+  /// The `interface` keyword.
+  Interface,
+  /// The `internal` visibility keyword.
+  Internal,
+  /// The `is` inheritance keyword.
+  Is,
+  /// The `library` keyword.
+  Library,
+  /// The `mapping` keyword.
+  Mapping,
+  /// The `memory` data location keyword.
+  Memory,
+  /// The `modifier` keyword.
+  Modifier,
+  /// The `new` keyword.
+  New,
+  /// The `override` keyword.
+  Override,
+  /// The `payable` keyword.
+  Payable,
+  /// The `private` visibility keyword.
+  Private,
+  /// The `public` visibility keyword.
+  Public,
+  /// The `pure` state mutability keyword.
+  Pure,
+  /// The `receive` keyword.
+  Receive,
+  /// The `return` keyword.
+  Return,
+  /// The `returns` keyword.
+  Returns,
+  /// The `storage` data location keyword.
+  Storage,
+  /// The `string` type keyword.
+  String,
+  /// The `struct` keyword.
+  Struct,
+  /// The `try` keyword.
+  Try,
+  /// The `type` keyword.
+  Type,
+  /// The `unchecked` keyword.
+  Unchecked,
+  /// The `using` keyword.
+  Using,
+  /// The `view` state mutability keyword.
+  View,
+  /// The `virtual` keyword.
+  Virtual,
+  /// The `while` keyword.
+  While,
+
+  // ----- Delimiters & punctuation -----
+  /// The `(` symbol.
+  LParen,
+  /// The `)` symbol.
+  RParen,
+  /// The `[` symbol.
+  LBracket,
+  /// The `]` symbol.
+  RBracket,
+  /// The `{` symbol.
+  LBrace,
+  /// The `}` symbol.
+  RBrace,
+  /// The `:` symbol.
+  Colon,
+  /// The `;` symbol.
+  Semicolon,
+  /// The `.` symbol.
+  Dot,
+  /// The `?` symbol.
+  Question,
+  /// The `=>` fat arrow.
+  FatArrow,
+  /// The `->` thin arrow.
+  ThinArrow,
+  /// The `=` assignment operator.
+  Assign,
+
+  // ----- Compound assignment operators -----
+  /// The `|=` operator.
+  BitOrAssign,
+  /// The `&=` operator.
+  BitAndAssign,
+  /// The `^=` operator.
+  BitXorAssign,
+  /// The `<<=` operator.
+  ShlAssign,
+  /// The `>>=` arithmetic right-shift assign operator.
+  SarAssign,
+  /// The `>>>=` logical right-shift assign operator.
+  ShrAssign,
+  /// The `+=` operator.
+  AddAssign,
+  /// The `-=` operator.
+  SubAssign,
+  /// The `*=` operator.
+  MulAssign,
+  /// The `/=` operator.
+  DivAssign,
+  /// The `%=` operator.
+  ModAssign,
+
+  /// The `,` symbol.
+  Comma,
+
+  // ----- Logical & bitwise operators -----
+  /// The `||` logical-or operator.
+  Or,
+  /// The `&&` logical-and operator.
+  And,
+  /// The `|` bitwise-or operator.
+  BitOr,
+  /// The `&` bitwise-and operator.
+  BitAnd,
+  /// The `^` bitwise-xor operator.
+  BitXor,
+  /// The `<<` shift-left operator.
+  Shl,
+  /// The `>>` arithmetic right-shift operator.
+  Sar,
+  /// The `>>>` logical right-shift operator.
+  Shr,
+
+  // ----- Arithmetic operators -----
+  /// The `+` operator.
+  Add,
+  /// The `-` operator.
+  Sub,
+  /// The `*` operator.
+  Mul,
+  /// The `/` operator.
+  Div,
+  /// The `%` operator.
+  Mod,
+  /// The `**` exponentiation operator.
+  Exp,
+
+  // ----- Comparison operators -----
+  /// The `==` equality operator.
+  Eq,
+  /// The `!=` inequality operator.
+  Ne,
+  /// The `<` operator.
+  Lt,
+  /// The `<=` operator.
+  Le,
+  /// The `>` operator.
+  Gt,
+  /// The `>=` operator.
+  Ge,
+
+  // ----- Unary operators -----
+  /// The `!` logical-negation operator.
+  Not,
+  /// The `~` bitwise-negation operator.
+  BitNot,
+  /// The `++` increment operator.
+  Inc,
+  /// The `--` decrement operator.
+  Dec,
+
+  // ----- Type-like & literal-ish kinds -----
+  /// A fixed-size `bytesN` type keyword (e.g. `bytes32`).
+  FixedBytes,
+  /// A denomination suffix (e.g. `wei`, `gwei`, `ether`, time units).
+  Denomination,
+  /// A signed integer type keyword (e.g. `int8`, `int256`).
+  Int,
+  /// An unsigned integer type keyword (e.g. `uint8`, `uint256`).
+  Uint,
+  /// A signed fixed-point type keyword (e.g. `fixed128x18`).
+  Fixed,
+  /// An unsigned fixed-point type keyword (e.g. `ufixed128x18`).
+  UFixed,
+
+  // ----- Literals & identifiers -----
+  /// A literal value (numeric, string, hex string, boolean, etc.).
   Lit,
+  /// An identifier (user-defined name).
   Identifier,
 }
 

@@ -453,18 +453,16 @@ macro_rules! token {
         })]
         // ==================================== Unicode string literals ====================================
         // Double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice()))]
+        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice()))]
         // Error handling branches for double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&double_quoted_chars)"#, |lexer| unclosed_double_quoted_unicode_string_error(lexer.span().into()))]
         #[token("unicode\"", |lexer| {
             <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
               .map(Into::into)
               .map_err(Errors::from_underlying)
         })]
         // Single quoted unicode string literal lexing
-        #[regex("unicode'(?&single_quoted_chars)'", |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice()))]
+        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice()))]
         // Error handling branches for single quoted unicode string literal lexing
-        #[regex("unicode'(?&single_quoted_chars)", |lexer| unclosed_single_quoted_unicode_string_error(lexer.span().into()))]
         #[token("unicode\'", |lexer| {
             <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
               .map(Into::into)
@@ -638,20 +636,6 @@ macro_rules! token {
       fn unclosed_single_quoted_hex_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_single_quote(span),
-        )))
-      }
-
-      #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_unicode_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
-        Err(Errors::from(Error::UnicodeString(
-          crate::error::sol::UnicodeStringError::unclosed_double_quote(span),
-        )))
-      }
-
-      #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_unicode_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
-        Err(Errors::from(Error::UnicodeString(
-          crate::error::sol::UnicodeStringError::unclosed_single_quote(span),
         )))
       }
 
