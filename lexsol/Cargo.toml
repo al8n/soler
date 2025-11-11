@@ -10,10 +10,12 @@ documentation = "https://docs.rs/lexsol"
 description = "Lexsol crate"
 
 [features]
-default = ["std", "evm"]
+default = ["std", "evm", "yul", "solidity"]
 alloc = ["logosky/alloc"]
 std = ["logosky/std"]
 
+yul = []
+solidity = []
 evm = []
 
 bytes = ["dep:bytes", "logosky/bytes"]

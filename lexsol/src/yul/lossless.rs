@@ -55,7 +55,7 @@ pub enum Token<S> {
   /// ":="
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
-  Assign,
+  ColonAssign,
   /// "->"
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
@@ -166,7 +166,7 @@ pub enum TokenKind {
   FormFeed,
 
   /// ":="
-  Assign,
+  ColonAssign,
   /// "->"
   ThinArrow,
   /// "{"
@@ -237,7 +237,7 @@ impl<S> Token<S> {
       Self::NewLine => TokenKind::NewLine,
       Self::CarriageReturn => TokenKind::CarriageReturn,
       Self::CarriageReturnNewLine => TokenKind::CarriageReturnNewLine,
-      Self::Assign => TokenKind::Assign,
+      Self::ColonAssign => TokenKind::ColonAssign,
       Self::ThinArrow => TokenKind::ThinArrow,
       Self::LBrace => TokenKind::LBrace,
       Self::RBrace => TokenKind::RBrace,

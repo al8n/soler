@@ -62,7 +62,7 @@ macro_rules! token {
       #[logos(subpattern hexadecimal = "0x(?&hex_digit)+")]
       pub enum Token $(<$lt>)? {
         #[token(":=")]
-        Assign,
+        ColonAssign,
         #[token("->")]
         ThinArrow,
         #[token("{", |lexer| lexer.increase_and_check().map_err(|e| Errors::from(Error::State(e))))]
@@ -243,7 +243,7 @@ macro_rules! token {
         #[cfg_attr(not(tarpaulin), inline(always))]
         fn from(value: Token $(<$lt>)?) -> Self {
           match value {
-            Token::Assign => Self::Assign,
+            Token::ColonAssign => Self::ColonAssign,
             Token::ThinArrow => Self::ThinArrow,
             Token::LBrace => Self::LBrace,
             Token::RBrace => Self::RBrace,

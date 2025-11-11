@@ -1,11 +1,11 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{Token as TokenT, utils::recursion_tracker::RecursionLimitExceeded};
+use logosky::{OperatorToken, PunctuatorToken, LitToken, IdentifierToken, KeywordToken, Token as TokenT, utils::recursion_tracker::RecursionLimitExceeded};
 
 use token::token;
 
 use super::Lit;
 
-use crate::error::yul as error;
+use crate::{error::yul as error, types::{LitBool, LitNumber}};
 
 mod bytes;
 mod str;
@@ -30,7 +30,7 @@ pub enum Token<S> {
   /// ":="
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
-  Assign,
+  ColonAssign,
   /// "->"
   #[unwrap(ignore)]
   #[try_unwrap(ignore)]
@@ -122,7 +122,7 @@ pub enum Token<S> {
 #[non_exhaustive]
 pub enum TokenKind {
   /// ":="
-  Assign,
+  ColonAssign,
   /// "->"
   ThinArrow,
   /// "{"
@@ -178,7 +178,7 @@ impl<S> Token<S> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn kind(&self) -> TokenKind {
     match self {
-      Self::Assign => TokenKind::Assign,
+      Self::ColonAssign => TokenKind::ColonAssign,
       Self::ThinArrow => TokenKind::ThinArrow,
       Self::LBrace => TokenKind::LBrace,
       Self::RBrace => TokenKind::RBrace,
@@ -204,10 +204,151 @@ impl<S> Token<S> {
   }
 }
 
-#[test]
-fn t() {
-  let src = "123_456";
-  let mut lexer: Lexer<'_> = Lexer::new(src);
-  let token = lexer.iter().next().unwrap();
-  println!("{:?}", token);
+impl<'a, S: 'a> PunctuatorToken<'a> for Token<S>
+where
+  Token<S>: logosky::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_brace_open(&self) -> bool {
+    matches!(self, Self::LBrace)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_brace_close(&self) -> bool {
+    matches!(self, Self::RBrace)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_paren_open(&self) -> bool {
+    matches!(self, Self::LParen)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_paren_close(&self) -> bool {
+    matches!(self, Self::RParen)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_dot(&self) -> bool {
+    matches!(self, Self::Dot)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_comma(&self) -> bool {
+    matches!(self, Self::Comma)
+  }
+}
+
+impl<'a, S: 'a> OperatorToken<'a> for Token<S>
+where
+  Token<S>: logosky::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_colon_assign(&self) -> bool {
+    matches!(self, Self::ColonAssign)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_arrow_operator(&self) -> bool {
+    matches!(self, Self::ThinArrow)
+  }
+}
+
+impl<'a, S: 'a> LitToken<'a> for Token<S>
+where
+  Token<S>: logosky::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_literal(&self) -> bool {
+    matches!(self, Self::Lit(_))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_decimal_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Number(LitNumber::Decimal(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_hexadecimal_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Number(LitNumber::Hexadecimal(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_boolean_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Boolean(_)))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_true_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Boolean(LitBool::True(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_false_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Boolean(LitBool::False(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_string_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::String(_)))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_inline_string_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::String(_)))
+  }
+}
+
+impl<'a, S: 'a> IdentifierToken<'a> for Token<S>
+where
+  Token<S>: logosky::Token<'a>,
+  <<Token<S> as logosky::Token<'a>>::Logos as logosky::Logos<'a>>::Source: logosky::Source<Slice<'a> = S>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_identifier(&self) -> bool {
+    matches!(self, Self::Identifier(_))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn identifier(&self) -> Option<&<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>> {
+    match self {
+      Self::Identifier(s) => Some(s),
+      _ => None,
+    }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn try_into_identifier(self) -> Result<<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>, Self>
+  where
+    Self: Sized,
+  {
+    self.try_unwrap_identifier().map_err(|e| e.input)
+  }
+}
+
+impl<'a, S: 'a> KeywordToken<'a> for Token<S>
+where
+  Token<S>: logosky::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn matches_keyword(&self, keyword: &str) -> bool {
+    self.keyword().is_some_and(|kw| kw == keyword)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn keyword(&self) -> Option<&'static str> {
+    match self {
+      Self::Leave => Some("leave"),
+      Self::Continue => Some("continue"),
+      Self::Break => Some("break"),
+      Self::Switch => Some("switch"),
+      Self::Case => Some("case"),
+      Self::Default => Some("default"),
+      Self::Function => Some("function"),
+      Self::Let => Some("let"),
+      Self::If => Some("if"),
+      Self::For => Some("for"),
+      _ => None,
+    }
+  }
 }

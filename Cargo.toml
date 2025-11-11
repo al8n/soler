@@ -2,6 +2,8 @@
 resolver = "3"
 members = [
   "lexsol",
+  "parsol",
+  "paryul",
   "soler",
 ]
 
@@ -28,6 +30,10 @@ derive_more = { version = "2", default-features = false, features = ["display", 
 
 hipstr = { version = "0.8", default-features = false }
 bytes = { version = "1", default-features = false }
+
+lexsol = { path = "lexsol", default-features = false }
+paryul = { path = "paryul", default-features = false }
+parsol = { path = "parsol", default-features = false }
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn"

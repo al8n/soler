@@ -84,7 +84,7 @@ macro_rules! token {
         FormFeed,
 
         #[token(":=", increase_token_and_check_on_token)]
-        Assign,
+        ColonAssign,
         #[token("->", increase_token_and_check_on_token)]
         ThinArrow,
         #[token("{", |lexer| lexer.increase_both_and_check().map_err(|e| Errors::from(Error::State(e))))]
@@ -429,7 +429,7 @@ macro_rules! token {
             Token::CarriageReturn => Self::CarriageReturn,
             Token::CarriageReturnNewLine => Self::CarriageReturnNewLine,
             Token::FormFeed => Self::FormFeed,
-            Token::Assign => Self::Assign,
+            Token::ColonAssign => Self::ColonAssign,
             Token::ThinArrow => Self::ThinArrow,
             Token::LBrace => Self::LBrace,
             Token::RBrace => Self::RBrace,

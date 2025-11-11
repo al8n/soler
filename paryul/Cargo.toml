@@ -1,5 +1,5 @@
 [package]
-name = "parsol"
+name = "paryul"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
@@ -12,18 +12,16 @@ metadata.workspace = true
 
 [features]
 default = ["std", "evm"]
-alloc = ["lexsol/alloc"]
-std = ["lexsol/std"]
+alloc = ["lexsol/alloc", "logosky/alloc"]
+std = ["lexsol/std", "logosky/default"]
 
-yul = []
 evm = ["lexsol/evm"]
 
+
 [dependencies]
-lexsol.workspace = true
+derive_more.workspace = true
+lexsol = { workspace = true, features = ["yul"] }
+logosky.workspace = true
 
 [lints]
 workspace = true
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
