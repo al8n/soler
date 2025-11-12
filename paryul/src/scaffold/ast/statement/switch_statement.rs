@@ -16,13 +16,14 @@ use crate::SyntaxKind;
 
 /// A switch case in a switch statement.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct SwitchCase<Literal, Block> {
+pub struct SwitchCase<Literal, Block, Lang = YUL> {
   span: Span,
   literal: Literal,
   block: Block,
+  _m: PhantomData<Lang>,
 }
 
-impl<Literal, Block> SwitchCase<Literal, Block> {
+impl<Literal, Block, Lang> SwitchCase<Literal, Block, Lang> {
   /// Create a new switch case.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, literal: Literal, block: Block) -> Self {
@@ -30,6 +31,7 @@ impl<Literal, Block> SwitchCase<Literal, Block> {
       span,
       literal,
       block,
+      _m: PhantomData,
     }
   }
 
@@ -52,7 +54,7 @@ impl<Literal, Block> SwitchCase<Literal, Block> {
   }
 }
 
-impl<'a, Literal, Block, I, T, Error> Parseable<'a, I, T, Error> for SwitchCase<Literal, Block>
+impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for SwitchCase<Literal, Block, Lang>
 where
   T: KeywordToken<'a>,
   Literal: Parseable<'a, I, T, Error>,
@@ -76,16 +78,17 @@ where
 
 /// The default case in a switch statement.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct DefaultCase<Block> {
+pub struct DefaultCase<Block, Lang = YUL> {
   span: Span,
   block: Block,
+  _m: PhantomData<Lang>,
 }
 
-impl<Block> DefaultCase<Block> {
+impl<Block, Lang> DefaultCase<Block, Lang> {
   /// Create a new default case.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, block: Block) -> Self {
-    Self { span, block }
+    Self { span, block, _m: PhantomData }
   }
 
   /// Get the span of the default case.
@@ -101,7 +104,7 @@ impl<Block> DefaultCase<Block> {
   }
 }
 
-impl<'a, Block, I, T, Error> Parseable<'a, I, T, Error> for DefaultCase<Block>
+impl<'a, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for DefaultCase<Block, Lang>
 where
   T: KeywordToken<'a>,
   Block: Parseable<'a, I, T, Error>,
@@ -129,14 +132,14 @@ where
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Case<Literal, Block> {
+pub enum Case<Literal, Block, Lang = YUL> {
   /// The switch case.
-  Switch(SwitchCase<Literal, Block>),
+  Switch(SwitchCase<Literal, Block, Lang>),
   /// The default case.
-  Default(DefaultCase<Block>),
+  Default(DefaultCase<Block, Lang>),
 }
 
-impl<'a, Literal, Block, I, T, Error> Parseable<'a, I, T, Error> for Case<Literal, Block>
+impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for Case<Literal, Block, Lang>
 where
   T: KeywordToken<'a>,
   Literal: Parseable<'a, I, T, Error>,
@@ -237,8 +240,8 @@ impl<Expr, Case, Container, Lang> SwitchStatement<Expr, Case, Container, Lang> {
   }
 }
 
-impl<'a, Expr, Case, Container, I, T, Error> Parseable<'a, I, T, Error>
-  for SwitchStatement<Expr, Case, Container, YUL>
+impl<'a, Expr, Case, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for SwitchStatement<Expr, Case, Container, Lang>
 where
   T: KeywordToken<'a>,
   Expr: Parseable<'a, I, T, Error>,

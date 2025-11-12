@@ -12,3 +12,9 @@ pub mod expression;
 
 /// The AST for [yul-statement](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulSwitchStatement)
 pub mod statement;
+
+/// The AST for [yul-variable-definition](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDefinition)
+pub mod variable_definition;
+
+/// The AST for [yul-assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
+pub mod assignment;
