@@ -1,11 +1,17 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{OperatorToken, PunctuatorToken, LitToken, IdentifierToken, KeywordToken, Token as TokenT, utils::recursion_tracker::RecursionLimitExceeded};
+use logosky::{
+  IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken, Require,
+  Token as TokenT, TriviaToken, utils::recursion_tracker::RecursionLimitExceeded,
+};
 
 use token::token;
 
 use super::Lit;
 
-use crate::{error::yul as error, types::{LitBool, LitNumber}};
+use crate::{
+  error::yul as error,
+  types::{LitBool, LitNumber},
+};
 
 mod bytes;
 mod str;
@@ -204,6 +210,16 @@ impl<S> Token<S> {
   }
 }
 
+impl<'a, S: 'a> TriviaToken<'a> for Token<S>
+where
+  Token<S>: logosky::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_trivia(&self) -> bool {
+    false
+  }
+}
+
 impl<'a, S: 'a> PunctuatorToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
@@ -302,7 +318,8 @@ where
 impl<'a, S: 'a> IdentifierToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
-  <<Token<S> as logosky::Token<'a>>::Logos as logosky::Logos<'a>>::Source: logosky::Source<Slice<'a> = S>,
+  <<Token<S> as logosky::Token<'a>>::Logos as logosky::Logos<'a>>::Source:
+    logosky::Source<Slice<'a> = S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_identifier(&self) -> bool {
@@ -310,7 +327,9 @@ where
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn identifier(&self) -> Option<&<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>> {
+  fn identifier(
+    &self,
+  ) -> Option<&<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>> {
     match self {
       Self::Identifier(s) => Some(s),
       _ => None,
@@ -318,7 +337,9 @@ where
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn try_into_identifier(self) -> Result<<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>, Self>
+  fn try_into_identifier(
+    self,
+  ) -> Result<<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>, Self>
   where
     Self: Sized,
   {
@@ -350,5 +371,18 @@ where
       Self::For => Some("for"),
       _ => None,
     }
+  }
+}
+
+#[cfg(feature = "evm")]
+#[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
+impl<S> Require<super::EvmBuiltinFunction> for Token<S> {
+  type Err = Self;
+
+  fn require(self) -> Result<super::EvmBuiltinFunction, Self::Err>
+  where
+    Self: Sized,
+  {
+    self.try_unwrap_evm_builtin().map_err(|e| e.input)
   }
 }

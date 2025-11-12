@@ -7,7 +7,9 @@ pub mod syntactic;
 
 mod handlers;
 
-use crate::types::{LitBool, LitHexStr, LitNumber, LitRegularStr, LitStrDelimiterKind};
+use crate::types::{
+  LitBool, LitDecimal, LitHexStr, LitHexadecimal, LitNumber, LitRegularStr, LitStrDelimiterKind,
+};
 
 /// The Yul language marker.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::Display)]
@@ -115,12 +117,12 @@ impl<S> Lit<S> {
 
   #[inline]
   pub(super) const fn lit_decimal(s: S) -> Self {
-    Self::Number(LitNumber::Decimal(s))
+    Self::Number(LitNumber::Decimal(LitDecimal::new(s)))
   }
 
   #[inline]
   pub(super) const fn lit_hexadecimal(s: S) -> Self {
-    Self::Number(LitNumber::Hexadecimal(s))
+    Self::Number(LitNumber::Hexadecimal(LitHexadecimal::new(s)))
   }
 
   #[inline]

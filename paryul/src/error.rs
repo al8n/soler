@@ -1,16 +1,32 @@
-pub use lexsol::{error::yul::{Errors as LexerErrors, Error as LexerError}, yul::{syntactic::{Errors as SyntacticLexerErrors, Error as SyntacticLexerError}, lossless::{Errors as LosslessLexerErrors, Error as LosslessLexerError}}};
+pub use lexsol::{
+  error::yul::{Error as LexerError, Errors as LexerErrors},
+  yul::{
+    lossless::{Error as LosslessLexerError, Errors as LosslessLexerErrors},
+    syntactic::{Error as SyntacticLexerError, Errors as SyntacticLexerErrors},
+  },
+};
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use lexsol::yul::{lossless, syntactic};
-use logosky::{Logos, State, Token, error::{UnexpectedEot, UnexpectedToken}, utils::{Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded}};
+use logosky::{
+  Logos, State, Token,
+  error::{UnexpectedEot, UnexpectedToken},
+  utils::{Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded},
+};
 
 use crate::SyntaxKind;
 
 /// The parser error type for Yul syntactic tokens.
-pub type SyntacticParserError<'a, S> = Error<syntactic::Token<S>, SyntaxKind, <syntactic::Token<S> as Token<'a>>::Char, RecursionLimitExceeded>;
+pub type SyntacticParserError<'a, S> = Error<
+  syntactic::Token<S>,
+  SyntaxKind,
+  <syntactic::Token<S> as Token<'a>>::Char,
+  RecursionLimitExceeded,
+>;
 
 /// The parser error type for Yul lossless tokens.
-pub type LosslessParserError<'a, S> = Error<lossless::Token<S>, SyntaxKind, <lossless::Token<S> as Token<'a>>::Char, LimitExceeded>;
+pub type LosslessParserError<'a, S> =
+  Error<lossless::Token<S>, SyntaxKind, <lossless::Token<S> as Token<'a>>::Char, LimitExceeded>;
 
 // /// The parser error type for Yul.
 // pub type ParserError<'a, T> = Error<<T as Token<'a>>::Char, <<<T as Token<'a>>::Logos as Logos<'a>>::Extras as State>::Error>;
@@ -40,6 +56,8 @@ impl<T, TK, Char, StateError> Error<T, TK, Char, StateError> {
   /// Creates an unexpected token error with the given span and token.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unexpected_token(span: Span, found: T, expected: TK) -> Self {
-    Self::UnexpectedToken(UnexpectedToken::expected_one_with_found(span, found, expected))
+    Self::UnexpectedToken(UnexpectedToken::expected_one_with_found(
+      span, found, expected,
+    ))
   }
 }

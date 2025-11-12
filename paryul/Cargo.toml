@@ -20,6 +20,7 @@ evm = ["lexsol/evm"]
 
 [dependencies]
 derive_more.workspace = true
+either = { version = "1", default-features = false }
 lexsol = { workspace = true, features = ["yul"] }
 logosky.workspace = true
 

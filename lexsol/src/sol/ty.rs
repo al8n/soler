@@ -8,7 +8,7 @@ pub use reserved::*;
 pub use string::*;
 pub use uint::*;
 
-use crate::types::{LitBool, LitHexStr, LitNumber, LitRegularStr};
+use crate::types::{LitBool, LitDecimal, LitHexStr, LitHexadecimal, LitNumber, LitRegularStr};
 
 mod denomination;
 mod fixed_bytes;
@@ -74,12 +74,12 @@ impl<S> Lit<S> {
 
   #[inline]
   pub(super) const fn lit_decimal(s: S) -> Self {
-    Self::Number(LitNumber::Decimal(s))
+    Self::Number(LitNumber::Decimal(LitDecimal::new(s)))
   }
 
   #[inline]
   pub(super) const fn lit_hexadecimal(s: S) -> Self {
-    Self::Number(LitNumber::Hexadecimal(s))
+    Self::Number(LitNumber::Hexadecimal(LitHexadecimal::new(s)))
   }
 
   #[inline]

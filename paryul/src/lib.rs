@@ -13,26 +13,47 @@ extern crate alloc as std;
 #[cfg(feature = "std")]
 extern crate std;
 
-/// The AST for Yul.
-pub mod ast;
-
-/// The CST for Yul.
-pub mod cst;
+/// The scaffold AST/CST nodes for Yul-like languages.
+pub mod scaffold;
 
 /// Error types for Yul parser.
 pub mod error;
 
 /// The syntax kinds for Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::IsVariant)]
+#[non_exhaustive]
+#[allow(non_camel_case_types)]
 pub enum SyntaxKind {
+  // ========= Keywords =========
+  /// Yul keyword 'function'
+  function_KW,
+  /// Yul keyword 'switch'
+  switch_KW,
+  /// Yul keyword 'case'
+  case_KW,
+  /// Yul keyword 'default'
+  default_KW,
+  /// Yul keyword 'for'
+  for_KW,
+  /// Yul keyword 'if'
+  if_KW,
+  /// Yul keyword 'let'
+  let_KW,
+  /// Yul keyword 'break'
+  break_KW,
+  /// Yul keyword 'continue'
+  continue_KW,
+  /// Yul keyword 'leave'
+  leave_KW,
+
   // ========= Nodes =========
   /// Statement
-  /// 
+  ///
   /// Spec: [Yul Statement](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulStatement)
   Statement,
 
   /// Block
-  /// 
+  ///
   /// Spec: [Yul Block](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulBlock)
   Block,
 
@@ -42,7 +63,7 @@ pub enum SyntaxKind {
   VariableDeclaration,
 
   /// Assignment
-  /// 
+  ///
   /// Spec: [Yul Assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
   Assignment,
 
@@ -57,12 +78,12 @@ pub enum SyntaxKind {
   ForStatement,
 
   /// Switch Statement
-  /// 
+  ///
   /// Spec: [Yul Switch Statements](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulSwitchStatement)
   SwitchStatement,
 
   /// Function definition
-  /// 
+  ///
   /// Spec: [Yul Function Definition](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionDefinition)
   FunctionDefinition,
 
@@ -70,12 +91,17 @@ pub enum SyntaxKind {
   PathSegment,
 
   /// Path
-  /// 
+  ///
   /// Spec: [Yul Path](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulPath)
   Path,
 
+  /// The name of a function call
+  ///
+  /// Spec: [Yul Function Call Name](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
+  FunctionCallName,
+
   /// Function call
-  /// 
+  ///
   /// Spec: [Yul Function Call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
   FunctionCall,
 
@@ -105,12 +131,12 @@ pub enum SyntaxKind {
   LitHexString,
 
   /// Literal
-  /// 
+  ///
   /// Spec: [Yul Literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulLiteral)
   Literal,
 
   /// Expression
-  /// 
+  ///
   /// Spec: [Yul Expression](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulExpression)
   Expression,
 
@@ -118,11 +144,10 @@ pub enum SyntaxKind {
   ///
   /// Spec: [Yul identifier](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulIdentifier)
   Identifier,
-
   // /// Token syntax kind
   // Token(TK),
 }
- 
+
 /// An identifier.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Ident<S> {

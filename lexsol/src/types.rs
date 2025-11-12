@@ -1,4 +1,7 @@
-use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
+use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
+
+/// The keywords
+pub mod keywords;
 
 /// The punctuators
 pub mod punct;
@@ -28,6 +31,68 @@ pub enum LitNumberKind {
   Hex,
 }
 
+/// The decimal number literal for Yul or Solidity
+///
+/// Spec:
+/// - [Yul decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulDecimalNumber)
+/// - [Solidity decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.DecimalNumber)
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct LitDecimal<S>(S);
+
+impl<S> LitDecimal<S> {
+  /// Creates a new decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new(lit: S) -> Self {
+    Self(lit)
+  }
+
+  /// Returns the source of the decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn source_ref(&self) -> &S {
+    &self.0
+  }
+
+  /// Returns the source of the decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn source(self) -> S
+  where
+    S: Copy,
+  {
+    self.0
+  }
+}
+
+/// The hexadecimal number literal for Yul or Solidity
+///
+/// Spec:
+///   - [Yul hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulHexNumber)
+///   - [Solidity Hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexNumber)
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct LitHexadecimal<S>(S);
+
+impl<S> LitHexadecimal<S> {
+  /// Creates a new decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new(lit: S) -> Self {
+    Self(lit)
+  }
+
+  /// Returns the source of the decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn source_ref(&self) -> &S {
+    &self.0
+  }
+
+  /// Returns the source of the decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn source(self) -> S
+  where
+    S: Copy,
+  {
+    self.0
+  }
+}
+
 /// The number literal
 ///
 /// Spec:
@@ -37,15 +102,15 @@ pub enum LitNumberKind {
 /// - [Solidity number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.numberLiteral)
 ///   - [Hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexNumber)
 ///   - [Decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.DecimalNumber)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, Unwrap, TryUnwrap)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, From, IsVariant, Unwrap, TryUnwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
 pub enum LitNumber<S> {
   /// Decimal number literal
-  Decimal(S),
+  Decimal(LitDecimal<S>),
   /// Hexadecimal number literal
-  Hexadecimal(S),
+  Hexadecimal(LitHexadecimal<S>),
 }
 
 impl<S> From<LitNumber<S>> for LitNumberKind {
