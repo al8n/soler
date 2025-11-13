@@ -1,11 +1,9 @@
 use core::marker::PhantomData;
 
-use lexsol::yul::YUL;
-
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 #[cfg(feature = "evm")]
-use logosky::{Require, utils::Spanned};
+use logosky::{Require, syntax::Language, utils::Spanned};
 
 use logosky::{
   IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
@@ -16,7 +14,7 @@ use logosky::{
   utils::Span,
 };
 
-use crate::{Ident, SyntaxKind};
+use crate::{Ident, SyntaxKind, YUL};
 
 /// A segment of a path.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -61,10 +59,9 @@ where
   T: IdentifierToken<'a>,
   T::Logos: Logos<'a>,
   <T::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
-  Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
-    + From<UnexpectedEot>
-    + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -74,26 +71,12 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    custom(|inp| {
-      let before = inp.cursor();
-      let tok: Option<Lexed<'_, T>> = inp.next();
-      match tok {
-        None => Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
-        Some(Lexed::Error(err)) => Err(err.into()),
-        Some(Lexed::Token(Spanned { span, data: tok })) => {
-          let ident = match tok.try_into_identifier() {
-            Ok(ident) => Ident::new(span, ident),
-            Err(tok) => {
-              return Err(
-                UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier).into(),
-              );
-            }
-          };
-
-          Ok(Self::new(ident))
-        }
-      }
-    })
+    logosky::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
+      |ident: Spanned<S>| {
+        let (span, ident) = ident.into_components();
+        PathSegment::new(Ident::new(span, ident))
+      },
+    )
   }
 }
 
@@ -103,8 +86,10 @@ where
   T: IdentifierToken<'a> + Require<EvmBuiltinFunction, Err = T>,
   T::Logos: Logos<'a>,
   <T::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
     + From<UnexpectedEot>
     + 'a,
 {
@@ -129,8 +114,12 @@ where
               Ok(_) => Ident::new(span, inp.slice(&before..&inp.cursor())),
               Err(tok) => {
                 return Err(
-                  UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::PathSegment)
-                    .into(),
+                  UnexpectedToken::expected_one_with_found(
+                    span,
+                    tok,
+                    SyntaxKind::PathSegment.into(),
+                  )
+                  .into(),
                 );
               }
             },
@@ -193,8 +182,10 @@ where
   T::Logos: Logos<'a>,
   Segment: Parseable<'a, I, T, Error>
     + From<Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>>>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
     + From<UnexpectedEot>
     + 'a,
   Container: ChumskyContainer<Segment>,
@@ -220,7 +211,8 @@ where
             Ok(ident) => Ident::new(span, ident),
             Err(tok) => {
               return Err(
-                UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier).into(),
+                UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier.into())
+                  .into(),
               );
             }
           };

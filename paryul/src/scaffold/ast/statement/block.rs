@@ -1,21 +1,22 @@
 use core::marker::PhantomData;
 
-use lexsol::yul::YUL;
 use logosky::{
   LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
-    IterParser, Parser, container::Container as ChumskyContainer, extra::ParserExtra,
-    punctuator,
+    IterParser, Parser,
+    container::Container as ChumskyContainer,
+    extra::ParserExtra,
+    token::punct::{brace_close, brace_open},
   },
-  error::{UnexpectedEot, UnexpectedToken},
+  error::UnexpectedToken,
+  syntax::Language,
   utils::{Span, cmp::Equivalent},
 };
 
-use crate::SyntaxKind;
-
+use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST for Yul block statement.
-/// 
+///
 /// See [Yul block statement](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulBlock)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Block<Statement, Container = Vec<Statement>, Lang = YUL> {
@@ -72,7 +73,10 @@ impl<Statement, Container, Lang> Block<Statement, Container, Lang> {
   where
     T: PunctuatorToken<'a>,
     str: Equivalent<T>,
-    Error: From<UnexpectedEot> + From<UnexpectedToken<'a, T, SyntaxKind>> + From<<T::Logos as Logos<'a>>::Error> + 'a,
+    Lang: Language,
+    Lang::SyntaxKind: From<SyntaxKind> + 'a,
+    Error:
+      From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + From<<T::Logos as Logos<'a>>::Error> + 'a,
     Container: ChumskyContainer<Statement>,
     Self: Sized + 'a,
     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
@@ -82,7 +86,10 @@ impl<Statement, Container, Lang> Block<Statement, Container, Lang> {
     statement_parser
       .repeated()
       .collect()
-      .delimited_by(punctuator("{", || SyntaxKind::LBrace), punctuator("}", || SyntaxKind::RBrace))
+      .delimited_by(
+        brace_open(|| SyntaxKind::LBrace.into()),
+        brace_close(|| SyntaxKind::RBrace.into()),
+      )
       .map_with(|statements, exa| Self::new(exa.span(), statements))
   }
 }

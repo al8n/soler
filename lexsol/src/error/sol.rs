@@ -12,7 +12,7 @@ use logosky::{
 
 use crate::{
   error::{EscapeSequenceError, HexStringError, StringError},
-  sol::SOLIDITY,
+  sol::sealed::SOLIDITY,
   types::LitStrDelimiterKind,
 };
 

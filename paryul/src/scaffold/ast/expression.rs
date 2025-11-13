@@ -1,12 +1,14 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use lexsol::yul::YUL;
 use logosky::{
-  LogoStream, Logos, PunctuatorToken, Source, Token, chumsky::{
+  LogoStream, Logos, PunctuatorToken, Source, Token,
+  chumsky::{
     Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
-  }, error::{UnexpectedEot, UnexpectedToken}, utils::cmp::Equivalent
+  },
+  error::{UnexpectedEot, UnexpectedToken},
+  syntax::Language,
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, YUL};
 
 use super::statement::function_call::FunctionCall;
 
@@ -36,12 +38,15 @@ impl<'a, Name, Container, Path, Literal, Lang, I, T, Error> Parseable<'a, I, T, 
   for Expression<Name, Path, Literal, Container, Lang>
 where
   T: PunctuatorToken<'a>,
-  str: Equivalent<T>,
   Path: Parseable<'a, I, T, Error>,
   Name: Parseable<'a, I, T, Error>,
   Literal: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Self>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedEot> + From<UnexpectedToken<'a, T, SyntaxKind>>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error>
+    + From<UnexpectedEot>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where

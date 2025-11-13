@@ -41,15 +41,15 @@ mod sealed {
     const DECIMAL_NUMBER_PATTERN: &'static str;
   }
 
-  impl Sealed for super::yul::YUL {
-    const INIT: Self = super::yul::YUL(());
+  impl Sealed for super::yul::sealed::YUL {
+    const INIT: Self = super::yul::sealed::YUL(());
     const NAME: &'static str = "yul";
     const DECIMAL_NUMBER_PATTERN: &'static str = r"0|[1-9][0-9]*";
     const HEX_NUMBER_PATTERN: &'static str = r"0x[0-9a-fA-F]+";
   }
 
-  impl Sealed for super::sol::SOLIDITY {
-    const INIT: Self = super::sol::SOLIDITY(());
+  impl Sealed for super::sol::sealed::SOLIDITY {
+    const INIT: Self = super::sol::sealed::SOLIDITY(());
     const NAME: &'static str = "solidity";
     const DECIMAL_NUMBER_PATTERN: &'static str = r"0|[1-9](_?[0-9_])*";
     const HEX_NUMBER_PATTERN: &'static str = r"0x[0-9a-fA-F_]+";

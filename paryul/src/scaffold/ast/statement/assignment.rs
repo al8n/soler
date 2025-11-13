@@ -1,18 +1,21 @@
 use core::marker::PhantomData;
 
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use lexsol::yul::YUL;
 use logosky::{
   KeywordToken, Lexed, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token,
   chumsky::{
-    IterParser, Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra,
-    operator, prelude::custom, punctuator,
+    IterParser, Parseable, Parser,
+    container::Container as ChumskyContainer,
+    extra::ParserExtra,
+    prelude::custom,
+    token::{operator::colon_eq_assign, punct::comma},
   },
   error::{UnexpectedEot, UnexpectedToken},
+  syntax::Language,
   utils::{Span, Spanned, cmp::Equivalent},
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST for single assignment in Yul.
 ///
@@ -69,7 +72,9 @@ where
   str: Equivalent<T>,
   Path: Parseable<'a, I, T, Error>,
   Expr: Parseable<'a, I, T, Error>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -80,7 +85,7 @@ where
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
     Path::parser()
-      .then_ignore(operator(":=", || SyntaxKind::ColonAssign))
+      .then_ignore(colon_eq_assign(|| SyntaxKind::ColonAssign.into()))
       .then(Expr::parser())
       .map_with(|(path, expr), exa| Self::new(exa.span(), path, expr))
   }
@@ -145,7 +150,9 @@ where
   Path: Parseable<'a, I, T, Error>,
   FunctionCall: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Path> + Clone + 'a,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -156,10 +163,10 @@ where
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
     Path::parser()
-      .separated_by(punctuator(",", || SyntaxKind::Comma))
+      .separated_by(comma(|| SyntaxKind::Comma.into()))
       .at_least(2)
       .collect()
-      .then_ignore(operator(":=", || SyntaxKind::ColonAssign))
+      .then_ignore(colon_eq_assign(|| SyntaxKind::ColonAssign.into()))
       .then(FunctionCall::parser())
       .map_with(|(paths, fn_call), exa| Self::new(exa.span(), paths, fn_call))
   }
@@ -194,8 +201,10 @@ where
   Expr: Parseable<'a, I, T, Error>,
   FunctionCall: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Path> + Clone + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
     + From<UnexpectedEot>
     + 'a,
 {
@@ -215,7 +224,7 @@ where
         None => return Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
         Some(Lexed::Error(e)) => return Err(<Error as core::convert::From<_>>::from(e)),
         Some(Lexed::Token(Spanned { span, data: tok })) => match () {
-          () if Equivalent::equivalent(":=", &tok) => {
+          () if tok.is_colon_eq_assign() => {
             let expr = inp.parse(Expr::parser())?;
             Self::Single(SingleTargetAssignment::new(
               inp.span_since(&before),
@@ -223,7 +232,7 @@ where
               expr,
             ))
           }
-          () if Equivalent::equivalent(",", &tok) => {
+          () if tok.is_comma() => {
             let mut paths = Container::default();
             paths.push(first_path);
 
@@ -235,10 +244,10 @@ where
                 None => return Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
                 Some(Lexed::Error(e)) => return Err(<Error as core::convert::From<_>>::from(e)),
                 Some(Lexed::Token(Spanned { span, data: tok })) => match () {
-                  () if Equivalent::equivalent(",", &tok) => {
+                  () if tok.is_comma() => {
                     continue;
                   }
-                  () if Equivalent::equivalent(":=", &tok) => {
+                  () if tok.is_colon_eq_assign() => {
                     let fn_call = inp.parse(FunctionCall::parser())?;
                     break Self::Multiple(MultipleTargetAssignment::new(
                       inp.span_since(&before),
@@ -248,10 +257,10 @@ where
                   }
                   _ => {
                     return Err(
-                      UnexpectedToken::expected_one_of_with_found(
+                      UnexpectedToken::expected_one_with_found(
                         span,
                         tok,
-                        &[SyntaxKind::Comma, SyntaxKind::ColonAssign],
+                        SyntaxKind::ColonAssign.into(),
                       )
                       .into(),
                     );
@@ -262,12 +271,8 @@ where
           }
           _ => {
             return Err(
-              UnexpectedToken::expected_one_of_with_found(
-                span,
-                tok,
-                &[SyntaxKind::Comma, SyntaxKind::ColonAssign],
-              )
-              .into(),
+              UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::ColonAssign.into())
+                .into(),
             );
           }
         },

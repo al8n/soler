@@ -8,7 +8,10 @@ pub mod syntactic;
 mod handlers;
 mod ty;
 
-/// The Solidity language marker.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::Display)]
-#[display("solidity")]
-pub struct SOLIDITY(pub(crate) ());
+pub(crate) mod sealed {
+  /// The Solidity language marker.
+  #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::Display)]
+  #[display("solidity")]
+  #[doc(hidden)]
+  pub struct SOLIDITY(pub(crate) ());
+}

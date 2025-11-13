@@ -1,18 +1,18 @@
 use core::marker::PhantomData;
 
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use lexsol::yul::YUL;
 use logosky::{
   KeywordToken, Lexed, LogoStream, Logos, Source, Token,
   chumsky::{
-    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, keyword,
-    prelude::*,
+    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
+    token::expected_keyword,
   },
   error::{UnexpectedEot, UnexpectedToken},
+  syntax::Language,
   utils::{Span, Spanned, cmp::Equivalent},
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, YUL};
 
 /// A switch case in a switch statement.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -59,9 +59,11 @@ impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error>
 where
   T: KeywordToken<'a>,
   str: Equivalent<T>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Literal: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -71,7 +73,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    keyword("case", || SyntaxKind::case_KW)
+    expected_keyword("case", || SyntaxKind::case_KW.into())
       .ignore_then(Literal::parser())
       .then(Block::parser())
       .map_with(|(literal, block), exa| Self::new(exa.span(), literal, block))
@@ -114,11 +116,10 @@ impl<'a, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for DefaultCase<Bl
 where
   T: KeywordToken<'a>,
   str: Equivalent<T>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Block: Parseable<'a, I, T, Error>,
-  Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
-    + From<UnexpectedEot>
-    + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -128,7 +129,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    keyword("default", || SyntaxKind::default_KW)
+    expected_keyword("default", || SyntaxKind::default_KW.into())
       .ignore_then(Block::parser())
       .map_with(|block, exa| Self::new(exa.span(), block))
   }
@@ -151,10 +152,12 @@ impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error>
 where
   T: KeywordToken<'a>,
   str: Equivalent<T>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Literal: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
   Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
     + From<UnexpectedEot>
     + 'a,
 {
@@ -182,10 +185,10 @@ where
           }
           _ => {
             return Err(
-              UnexpectedToken::expected_one_of_with_found(
+              UnexpectedToken::expected_one_with_found(
                 span,
                 tok,
-                &[SyntaxKind::case_KW, SyntaxKind::default_KW],
+                SyntaxKind::SwitchCaseKeyword.into(),
               )
               .into(),
             );
@@ -257,7 +260,9 @@ where
   Expr: Parseable<'a, I, T, Error>,
   Case: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Case>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -267,7 +272,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    keyword("switch", || SyntaxKind::switch_KW)
+    expected_keyword("switch", || SyntaxKind::switch_KW.into())
       .ignore_then(Expr::parser())
       .then(Case::parser().repeated().at_least(1).collect())
       .map_with(|(expression, cases), exa| Self::new(exa.span(), expression, cases))

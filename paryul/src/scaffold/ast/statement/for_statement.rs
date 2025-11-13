@@ -1,14 +1,14 @@
 use core::marker::PhantomData;
 
-use lexsol::yul::YUL;
 use logosky::{
   KeywordToken, LogoStream, Logos, Source, Token,
-  chumsky::{Parseable, Parser, extra::ParserExtra, keyword},
+  chumsky::{Parseable, Parser, extra::ParserExtra, token::expected_keyword},
   error::UnexpectedToken,
+  syntax::Language,
   utils::{Span, cmp::Equivalent},
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST for Yul for statement.
 ///
@@ -77,7 +77,9 @@ where
   Condition: Parseable<'a, I, T, Error>,
   Post: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -87,7 +89,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    keyword("for", || SyntaxKind::for_KW)
+    expected_keyword("for", || SyntaxKind::for_KW.into())
       .ignore_then(Init::parser())
       .then(Condition::parser())
       .then(Post::parser())

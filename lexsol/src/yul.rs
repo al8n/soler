@@ -11,10 +11,13 @@ use crate::types::{
   LitBool, LitDecimal, LitHexStr, LitHexadecimal, LitNumber, LitRegularStr, LitStrDelimiterKind,
 };
 
-/// The Yul language marker.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::Display)]
-#[display("yul")]
-pub struct YUL(pub(crate) ());
+pub(crate) mod sealed {
+  /// The Yul language marker.
+  #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::Display)]
+  #[display("yul")]
+  #[doc(hidden)]
+  pub struct YUL(pub(crate) ());
+}
 
 /// The kind of string literal of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]

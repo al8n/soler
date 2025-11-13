@@ -1,7 +1,5 @@
 use core::marker::PhantomData;
 
-use lexsol::yul::YUL;
-
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 #[cfg(feature = "evm")]
@@ -12,12 +10,19 @@ use logosky::{
 };
 
 use logosky::{
-  IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token, chumsky::{
-    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*, punctuator,
-  }, utils::{Span, cmp::Equivalent}
+  IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
+  chumsky::{
+    Parseable, Parser,
+    container::Container as ChumskyContainer,
+    extra::ParserExtra,
+    prelude::*,
+    token::punct::{comma, paren_close, paren_open},
+  },
+  syntax::Language,
+  utils::Span,
 };
 
-use crate::{Ident, SyntaxKind};
+use crate::{Ident, SyntaxKind, YUL};
 
 /// A scaffold AST node for a Yul function call name.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -62,8 +67,10 @@ where
   T: IdentifierToken<'a>,
   T::Logos: Logos<'a>,
   <T::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
     + From<UnexpectedEot>
     + 'a,
 {
@@ -75,26 +82,12 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    custom(|inp| {
-      let before = inp.cursor();
-      let tok: Option<Lexed<'_, T>> = inp.next();
-      match tok {
-        None => Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
-        Some(Lexed::Error(err)) => Err(err.into()),
-        Some(Lexed::Token(Spanned { span, data: tok })) => {
-          let ident = match tok.try_into_identifier() {
-            Ok(ident) => Ident::new(span, ident),
-            Err(tok) => {
-              return Err(
-                UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier).into(),
-              );
-            }
-          };
-
-          Ok(Self::new(ident))
-        }
-      }
-    })
+    logosky::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
+      |ident: Spanned<S>| {
+        let (span, ident) = ident.into_components();
+        FunctionCallName::new(Ident::new(span, ident))
+      },
+    )
   }
 }
 
@@ -104,8 +97,10 @@ where
   T: IdentifierToken<'a> + Require<EvmBuiltinFunction, Err = T>,
   T::Logos: Logos<'a>,
   <T::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
     + From<UnexpectedEot>
     + 'a,
 {
@@ -130,8 +125,12 @@ where
               Ok(_) => Ident::new(span, inp.slice(&before..&inp.cursor())),
               Err(tok) => {
                 return Err(
-                  UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::FunctionCallName)
-                    .into(),
+                  UnexpectedToken::expected_one_with_found(
+                    span,
+                    tok,
+                    SyntaxKind::FunctionCallName.into(),
+                  )
+                  .into(),
                 );
               }
             },
@@ -197,10 +196,12 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
   ) -> impl Parser<'a, I, Self, E> + Clone
   where
     T: PunctuatorToken<'a>,
-    str: Equivalent<T>,
     Name: Parseable<'a, I, T, Error>,
-    Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedEot> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+    Error:
+      From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
     Container: ChumskyContainer<Expression>,
+    Lang: Language,
+    Lang::SyntaxKind: From<SyntaxKind> + 'a,
     Self: Sized + 'a,
     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
     T: Token<'a>,
@@ -209,9 +210,12 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
     Name::parser()
       .then(
         expression_parser
-          .separated_by(punctuator(",", || SyntaxKind::Comma))
+          .separated_by(comma(|| SyntaxKind::Comma.into()))
           .collect::<Container>()
-          .delimited_by(punctuator("(", || SyntaxKind::LParen), punctuator(")", || SyntaxKind::RParen)),
+          .delimited_by(
+            paren_open(|| SyntaxKind::LParen.into()),
+            paren_close(|| SyntaxKind::RParen.into()),
+          ),
       )
       .map_with(|(name, expressions), exa| Self::new(exa.span(), name, expressions))
   }

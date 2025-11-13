@@ -19,8 +19,17 @@ pub mod scaffold;
 /// Error types for Yul parser.
 pub mod error;
 
+/// The YUL language marker.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, derive_more::Display)]
+#[display("yul")]
+pub struct YUL;
+
+impl logosky::syntax::Language for YUL {
+  type SyntaxKind = SyntaxKind;
+}
+
 /// The syntax kinds for Yul
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, derive_more::IsVariant)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, derive_more::IsVariant)]
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
 pub enum SyntaxKind {
@@ -41,6 +50,8 @@ pub enum SyntaxKind {
   // ========= Operators =========
   /// Yul assignment operator ':='
   ColonAssign,
+  /// Yul thin arrow '->'
+  ThinArrow,
 
   // ========= Keywords =========
   /// Yul keyword 'function'
@@ -63,6 +74,9 @@ pub enum SyntaxKind {
   continue_KW,
   /// Yul keyword 'leave'
   leave_KW,
+
+  /// Yul switch case keyword, either 'case' or 'default'
+  SwitchCaseKeyword,
 
   // ========= Nodes =========
   /// Statement

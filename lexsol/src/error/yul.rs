@@ -7,7 +7,7 @@ use logosky::{
 use crate::{
   error::{HexStringError, StringError},
   types::LitStrDelimiterKind,
-  yul::YUL,
+  yul::sealed::YUL,
 };
 
 /// The hexadecimal literal of Yul

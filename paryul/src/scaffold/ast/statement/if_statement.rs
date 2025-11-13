@@ -1,14 +1,13 @@
 use core::marker::PhantomData;
-
-use lexsol::yul::YUL;
 use logosky::{
   KeywordToken, LogoStream, Logos, Source, Token,
-  chumsky::{Parseable, Parser, extra::ParserExtra, keyword},
+  chumsky::{Parseable, Parser, extra::ParserExtra, token::expected_keyword},
   error::UnexpectedToken,
+  syntax::Language,
   utils::{Span, cmp::Equivalent},
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST for Yul if statement.
 ///
@@ -59,7 +58,9 @@ where
   str: Equivalent<T>,
   Expr: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -69,7 +70,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    keyword("if", || SyntaxKind::if_KW)
+    expected_keyword("if", || SyntaxKind::if_KW.into())
       .ignore_then(Expr::parser())
       .then(Block::parser())
       .map_with(|(condition, block), exa| Self::new(exa.span(), condition, block))

@@ -263,12 +263,12 @@ where
   str: Equivalent<S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_colon_assign(&self) -> bool {
+  fn is_colon_eq_assign(&self) -> bool {
     matches!(self, Self::ColonAssign)
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_arrow_operator(&self) -> bool {
+  fn is_arrow(&self) -> bool {
     matches!(self, Self::ThinArrow)
   }
 }

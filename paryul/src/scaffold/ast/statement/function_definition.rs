@@ -1,24 +1,34 @@
 use core::marker::PhantomData;
-
-use lexsol::types::punct::{Comma, LParen, RParen, ThinArrow};
 use logosky::{
-  KeywordToken, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token, chumsky::{
-    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, keyword,
+  KeywordToken, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token,
+  chumsky::{
+    Parseable, Parser,
+    container::Container as ChumskyContainer,
+    extra::ParserExtra,
     prelude::*,
-  }, error::UnexpectedToken, utils::{Span, cmp::Equivalent}
+    token::{
+      expected_keyword,
+      operator::arrow,
+      punct::{comma, paren_close, paren_open},
+    },
+  },
+  error::{UnexpectedEot, UnexpectedToken},
+  syntax::Language,
+  utils::{Span, cmp::Equivalent},
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST node for Yul function definition arguments.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionDefinitionArguments<Arg, Container = Vec<Arg>> {
+pub struct FunctionDefinitionArguments<Arg, Container = Vec<Arg>, Lang = YUL> {
   span: Span,
   args: Container,
   _m: PhantomData<Arg>,
+  _lang: PhantomData<Lang>,
 }
 
-impl<Arg, Container> FunctionDefinitionArguments<Arg, Container> {
+impl<Arg, Container, Lang> FunctionDefinitionArguments<Arg, Container, Lang> {
   /// Create a new function definition arguments.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, args: Container) -> Self {
@@ -26,6 +36,7 @@ impl<Arg, Container> FunctionDefinitionArguments<Arg, Container> {
       span,
       args,
       _m: PhantomData,
+      _lang: PhantomData,
     }
   }
 
@@ -51,12 +62,18 @@ impl<Arg, Container> FunctionDefinitionArguments<Arg, Container> {
   }
 }
 
-impl<'a, Arg, Container, I, T, Error> Parseable<'a, I, T, Error>
-  for FunctionDefinitionArguments<Arg, Container>
+impl<'a, Arg, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for FunctionDefinitionArguments<Arg, Container, Lang>
 where
   T: PunctuatorToken<'a>,
   Arg: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Arg>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
+    + From<UnexpectedEot>
+    + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -67,7 +84,7 @@ where
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
     Arg::parser()
-      .separated_by(Comma::parser())
+      .separated_by(comma(|| SyntaxKind::Comma.into()))
       .collect()
       .map_with(|args, exa| Self::new(exa.span(), args))
   }
@@ -75,13 +92,14 @@ where
 
 /// A scaffold AST node for Yul function definition return parameters.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionDefinitionReturnParameters<Param, Container> {
+pub struct FunctionDefinitionReturnParameters<Param, Container, Lang = YUL> {
   span: Span,
   params: Container,
   _m: PhantomData<Param>,
+  _lang: PhantomData<Lang>,
 }
 
-impl<Param, Container> FunctionDefinitionReturnParameters<Param, Container> {
+impl<Param, Container, Lang> FunctionDefinitionReturnParameters<Param, Container, Lang> {
   /// Create a new function definition return parameters.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, params: Container) -> Self {
@@ -89,6 +107,7 @@ impl<Param, Container> FunctionDefinitionReturnParameters<Param, Container> {
       span,
       params,
       _m: PhantomData,
+      _lang: PhantomData,
     }
   }
 
@@ -114,12 +133,17 @@ impl<Param, Container> FunctionDefinitionReturnParameters<Param, Container> {
   }
 }
 
-impl<'a, Param, Container, I, T, Error> Parseable<'a, I, T, Error>
-  for FunctionDefinitionReturnParameters<Param, Container>
+impl<'a, Param, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for FunctionDefinitionReturnParameters<Param, Container, Lang>
 where
   T: PunctuatorToken<'a>,
   Param: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Param>,
+  Error: From<<T::Logos as Logos<'a>>::Error>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
+    + From<UnexpectedEot>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -130,7 +154,7 @@ where
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
     Param::parser()
-      .separated_by(Comma::parser())
+      .separated_by(comma(|| SyntaxKind::Comma.into()))
       .collect()
       .map_with(|params, exa| Self::new(exa.span(), params))
   }
@@ -140,16 +164,17 @@ where
 ///
 /// Spec: [Yul Function Definition](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionDefinition)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionDefinition<Name, Arguments, ReturnParameters, Block> {
+pub struct FunctionDefinition<Name, Arguments, ReturnParameters, Block, Lang = YUL> {
   span: Span,
   name: Name,
   arguments: Arguments,
   return_params: Option<ReturnParameters>,
   block: Block,
+  _lang: PhantomData<Lang>,
 }
 
-impl<Name, Arguments, ReturnParameters, Block>
-  FunctionDefinition<Name, Arguments, ReturnParameters, Block>
+impl<Name, Arguments, ReturnParameters, Block, Lang>
+  FunctionDefinition<Name, Arguments, ReturnParameters, Block, Lang>
 {
   /// Create a new function definition.
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -166,6 +191,7 @@ impl<Name, Arguments, ReturnParameters, Block>
       arguments,
       return_params,
       block,
+      _lang: PhantomData,
     }
   }
 
@@ -200,8 +226,8 @@ impl<Name, Arguments, ReturnParameters, Block>
   }
 }
 
-impl<'a, Name, Arguments, ReturnParameters, Block, I, T, Error> Parseable<'a, I, T, Error>
-  for FunctionDefinition<Name, Arguments, ReturnParameters, Block>
+impl<'a, Name, Arguments, ReturnParameters, Block, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for FunctionDefinition<Name, Arguments, ReturnParameters, Block, Lang>
 where
   T: KeywordToken<'a> + PunctuatorToken<'a> + OperatorToken<'a>,
   str: Equivalent<T>,
@@ -209,7 +235,12 @@ where
   Arguments: Parseable<'a, I, T, Error>,
   ReturnParameters: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
-  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
+    + From<UnexpectedEot>
+    + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -219,11 +250,14 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    keyword("function", || SyntaxKind::function_KW)
+    expected_keyword("function", || SyntaxKind::function_KW.into())
       .ignore_then(Name::parser())
-      .then(Arguments::parser().delimited_by(LParen::parser(), RParen::parser()))
+      .then(Arguments::parser().delimited_by(
+        paren_open(|| SyntaxKind::LBrace.into()),
+        paren_close(|| SyntaxKind::RBrace.into()),
+      ))
       .then(
-        ThinArrow::parser()
+        arrow(|| SyntaxKind::ThinArrow.into())
           .ignore_then(ReturnParameters::parser())
           .or_not(),
       )
