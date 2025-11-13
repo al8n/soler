@@ -1,9 +1,6 @@
 use core::marker::PhantomData;
 
-use lexsol::{
-  types::punct::{Comma, LParen, RParen},
-  yul::YUL,
-};
+use lexsol::yul::YUL;
 
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
@@ -15,11 +12,9 @@ use logosky::{
 };
 
 use logosky::{
-  IdentifierToken, Lexed, LogoStream, Logos, Source, Token,
-  chumsky::{
-    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
-  },
-  utils::Span,
+  IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token, chumsky::{
+    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*, punctuator,
+  }, utils::{Span, cmp::Equivalent}
 };
 
 use crate::{Ident, SyntaxKind};
@@ -197,16 +192,14 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
 
   /// Returns a parser for the FunctionCall with the given expression parser.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn parser_with_expression<'a, I, T, Error, E>(
+  pub fn parser<'a, I, T, Error, E>(
     expression_parser: impl Parser<'a, I, Expression, E> + Clone,
   ) -> impl Parser<'a, I, Self, E> + Clone
   where
-    T: Token<'a>,
+    T: PunctuatorToken<'a>,
+    str: Equivalent<T>,
     Name: Parseable<'a, I, T, Error>,
-    LParen: Parseable<'a, I, T, Error>,
-    RParen: Parseable<'a, I, T, Error>,
-    Comma: Parseable<'a, I, T, Error>,
-    Error: 'a,
+    Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedEot> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
     Container: ChumskyContainer<Expression>,
     Self: Sized + 'a,
     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
@@ -216,36 +209,36 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
     Name::parser()
       .then(
         expression_parser
-          .separated_by(Comma::parser())
+          .separated_by(punctuator(",", || SyntaxKind::Comma))
           .collect::<Container>()
-          .delimited_by(LParen::parser(), RParen::parser()),
+          .delimited_by(punctuator("(", || SyntaxKind::LParen), punctuator(")", || SyntaxKind::RParen)),
       )
       .map_with(|(name, expressions), exa| Self::new(exa.span(), name, expressions))
   }
 }
 
-impl<'a, Name, Expression, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
-  for FunctionCall<Name, Expression, Container, Lang>
-where
-  T: Token<'a>,
-  Name: Parseable<'a, I, T, Error>,
-  LParen: Parseable<'a, I, T, Error>,
-  RParen: Parseable<'a, I, T, Error>,
-  Comma: Parseable<'a, I, T, Error>,
-  Expression: Parseable<'a, I, T, Error>,
-  Container: ChumskyContainer<Expression>,
-{
-  fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-  where
-    Self: Sized + 'a,
-    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-    T: Token<'a>,
-    Error: 'a,
-    E: ParserExtra<'a, I, Error = Error> + 'a,
-  {
-    Self::parser_with_expression(Expression::parser())
-  }
-}
+// impl<'a, Name, Expression, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
+//   for FunctionCall<Name, Expression, Container, Lang>
+// where
+//   T: Token<'a>,
+//   Name: Parseable<'a, I, T, Error>,
+//   LParen: Parseable<'a, I, T, Error>,
+//   RParen: Parseable<'a, I, T, Error>,
+//   Comma: Parseable<'a, I, T, Error>,
+//   Expression: Parseable<'a, I, T, Error>,
+//   Container: ChumskyContainer<Expression>,
+// {
+//   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
+//   where
+//     Self: Sized + 'a,
+//     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
+//     T: Token<'a>,
+//     Error: 'a,
+//     E: ParserExtra<'a, I, Error = Error> + 'a,
+//   {
+//     Self::parser_with_expression(Expression::parser())
+//   }
+// }
 
 // impl<'a, Name, Expression, Container, Lang, I, T, Error> Recoverable<'a, I, T, Error>
 //   for FunctionCall<Name, Expression, Container, Lang>

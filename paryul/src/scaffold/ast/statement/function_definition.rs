@@ -2,12 +2,13 @@ use core::marker::PhantomData;
 
 use lexsol::types::punct::{Comma, LParen, RParen, ThinArrow};
 use logosky::{
-  LogoStream, Logos, Source, Token,
-  chumsky::{
-    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
-  },
-  utils::Span,
+  KeywordToken, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token, chumsky::{
+    Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, keyword,
+    prelude::*,
+  }, error::UnexpectedToken, utils::{Span, cmp::Equivalent}
 };
+
+use crate::SyntaxKind;
 
 /// A scaffold AST node for Yul function definition arguments.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -53,9 +54,8 @@ impl<Arg, Container> FunctionDefinitionArguments<Arg, Container> {
 impl<'a, Arg, Container, I, T, Error> Parseable<'a, I, T, Error>
   for FunctionDefinitionArguments<Arg, Container>
 where
-  T: Token<'a>,
+  T: PunctuatorToken<'a>,
   Arg: Parseable<'a, I, T, Error>,
-  Comma: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Arg>,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
@@ -117,9 +117,8 @@ impl<Param, Container> FunctionDefinitionReturnParameters<Param, Container> {
 impl<'a, Param, Container, I, T, Error> Parseable<'a, I, T, Error>
   for FunctionDefinitionReturnParameters<Param, Container>
 where
-  T: Token<'a>,
+  T: PunctuatorToken<'a>,
   Param: Parseable<'a, I, T, Error>,
-  Comma: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Param>,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
@@ -204,14 +203,13 @@ impl<Name, Arguments, ReturnParameters, Block>
 impl<'a, Name, Arguments, ReturnParameters, Block, I, T, Error> Parseable<'a, I, T, Error>
   for FunctionDefinition<Name, Arguments, ReturnParameters, Block>
 where
-  T: Token<'a>,
+  T: KeywordToken<'a> + PunctuatorToken<'a> + OperatorToken<'a>,
+  str: Equivalent<T>,
   Name: Parseable<'a, I, T, Error>,
-  LParen: Parseable<'a, I, T, Error>,
-  RParen: Parseable<'a, I, T, Error>,
-  ThinArrow: Parseable<'a, I, T, Error>,
   Arguments: Parseable<'a, I, T, Error>,
   ReturnParameters: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -221,7 +219,8 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    Name::parser()
+    keyword("function", || SyntaxKind::function_KW)
+      .ignore_then(Name::parser())
       .then(Arguments::parser().delimited_by(LParen::parser(), RParen::parser()))
       .then(
         ThinArrow::parser()

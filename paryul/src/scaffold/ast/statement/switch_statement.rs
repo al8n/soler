@@ -9,7 +9,7 @@ use logosky::{
     prelude::*,
   },
   error::{UnexpectedEot, UnexpectedToken},
-  utils::{Span, Spanned},
+  utils::{Span, Spanned, cmp::Equivalent},
 };
 
 use crate::SyntaxKind;
@@ -54,9 +54,11 @@ impl<Literal, Block, Lang> SwitchCase<Literal, Block, Lang> {
   }
 }
 
-impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for SwitchCase<Literal, Block, Lang>
+impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for SwitchCase<Literal, Block, Lang>
 where
   T: KeywordToken<'a>,
+  str: Equivalent<T>,
   Literal: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
   Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
@@ -88,7 +90,11 @@ impl<Block, Lang> DefaultCase<Block, Lang> {
   /// Create a new default case.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, block: Block) -> Self {
-    Self { span, block, _m: PhantomData }
+    Self {
+      span,
+      block,
+      _m: PhantomData,
+    }
   }
 
   /// Get the span of the default case.
@@ -107,6 +113,7 @@ impl<Block, Lang> DefaultCase<Block, Lang> {
 impl<'a, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for DefaultCase<Block, Lang>
 where
   T: KeywordToken<'a>,
+  str: Equivalent<T>,
   Block: Parseable<'a, I, T, Error>,
   Error: From<<T::Logos as Logos<'a>>::Error>
     + From<UnexpectedToken<'a, T, SyntaxKind>>
@@ -139,9 +146,11 @@ pub enum Case<Literal, Block, Lang = YUL> {
   Default(DefaultCase<Block, Lang>),
 }
 
-impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error> for Case<Literal, Block, Lang>
+impl<'a, Literal, Block, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for Case<Literal, Block, Lang>
 where
   T: KeywordToken<'a>,
+  str: Equivalent<T>,
   Literal: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
   Error: From<<T::Logos as Logos<'a>>::Error>
@@ -163,11 +172,11 @@ where
         None => Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
         Some(Lexed::Error(e)) => Err(<Error as core::convert::From<_>>::from(e)),
         Some(Lexed::Token(Spanned { span, data: tok })) => Ok(match () {
-          () if KeywordToken::matches_keyword(&tok, "case") => {
+          () if Equivalent::equivalent("case", &tok) => {
             let (lit, block) = inp.parse(Literal::parser().then(Block::parser()))?;
             Self::Switch(SwitchCase::new(inp.span_since(&before), lit, block))
           }
-          () if KeywordToken::matches_keyword(&tok, "default") => {
+          () if Equivalent::equivalent("default", &tok) => {
             let block = inp.parse(Block::parser())?;
             Self::Default(DefaultCase::new(inp.span_since(&before), block))
           }
@@ -188,7 +197,7 @@ where
 }
 
 /// A Yul switch statement.
-/// 
+///
 /// See [Yul switch statement](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulSwitchStatement)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SwitchStatement<Expr, Case, Container = Vec<Case>, Lang = YUL> {
@@ -244,12 +253,11 @@ impl<'a, Expr, Case, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
   for SwitchStatement<Expr, Case, Container, Lang>
 where
   T: KeywordToken<'a>,
+  str: Equivalent<T>,
   Expr: Parseable<'a, I, T, Error>,
   Case: Parseable<'a, I, T, Error>,
   Container: ChumskyContainer<Case>,
-  Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, SyntaxKind>>
-    + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
 {
   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
   where
@@ -261,14 +269,7 @@ where
   {
     keyword("switch", || SyntaxKind::switch_KW)
       .ignore_then(Expr::parser())
-      .then(
-        Case::parser()
-          .repeated()
-          .at_least(1)
-          .collect(),
-      )
-      .map_with(|(expression, cases), exa| {
-        Self::new(exa.span(), expression, cases)
-      })
+      .then(Case::parser().repeated().at_least(1).collect())
+      .map_with(|(expression, cases), exa| Self::new(exa.span(), expression, cases))
   }
 }

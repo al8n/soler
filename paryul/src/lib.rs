@@ -24,6 +24,24 @@ pub mod error;
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
 pub enum SyntaxKind {
+  // ========= Punctuation =========
+  /// Yul left brace '{'
+  LBrace,
+  /// Yul right brace '}'
+  RBrace,
+  /// Yul left parenthesis '('
+  LParen,
+  /// Yul right parenthesis ')'
+  RParen,
+  /// Yul comma ','
+  Comma,
+  /// Yul dot '.'
+  Dot,
+
+  // ========= Operators =========
+  /// Yul assignment operator ':='
+  ColonAssign,
+
   // ========= Keywords =========
   /// Yul keyword 'function'
   function_KW,

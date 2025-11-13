@@ -1,7 +1,8 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
 use logosky::{
   IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken, Require,
-  Token as TokenT, TriviaToken, utils::recursion_tracker::RecursionLimitExceeded,
+  Token as TokenT, TriviaToken,
+  utils::{cmp::Equivalent, recursion_tracker::RecursionLimitExceeded},
 };
 
 use token::token;
@@ -223,6 +224,7 @@ where
 impl<'a, S: 'a> PunctuatorToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
+  str: Equivalent<S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_brace_open(&self) -> bool {
@@ -258,6 +260,7 @@ where
 impl<'a, S: 'a> OperatorToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
+  str: Equivalent<S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_colon_assign(&self) -> bool {
@@ -350,12 +353,8 @@ where
 impl<'a, S: 'a> KeywordToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
+  str: Equivalent<S>,
 {
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn matches_keyword(&self, keyword: &str) -> bool {
-    self.keyword().is_some_and(|kw| kw == keyword)
-  }
-
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn keyword(&self) -> Option<&'static str> {
     match self {
@@ -370,6 +369,39 @@ where
       Self::If => Some("if"),
       Self::For => Some("for"),
       _ => None,
+    }
+  }
+}
+
+impl<S> Equivalent<Token<S>> for str
+where
+  str: Equivalent<S>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn equivalent(&self, other: &Token<S>) -> bool {
+    match other {
+      Token::Leave => self.eq("leave"),
+      Token::Continue => self.eq("continue"),
+      Token::Break => self.eq("break"),
+      Token::Switch => self.eq("switch"),
+      Token::Case => self.eq("case"),
+      Token::Default => self.eq("default"),
+      Token::Function => self.eq("function"),
+      Token::Let => self.eq("let"),
+      Token::If => self.eq("if"),
+      Token::For => self.eq("for"),
+      Token::LBrace => self.eq("{"),
+      Token::RBrace => self.eq("}"),
+      Token::LParen => self.eq("("),
+      Token::RParen => self.eq(")"),
+      Token::Dot => self.eq("."),
+      Token::Comma => self.eq(","),
+      Token::ColonAssign => self.eq(":="),
+      Token::ThinArrow => self.eq("->"),
+      Token::Identifier(s) => self.equivalent(s),
+      #[cfg(feature = "evm")]
+      Token::EvmBuiltin(b) => self.eq(b.as_str()),
+      _ => false,
     }
   }
 }

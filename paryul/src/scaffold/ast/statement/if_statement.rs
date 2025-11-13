@@ -3,11 +3,9 @@ use core::marker::PhantomData;
 use lexsol::yul::YUL;
 use logosky::{
   KeywordToken, LogoStream, Logos, Source, Token,
-  chumsky::{
-    Parseable, Parser, extra::ParserExtra, keyword,
-  },
+  chumsky::{Parseable, Parser, extra::ParserExtra, keyword},
   error::UnexpectedToken,
-  utils::Span,
+  utils::{Span, cmp::Equivalent},
 };
 
 use crate::SyntaxKind;
@@ -58,6 +56,7 @@ impl<'a, Expr, Block, Lang, I, T, Error> Parseable<'a, I, T, Error>
   for IfStatement<Expr, Block, Lang>
 where
   T: KeywordToken<'a>,
+  str: Equivalent<T>,
   Expr: Parseable<'a, I, T, Error>,
   Block: Parseable<'a, I, T, Error>,
   Error: From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, SyntaxKind>> + 'a,
@@ -73,8 +72,6 @@ where
     keyword("if", || SyntaxKind::if_KW)
       .ignore_then(Expr::parser())
       .then(Block::parser())
-      .map_with(|(condition, block), exa| {
-        Self::new(exa.span(), condition, block)
-      })
+      .map_with(|(condition, block), exa| Self::new(exa.span(), condition, block))
   }
 }

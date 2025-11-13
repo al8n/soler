@@ -180,6 +180,13 @@ mod evm {
             }
           }
         }
+
+        impl logosky::utils::cmp::Equivalent<EvmBuiltinFunction> for str {
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          fn equivalent(&self, other: &EvmBuiltinFunction) -> bool {
+            other.as_str().equivalent(self)
+          }
+        }
       }
     };
   }

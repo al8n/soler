@@ -3,17 +3,15 @@ use core::marker::PhantomData;
 use lexsol::yul::YUL;
 use logosky::{
   KeywordToken, LogoStream, Logos, Source, Token,
-  chumsky::{
-    Parseable, Parser, extra::ParserExtra, keyword,
-  },
+  chumsky::{Parseable, Parser, extra::ParserExtra, keyword},
   error::UnexpectedToken,
-  utils::Span,
+  utils::{Span, cmp::Equivalent},
 };
 
 use crate::SyntaxKind;
 
 /// A scaffold AST for Yul for statement.
-/// 
+///
 /// See [Yul for statement](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulForStatement)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ForStatement<Init, Condition, Post, Block, Lang = YUL> {
@@ -28,13 +26,7 @@ pub struct ForStatement<Init, Condition, Post, Block, Lang = YUL> {
 impl<Init, Condition, Post, Block, Lang> ForStatement<Init, Condition, Post, Block, Lang> {
   /// Create a new for statement.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn new(
-    span: Span,
-    init: Init,
-    condition: Condition,
-    post: Post,
-    block: Block,
-  ) -> Self {
+  pub const fn new(span: Span, init: Init, condition: Condition, post: Post, block: Block) -> Self {
     Self {
       span,
       init,
@@ -80,6 +72,7 @@ impl<'a, Init, Condition, Post, Block, Lang, I, T, Error> Parseable<'a, I, T, Er
   for ForStatement<Init, Condition, Post, Block, Lang>
 where
   T: KeywordToken<'a>,
+  str: Equivalent<T>,
   Init: Parseable<'a, I, T, Error>,
   Condition: Parseable<'a, I, T, Error>,
   Post: Parseable<'a, I, T, Error>,
