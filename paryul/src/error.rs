@@ -10,7 +10,10 @@ use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use lexsol::yul::{lossless, syntactic};
 use logosky::{
   Logos, State, Token,
-  error::{UnexpectedEot, UnexpectedToken},
+  error::{
+    UnclosedBrace, UnclosedParen, UndelimitedBrace, UndelimitedParen, UnexpectedEot,
+    UnexpectedToken, UnopenedBrace, UnopenedParen,
+  },
   utils::{Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded},
 };
 
@@ -38,6 +41,18 @@ pub type LosslessParserError<'a, S> =
 pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
   /// Lexer error
   Lexer(LexerErrors<Char, StateError>),
+  /// Undelimited brace
+  UndelimitedBrace(UndelimitedBrace),
+  /// Undelimited parenthesis
+  UndelimitedParen(UndelimitedParen),
+  /// Unopened brace
+  UnopenedBrace(UnopenedBrace),
+  /// Unopened parenthesis
+  UnopenedParen(UnopenedParen),
+  /// Unclosed brace
+  UnclosedBrace(UnclosedBrace),
+  /// Unclosed parenthesis
+  UnclosedParenthesis(UnclosedParen),
   /// Unexpected token
   UnexpectedToken(UnexpectedToken<'static, T, TK>),
   /// State error
