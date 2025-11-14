@@ -180,6 +180,34 @@ pub enum SyntaxKind {
   // Token(TK),
 }
 
+impl From<logosky::utils::delimiter::RBrace> for SyntaxKind {
+  #[inline]
+  fn from(_: logosky::utils::delimiter::RBrace) -> Self {
+    Self::RBrace
+  }
+}
+
+impl From<logosky::utils::delimiter::LBrace> for SyntaxKind {
+  #[inline]
+  fn from(_: logosky::utils::delimiter::LBrace) -> Self {
+    Self::LBrace
+  }
+}
+
+impl From<logosky::utils::delimiter::LParen> for SyntaxKind {
+  #[inline]
+  fn from(_: logosky::utils::delimiter::LParen) -> Self {
+    Self::LParen
+  }
+}
+
+impl From<logosky::utils::delimiter::RParen> for SyntaxKind {
+  #[inline]
+  fn from(_: logosky::utils::delimiter::RParen) -> Self {
+    Self::RParen
+  }
+}
+
 /// An identifier.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Ident<S> {

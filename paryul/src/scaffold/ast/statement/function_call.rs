@@ -12,12 +12,14 @@ use logosky::{
 use logosky::{
   IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
-    Parseable, Parser,
+    Parseable, Parser, Recoverable,
     container::Container as ChumskyContainer,
+    delimited::DelimitedByParen,
     extra::ParserExtra,
     prelude::*,
     token::punct::{comma, paren_close, paren_open},
   },
+  error::{UnclosedParen, UndelimitedParen, UnopenedParen},
   syntax::Language,
   utils::Span,
 };
@@ -219,71 +221,42 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
       )
       .map_with(|(name, expressions), exa| Self::new(exa.span(), name, expressions))
   }
+
+  /// Returns a parser for the FunctionCall with the given expression parser.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn recoverable_parser<'a, I, T, Error, E>(
+    expression_parser: impl Parser<'a, I, Expression, E> + Clone,
+  ) -> impl Parser<'a, I, Self, E> + Clone
+  where
+    T: PunctuatorToken<'a>,
+    Name: Recoverable<'a, I, T, Error>,
+    Error: From<<T::Logos as Logos<'a>>::Error>
+      + From<UnopenedParen>
+      + From<UnexpectedEot>
+      + From<UnclosedParen>
+      + From<UndelimitedParen>
+      + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
+      + 'a,
+    Container: ChumskyContainer<Expression>,
+    Lang: Language,
+    Lang::SyntaxKind: From<SyntaxKind> + 'a,
+    Self: Sized + 'a,
+    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
+    T: Token<'a>,
+    E: ParserExtra<'a, I, Error = Error> + 'a,
+  {
+    Name::recoverable_parser()
+      .then(DelimitedByParen::recoverable_parser(
+        expression_parser
+          .separated_by(comma(|| SyntaxKind::Comma.into()))
+          .collect(),
+      ))
+      .map_with(|(name, expressions), exa| match expressions {
+        Ok(exprs) => {
+          let (_, expressions) = exprs.into_components();
+          Self::new(exa.span(), name, expressions)
+        }
+        Err(_) => Self::new(exa.span(), name, Container::default()),
+      })
+  }
 }
-
-// impl<'a, Name, Expression, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
-//   for FunctionCall<Name, Expression, Container, Lang>
-// where
-//   T: Token<'a>,
-//   Name: Parseable<'a, I, T, Error>,
-//   LParen: Parseable<'a, I, T, Error>,
-//   RParen: Parseable<'a, I, T, Error>,
-//   Comma: Parseable<'a, I, T, Error>,
-//   Expression: Parseable<'a, I, T, Error>,
-//   Container: ChumskyContainer<Expression>,
-// {
-//   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-//   where
-//     Self: Sized + 'a,
-//     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-//     T: Token<'a>,
-//     Error: 'a,
-//     E: ParserExtra<'a, I, Error = Error> + 'a,
-//   {
-//     Self::parser_with_expression(Expression::parser())
-//   }
-// }
-
-// impl<'a, Name, Expression, Container, Lang, I, T, Error> Recoverable<'a, I, T, Error>
-//   for FunctionCall<Name, Expression, Container, Lang>
-// where
-//   T: IdentifierToken<'a> + PunctuatorToken<'a> + TriviaToken<'a>,
-//   T::Logos: Logos<'a>,
-//   Name: Parseable<'a, I, T, Error> + ErrorNode,
-//   LParen: Parseable<'a, I, T, Error>,
-//   RParen: Parseable<'a, I, T, Error>,
-//   Comma: Parseable<'a, I, T, Error>,
-//   Expression: Recoverable<'a, I, T, Error> + ErrorNode,
-//   Error: From<<T::Logos as Logos<'a>>::Error>
-//     + From<UnexpectedToken<'a, T, SyntaxKind>>
-//     + From<UnexpectedEot>
-//     + 'a,
-//   Container: ChumskyContainer<Expression>,
-// {
-//   fn recoverable_parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-//   where
-//     Self: Sized + 'a,
-//     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-//     T: Token<'a>,
-//     Error: 'a,
-//     E: ParserExtra<'a, I, Error = Error> + 'a,
-//   {
-//     Name::parser()
-//       .recover_with(via_parser(skip_until_token(|t: &T| t.is_identifier()).map_with(|_, exa| Name::error(exa.span()))))
-//       .then_ignore(
-//         LParen::parser()
-//           .recover_with(via_parser(any().validate().re))
-//       )
-//       .then(
-//         Expression::parser()
-//           .separated_by(Comma::parser())
-//           .collect::<Container>(),
-//       )
-//       .then_ignore(RParen::parser())
-//       .map_with(|(name, expressions), exa| Self::new(exa.span(), name, expressions))
-//       .recover_with(via_parser(skip_until_token(|t: &T| {
-//         !t.is_trivia()
-//       })
-//       .map_with(|_, exa| Self::new(exa.span(), Name::parser().parse_inner(exa).unwrap(), Container::default()))))
-//   }
-// }

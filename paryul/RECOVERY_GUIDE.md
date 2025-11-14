@@ -4,8 +4,6 @@ When building the Yul parser, apply error recovery at nodes that provide natural
 
 | SyntaxKind           | Recommended Sync Points                             | Notes                                                                                   |
 |----------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
-| `Statement`          | `;`, `}`                                            | Base construct; prevent a single bad statement from aborting the enclosing block        |
-| `Block`              | Matching `}`                                        | Lets the parser resume with the surrounding construct                                   |
 | `VariableDeclaration`| `;`, `}`                                            | Treated as a statement; sync to next statement boundary                                 |
 | `Assignment`         | `;`, `}`                                            | Same as above                                                                           |
 | `FunctionCall`       | `;`, `}`                                            | Calls that appear as standalone statements                                              |
