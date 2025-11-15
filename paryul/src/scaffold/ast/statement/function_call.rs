@@ -12,30 +12,29 @@ use logosky::{
 use logosky::{
   IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
-    Parseable, Parser, Recoverable,
+    Parseable, Parser,
     container::Container as ChumskyContainer,
-    delimited::DelimitedByParen,
     extra::ParserExtra,
     prelude::*,
     token::punct::{comma, paren_close, paren_open},
   },
-  error::{UnclosedParen, UndelimitedParen, UnopenedParen},
   syntax::Language,
+  types::Ident,
   utils::Span,
 };
 
-use crate::{Ident, SyntaxKind, YUL};
+use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST node for a Yul function call name.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionCallName<S, Lang = YUL> {
-  ident: Ident<S>,
+  ident: Ident<S, Lang>,
   _lang: PhantomData<Lang>,
 }
 
-impl<S, Lang> From<Ident<S>> for FunctionCallName<S, Lang> {
+impl<S, Lang> From<Ident<S, Lang>> for FunctionCallName<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn from(ident: Ident<S>) -> Self {
+  fn from(ident: Ident<S, Lang>) -> Self {
     Self::new(ident)
   }
 }
@@ -43,7 +42,7 @@ impl<S, Lang> From<Ident<S>> for FunctionCallName<S, Lang> {
 impl<S, Lang> FunctionCallName<S, Lang> {
   /// Create a new path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn new(ident: Ident<S>) -> Self {
+  pub const fn new(ident: Ident<S, Lang>) -> Self {
     Self {
       ident,
       _lang: PhantomData,
@@ -58,7 +57,7 @@ impl<S, Lang> FunctionCallName<S, Lang> {
 
   /// Get the identifier of the path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn ident(&self) -> &Ident<S> {
+  pub const fn ident(&self) -> &Ident<S, Lang> {
     &self.ident
   }
 }
@@ -220,43 +219,5 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
           ),
       )
       .map_with(|(name, expressions), exa| Self::new(exa.span(), name, expressions))
-  }
-
-  /// Returns a parser for the FunctionCall with the given expression parser.
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn recoverable_parser<'a, I, T, Error, E>(
-    expression_parser: impl Parser<'a, I, Expression, E> + Clone,
-  ) -> impl Parser<'a, I, Self, E> + Clone
-  where
-    T: PunctuatorToken<'a>,
-    Name: Recoverable<'a, I, T, Error>,
-    Error: From<<T::Logos as Logos<'a>>::Error>
-      + From<UnopenedParen>
-      + From<UnexpectedEot>
-      + From<UnclosedParen>
-      + From<UndelimitedParen>
-      + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
-      + 'a,
-    Container: ChumskyContainer<Expression>,
-    Lang: Language,
-    Lang::SyntaxKind: From<SyntaxKind> + 'a,
-    Self: Sized + 'a,
-    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-    T: Token<'a>,
-    E: ParserExtra<'a, I, Error = Error> + 'a,
-  {
-    Name::recoverable_parser()
-      .then(DelimitedByParen::recoverable_parser(
-        expression_parser
-          .separated_by(comma(|| SyntaxKind::Comma.into()))
-          .collect(),
-      ))
-      .map_with(|(name, expressions), exa| match expressions {
-        Ok(exprs) => {
-          let (_, expressions) = exprs.into_components();
-          Self::new(exa.span(), name, expressions)
-        }
-        Err(_) => Self::new(exa.span(), name, Container::default()),
-      })
   }
 }

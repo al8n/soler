@@ -2,25 +2,24 @@ pub use lexsol::{
   error::yul::{Error as LexerError, Errors as LexerErrors},
   yul::{
     lossless::{Error as LosslessLexerError, Errors as LosslessLexerErrors},
-    syntactic::{Error as SyntacticLexerError, Errors as SyntacticLexerErrors},
+    syntactic::{Error as AstLexerError, Errors as AstLexerErrors},
   },
 };
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use lexsol::yul::{lossless, syntactic};
 use logosky::{
-  Logos, State, Token,
+  Token,
   error::{
-    UnclosedBrace, UnclosedParen, UndelimitedBrace, UndelimitedParen, UnexpectedEot,
-    UnexpectedToken, UnopenedBrace, UnopenedParen,
+    UnclosedBrace, UnclosedParen, UndelimitedBrace, UndelimitedParen, UnexpectedEot, UnexpectedToken, UnknownLexeme, UnopenedBrace, UnopenedParen
   },
   utils::{Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded},
 };
 
-use crate::SyntaxKind;
+use crate::{SyntaxKind, syntax::Statement};
 
 /// The parser error type for Yul syntactic tokens.
-pub type SyntacticParserError<'a, S> = Error<
+pub type AstParserError<'a, S> = Error<
   syntactic::Token<S>,
   SyntaxKind,
   <syntactic::Token<S> as Token<'a>>::Char,
@@ -55,6 +54,7 @@ pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
   UnclosedParenthesis(UnclosedParen),
   /// Unexpected token
   UnexpectedToken(UnexpectedToken<'static, T, TK>),
+  UnknownStatement(UnknownLexeme<Char, Statement>),
   /// State error
   State(Spanned<StateError>),
   /// End of token stream

@@ -27,7 +27,7 @@ pub mod function_call;
 pub mod function_definition;
 
 /// The AST for [yul-variable-definition](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDefinition)
-pub mod variable_definition;
+pub mod variable_declaration;
 
 /// The AST for [yul-assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
 pub mod assignment;

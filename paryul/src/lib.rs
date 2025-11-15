@@ -5,8 +5,6 @@
 #![allow(clippy::double_parens)]
 // #![deny(missing_docs)]
 
-use logosky::utils::Span;
-
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc as std;
 
@@ -16,8 +14,17 @@ extern crate std;
 /// The scaffold AST/CST nodes for Yul-like languages.
 pub mod scaffold;
 
+/// The AST nodes for Yul language.
+pub mod ast;
+
+/// The CST nodes for Yul language.
+pub mod cst;
+
 /// Error types for Yul parser.
 pub mod error;
+
+/// The syntax for Yul.
+pub mod syntax;
 
 /// The YUL language marker.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, derive_more::Display)]
@@ -205,41 +212,5 @@ impl From<logosky::utils::delimiter::RParen> for SyntaxKind {
   #[inline]
   fn from(_: logosky::utils::delimiter::RParen) -> Self {
     Self::RParen
-  }
-}
-
-/// An identifier.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Ident<S> {
-  span: Span,
-  ident: S,
-}
-
-impl<S> Ident<S> {
-  /// Create a new identifier.
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn new(span: Span, ident: S) -> Self {
-    Self { span, ident }
-  }
-
-  /// Get the span of the identifier.
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn span(&self) -> Span {
-    self.span
-  }
-
-  /// Get the string of the identifier.
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn ident_ref(&self) -> &S {
-    &self.ident
-  }
-
-  /// Get the string of the identifier.
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn ident(self) -> S
-  where
-    S: Copy,
-  {
-    self.ident
   }
 }

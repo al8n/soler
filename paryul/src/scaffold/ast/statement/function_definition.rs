@@ -92,7 +92,7 @@ where
 
 /// A scaffold AST node for Yul function definition return parameters.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionDefinitionReturnParameters<Param, Container, Lang = YUL> {
+pub struct FunctionDefinitionReturnParameters<Param, Container = Vec<Param>, Lang = YUL> {
   span: Span,
   params: Container,
   _m: PhantomData<Param>,

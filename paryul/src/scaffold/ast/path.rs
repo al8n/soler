@@ -11,21 +11,22 @@ use logosky::{
     Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
   },
   error::{UnexpectedEot, UnexpectedToken},
+  types::Ident,
   utils::Span,
 };
 
-use crate::{Ident, SyntaxKind, YUL};
+use crate::{SyntaxKind, YUL};
 
 /// A segment of a path.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct PathSegment<S, Lang = YUL> {
-  ident: Ident<S>,
+  ident: Ident<S, Lang>,
   _lang: PhantomData<Lang>,
 }
 
-impl<S, Lang> From<Ident<S>> for PathSegment<S, Lang> {
+impl<S, Lang> From<Ident<S, Lang>> for PathSegment<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn from(ident: Ident<S>) -> Self {
+  fn from(ident: Ident<S, Lang>) -> Self {
     Self::new(ident)
   }
 }
@@ -33,7 +34,7 @@ impl<S, Lang> From<Ident<S>> for PathSegment<S, Lang> {
 impl<S, Lang> PathSegment<S, Lang> {
   /// Create a new path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn new(ident: Ident<S>) -> Self {
+  pub const fn new(ident: Ident<S, Lang>) -> Self {
     Self {
       ident,
       _lang: PhantomData,
@@ -48,7 +49,7 @@ impl<S, Lang> PathSegment<S, Lang> {
 
   /// Get the identifier of the path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn ident(&self) -> &Ident<S> {
+  pub const fn ident(&self) -> &Ident<S, Lang> {
     &self.ident
   }
 }
@@ -173,33 +174,29 @@ impl<Segment, Container, Lang> Path<Segment, Container, Lang> {
   {
     self.segments.as_ref()
   }
-}
 
-impl<'a, Segment, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
-  for Path<Segment, Container, Lang>
-where
-  T: IdentifierToken<'a> + PunctuatorToken<'a>,
-  T::Logos: Logos<'a>,
-  Segment: Parseable<'a, I, T, Error>
-    + From<Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>>>,
-  Lang: Language,
-  Lang::SyntaxKind: From<SyntaxKind> + 'a,
-  Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
-    + From<UnexpectedEot>
-    + 'a,
-  Container: ChumskyContainer<Segment>,
-{
-  #[inline]
-  fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
+  /// Returns a parser for the Path with the given segment parser.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn parser<'a, I, T, Error, E>(
+    segment_parser: impl Parser<'a, I, Segment, E> + Clone + 'a,
+  ) -> impl Parser<'a, I, Self, E> + Clone
   where
+    T: IdentifierToken<'a> + PunctuatorToken<'a>,
+    T::Logos: Logos<'a>,
+    Lang: Language,
+    Lang::SyntaxKind: From<SyntaxKind> + 'a,
+    Segment: From<Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>, Lang>>,
+    Error: From<<T::Logos as Logos<'a>>::Error>
+      + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
+      + From<UnexpectedEot>
+      + 'a,
+    Container: ChumskyContainer<Segment>,
     Self: Sized + 'a,
     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
     T: Token<'a>,
-    Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    custom(|inp| {
+    custom(move |inp| {
       let before = inp.cursor();
 
       let tok: Option<Lexed<'_, T>> = inp.next();
@@ -236,11 +233,39 @@ where
             // consume the dot as we are building a AST not CST.
             inp.skip();
 
-            segments.push(inp.parse(Segment::parser())?);
+            segments.push(inp.parse(segment_parser.clone())?);
           }
           Some(Lexed::Error(_)) | None => return Ok(Path::new(inp.span_since(&before), segments)),
         }
       }
     })
+  }
+}
+
+impl<'a, Segment, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
+  for Path<Segment, Container, Lang>
+where
+  T: IdentifierToken<'a> + PunctuatorToken<'a>,
+  T::Logos: Logos<'a>,
+  Segment: Parseable<'a, I, T, Error>
+    + From<Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>, Lang>>,
+  Lang: Language,
+  Lang::SyntaxKind: From<SyntaxKind> + 'a,
+  Error: From<<T::Logos as Logos<'a>>::Error>
+    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
+    + From<UnexpectedEot>
+    + 'a,
+  Container: ChumskyContainer<Segment>,
+{
+  #[inline]
+  fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
+  where
+    Self: Sized + 'a,
+    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
+    T: Token<'a>,
+    Error: 'a,
+    E: ParserExtra<'a, I, Error = Error> + 'a,
+  {
+    Self::parser(Segment::parser())
   }
 }

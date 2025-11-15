@@ -209,6 +209,26 @@ impl<S> Token<S> {
       Self::EvmBuiltin(_) => TokenKind::EvmBuiltin,
     }
   }
+
+  /// Returns `true` if the token may be a YUL statement start token.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_statement_start(&self) -> bool {
+    match self {
+      Self::Leave
+      | Self::Continue
+      | Self::Break
+      | Self::LBrace
+      | Self::Switch
+      | Self::Function
+      | Self::Let
+      | Self::If
+      | Self::For
+      | Self::Identifier(_) => true,
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(_) => true,
+      _ => false,
+    }
+  }
 }
 
 impl<'a, S: 'a> TriviaToken<'a> for Token<S>
