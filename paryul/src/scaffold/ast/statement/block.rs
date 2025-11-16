@@ -100,8 +100,8 @@ impl<Statement, Container, Lang> Block<Statement, Container, Lang> {
   /// three distinct recovery scenarios based on delimiter presence.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn recoverable_parser<'a, I, T, Error, E>(
-    statement_parser: impl Parser<'a, I, Statement, E> + Clone,
-  ) -> impl Parser<'a, I, Self, E> + Clone
+    statement_parser: impl Parser<'a, I, Statement, E> + Clone + 'a,
+  ) -> impl Parser<'a, I, Self, E> + Clone + 'a
   where
     T: PunctuatorToken<'a>,
     Lang: Language,

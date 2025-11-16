@@ -20,7 +20,7 @@ use logosky::{
   },
   syntax::Language,
   types::Ident,
-  utils::Span,
+  utils::{AsSpan, Span},
 };
 
 use crate::{SyntaxKind, YUL};
@@ -156,6 +156,15 @@ pub struct FunctionCall<Name, Expression, Container = Vec<Expression>, Lang = YU
   _lang: PhantomData<Lang>,
 }
 
+impl<Name, Expression, Container, Lang> AsSpan<Span>
+  for FunctionCall<Name, Expression, Container, Lang>
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_span(&self) -> &Span {
+    self.span_ref()
+  }
+}
+
 impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container, Lang> {
   /// Create a new function call.
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -167,6 +176,24 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
       _m: PhantomData,
       _lang: PhantomData,
     }
+  }
+
+  /// Get the span of the function call.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span(&self) -> Span {
+    self.span
+  }
+
+  /// Get the reference to the span of the function call.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span_ref(&self) -> &Span {
+    &self.span
+  }
+
+  /// Get the mutable reference to the span of the function call.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span_mut(&mut self) -> &mut Span {
+    &mut self.span
   }
 
   /// Get the name of the function call.

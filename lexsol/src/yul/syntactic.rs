@@ -229,6 +229,23 @@ impl<S> Token<S> {
       _ => false,
     }
   }
+
+  /// Returns `true` if the token may be a YUL path start token.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_path_start(&self) -> bool {
+    matches!(self, Self::Identifier(_))
+  }
+
+  /// Returns `true` if the token may be a YUL expression start token.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_expression_start(&self) -> bool {
+    match self {
+      Self::Identifier(_) | Self::Lit(_) => true,
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(_) => true,
+      _ => false,
+    }
+  }
 }
 
 impl<'a, S: 'a> TriviaToken<'a> for Token<S>
@@ -244,7 +261,6 @@ where
 impl<'a, S: 'a> PunctuatorToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
-  str: Equivalent<S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_brace_open(&self) -> bool {
@@ -280,7 +296,6 @@ where
 impl<'a, S: 'a> OperatorToken<'a> for Token<S>
 where
   Token<S>: logosky::Token<'a>,
-  str: Equivalent<S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_colon_eq_assign(&self) -> bool {

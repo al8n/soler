@@ -172,7 +172,7 @@ pub enum SyntaxKind {
   /// Literal
   ///
   /// Spec: [Yul Literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulLiteral)
-  Literal,
+  Lit,
 
   /// Expression
   ///

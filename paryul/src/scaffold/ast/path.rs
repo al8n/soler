@@ -12,7 +12,7 @@ use logosky::{
   },
   error::{UnexpectedEot, UnexpectedToken},
   types::Ident,
-  utils::Span,
+  utils::{AsSpan, Span},
 };
 
 use crate::{SyntaxKind, YUL};
@@ -22,6 +22,13 @@ use crate::{SyntaxKind, YUL};
 pub struct PathSegment<S, Lang = YUL> {
   ident: Ident<S, Lang>,
   _lang: PhantomData<Lang>,
+}
+
+impl<S, Lang> AsSpan<Span> for PathSegment<S, Lang> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_span(&self) -> &Span {
+    self.ident.span_ref()
+  }
 }
 
 impl<S, Lang> From<Ident<S, Lang>> for PathSegment<S, Lang> {
@@ -142,10 +149,17 @@ pub struct Path<Segment, Container = Vec<Segment>, Lang = YUL> {
   _lang: PhantomData<Lang>,
 }
 
+impl<Segment, Container, Lang> AsSpan<Span> for Path<Segment, Container, Lang> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_span(&self) -> &Span {
+    self.span_ref()
+  }
+}
+
 impl<Segment, Container, Lang> Path<Segment, Container, Lang> {
   /// Create a new path.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  const fn new(span: Span, segments: Container) -> Self {
+  pub const fn new(span: Span, segments: Container) -> Self {
     Self {
       span,
       segments,
@@ -158,6 +172,18 @@ impl<Segment, Container, Lang> Path<Segment, Container, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn span(&self) -> Span {
     self.span
+  }
+
+  /// Get the reference to the span of the path.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span_ref(&self) -> &Span {
+    &self.span
+  }
+
+  /// Get the mutable reference to the span of the path.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span_mut(&mut self) -> &mut Span {
+    &mut self.span
   }
 
   /// Get the segments of the path.
