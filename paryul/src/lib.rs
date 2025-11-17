@@ -137,7 +137,7 @@ pub enum SyntaxKind {
   /// The name of a function call
   ///
   /// Spec: [Yul Function Call Name](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
-  FunctionCallName,
+  FunctionName,
 
   /// Function call
   ///

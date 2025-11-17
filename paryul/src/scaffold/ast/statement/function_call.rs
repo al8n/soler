@@ -27,19 +27,19 @@ use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST node for a Yul function call name.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionCallName<S, Lang = YUL> {
+pub struct FunctionName<S, Lang = YUL> {
   ident: Ident<S, Lang>,
   _lang: PhantomData<Lang>,
 }
 
-impl<S, Lang> From<Ident<S, Lang>> for FunctionCallName<S, Lang> {
+impl<S, Lang> From<Ident<S, Lang>> for FunctionName<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn from(ident: Ident<S, Lang>) -> Self {
     Self::new(ident)
   }
 }
 
-impl<S, Lang> FunctionCallName<S, Lang> {
+impl<S, Lang> FunctionName<S, Lang> {
   /// Create a new path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(ident: Ident<S, Lang>) -> Self {
@@ -63,7 +63,7 @@ impl<S, Lang> FunctionCallName<S, Lang> {
 }
 
 #[cfg(not(feature = "evm"))]
-impl<'a, S, I, T, Lang, Error> Parseable<'a, I, T, Error> for FunctionCallName<S, Lang>
+impl<'a, S, I, T, Lang, Error> Parseable<'a, I, T, Error> for FunctionName<S, Lang>
 where
   T: IdentifierToken<'a>,
   T::Logos: Logos<'a>,
@@ -86,14 +86,14 @@ where
     logosky::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
       |ident: Spanned<S>| {
         let (span, ident) = ident.into_components();
-        FunctionCallName::new(Ident::new(span, ident))
+        FunctionName::new(Ident::new(span, ident))
       },
     )
   }
 }
 
 #[cfg(feature = "evm")]
-impl<'a, S, I, T, Lang, Error> Parseable<'a, I, T, Error> for FunctionCallName<S, Lang>
+impl<'a, S, I, T, Lang, Error> Parseable<'a, I, T, Error> for FunctionName<S, Lang>
 where
   T: IdentifierToken<'a> + Require<EvmBuiltinFunction, Err = T>,
   T::Logos: Logos<'a>,
@@ -129,7 +129,7 @@ where
                   UnexpectedToken::expected_one_with_found(
                     span,
                     tok,
-                    SyntaxKind::FunctionCallName.into(),
+                    SyntaxKind::FunctionName.into(),
                   )
                   .into(),
                 );
@@ -137,7 +137,7 @@ where
             },
           };
 
-          Ok(FunctionCallName::new(ident))
+          Ok(FunctionName::new(ident))
         }
       }
     })

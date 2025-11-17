@@ -10,7 +10,7 @@ use logosky::{
 
 use crate::{
   error::{AstLexerErrors, TrailingComma, UnknownExpression},
-  scaffold::ast::statement::function_call::FunctionCallName,
+  scaffold::ast::statement::function_call::FunctionName,
 };
 
 use super::*;
@@ -198,13 +198,13 @@ where
                       let (_, exprs) = exprs.into_components();
                       Expression::FunctionCall(FunctionCall::new(
                         inp.span_since(&start),
-                        FunctionCallName::new(ident),
+                        FunctionName::new(ident),
                         exprs.data,
                       ))
                     }
                     Err(_) => Expression::FunctionCall(FunctionCall::new(
                       inp.span_since(&start),
-                      FunctionCallName::new(ident),
+                      FunctionName::new(ident),
                       Vec::new(),
                     )),
                   }
@@ -234,7 +234,7 @@ where
               let start = inp.cursor();
               inp.skip();
               let end = inp.cursor();
-              let name = FunctionCallName::new(Ident::new(span, inp.slice(&start..&end)));
+              let name = FunctionName::new(Ident::new(span, inp.slice(&start..&end)));
               // parse the exprs
               let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
                 _,
@@ -291,7 +291,7 @@ where
                   // construct a function call expression but missing identifier
                   return Ok(Self::Node(Expression::FunctionCall(FunctionCall::new(
                     inp.span_since(&cur),
-                    FunctionCallName::new(ident),
+                    FunctionName::new(ident),
                     Vec::new(),
                   ))));
                 }
@@ -324,13 +324,13 @@ where
                   let (_, exprs) = exprs.into_components();
                   Expression::FunctionCall(FunctionCall::new(
                     inp.span_since(&cur),
-                    FunctionCallName::new(ident),
+                    FunctionName::new(ident),
                     exprs.data,
                   ))
                 }
                 Err(_) => Expression::FunctionCall(FunctionCall::new(
                   inp.span_since(&cur),
-                  FunctionCallName::new(ident),
+                  FunctionName::new(ident),
                   Vec::new(),
                 )),
               }
@@ -481,7 +481,7 @@ where
             // let start = inp.cursor();
             // inp.skip();
             // let end = inp.cursor();
-            // let name = FunctionCallName::new(Ident::new(span, inp.slice(&start..&end)));
+            // let name = FunctionName::new(Ident::new(span, inp.slice(&start..&end)));
             // // parse the exprs
             // let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
             //   _,
@@ -538,7 +538,7 @@ where
             //     // construct a function call expression but missing identifier
             //     return Ok(Self::Node(Expression::FunctionCall(FunctionCall::new(
             //       inp.span_since(&cur),
-            //       FunctionCallName::new(ident),
+            //       FunctionName::new(ident),
             //       Vec::new(),
             //     ))));
             //   }
@@ -571,13 +571,13 @@ where
             //     let (_, exprs) = exprs.into_components();
             //     Expression::FunctionCall(FunctionCall::new(
             //       inp.span_since(&cur),
-            //       FunctionCallName::new(ident),
+            //       FunctionName::new(ident),
             //       exprs.data,
             //     ))
             //   }
             //   Err(_) => Expression::FunctionCall(FunctionCall::new(
             //     inp.span_since(&cur),
-            //     FunctionCallName::new(ident),
+            //     FunctionName::new(ident),
             //     Vec::new(),
             //   )),
             // }

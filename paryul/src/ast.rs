@@ -2,7 +2,7 @@ use crate::{SyntaxKind, YUL, error::AstParserError, scaffold::ast};
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use lexsol::types::keywords::{Break, Continue, Leave};
+use lexsol::types::{LitBool, LitDecimal, LitHexadecimal, LitNumber, keywords::{Break, Continue, Leave}};
 use logosky::{
   IdentifierToken, KeywordToken, Lexed, LitToken, LogoStream, Logos, PunctuatorToken, Require,
   Source, Token,
@@ -18,6 +18,7 @@ pub use statement::Statement;
 mod assignment;
 mod expression;
 mod function_call;
+mod function_name;
 mod path;
 mod statement;
 
@@ -25,6 +26,62 @@ mod statement;
 pub type AstToken<S> = lexsol::yul::syntactic::Token<S>;
 /// The tokenizer type for Yul AST nodes.
 pub type AstTokenizer<'a, S> = lexsol::yul::syntactic::Lexer<'a, S>;
+
+#[derive(Debug, Clone, PartialEq, Eq, TryUnwrap)]
+enum SemiIdentifierToken<S> {
+  Leave,
+  Continue,
+  Break,
+  Switch,
+  Case,
+  Default,
+  Function,
+  Let,
+  If,
+  For,
+  LitBool(LitBool<S>),
+  LitDecimal(LitDecimal<S>),
+  LitHexadecimal(LitHexadecimal<S>),
+  #[cfg(feature = "evm")]
+  EvmBuiltin(lexsol::yul::EvmBuiltinFunction),
+  Identifier(S),
+}
+
+impl<S> Require<SemiIdentifierToken<S>> for AstToken<S> {
+  type Err = Self;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn require(self) -> Result<SemiIdentifierToken<S>, Self::Err>
+  where
+    Self: Sized,
+  {
+    Ok(match self {
+      Self::Leave => SemiIdentifierToken::Leave,
+      Self::Continue => SemiIdentifierToken::Continue,
+      Self::Break => SemiIdentifierToken::Break,
+      Self::Switch => SemiIdentifierToken::Switch,
+      Self::Case => SemiIdentifierToken::Case,
+      Self::Default => SemiIdentifierToken::Default,
+      Self::Function => SemiIdentifierToken::Function,
+      Self::Let => SemiIdentifierToken::Let,
+      Self::If => SemiIdentifierToken::If,
+      Self::For => SemiIdentifierToken::For,
+      Self::Identifier(ident) => SemiIdentifierToken::Identifier(ident),
+      Self::Lit(lit) => match lit {
+        Lit::Boolean(val) => SemiIdentifierToken::LitBool(val),
+        Lit::Number(val) => match val {
+          LitNumber::Decimal(val) => SemiIdentifierToken::LitDecimal(val),
+          LitNumber::Hexadecimal(val) => SemiIdentifierToken::LitHexadecimal(val),
+          lit => return Err(Self::Lit(Lit::Number(lit))),
+        },
+        lit => return Err(Self::Lit(lit)),
+      },
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(val) => SemiIdentifierToken::EvmBuiltin(val),
+      tok => return Err(tok),
+    })
+  }
+}
 
 /// The identifier type for Yul.
 ///
@@ -42,13 +99,13 @@ pub type Path<S> = ast::path::Path<PathSegment<S>>;
 /// The function call name type for Yul.
 ///
 /// Spec: [Yul Function Call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
-pub type FunctionCallName<S> = ast::statement::function_call::FunctionCallName<S>;
+pub type FunctionName<S> = ast::statement::function_call::FunctionName<S>;
 
 /// The function call type for Yul.
 ///
 /// Spec: [Yul Function Call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
 pub type FunctionCall<S> =
-  ast::statement::function_call::FunctionCall<FunctionCallName<S>, Expression<S>>;
+  ast::statement::function_call::FunctionCall<FunctionName<S>, Expression<S>>;
 
 /// The single-target assignment type for Yul.
 ///
@@ -79,7 +136,7 @@ pub type SingleVariableDeclaration<S> =
 /// Spec: [Yul Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
 pub type MultipleVariableDeclaration<S> =
   ast::statement::variable_declaration::MultipleVariableDeclaration<
-    FunctionCallName<S>,
+    FunctionName<S>,
     FunctionCall<S>,
   >;
 
@@ -87,7 +144,7 @@ pub type MultipleVariableDeclaration<S> =
 ///
 /// Spec: [Yul Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
 pub type VariableDeclaration<S> = ast::statement::variable_declaration::VariableDeclaration<
-  FunctionCallName<S>,
+  FunctionName<S>,
   Expression<S>,
   FunctionCall<S>,
 >;
@@ -145,7 +202,7 @@ pub type FunctionDefinitionReturnParameters<S> =
 ///
 /// Spec: [Yul Function Definition](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionDefinition)
 pub type FunctionDefinition<S> = ast::statement::function_definition::FunctionDefinition<
-  FunctionCallName<S>,
+  FunctionName<S>,
   FunctionDefinitionArguments<S>,
   FunctionDefinitionReturnParameters<S>,
   Block<S>,

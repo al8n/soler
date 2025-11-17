@@ -13,7 +13,7 @@ use logosky::{
 
 use crate::{
   error::{AstLexerErrors, TrailingComma},
-  scaffold::ast::statement::function_call::FunctionCallName,
+  scaffold::ast::statement::function_call::FunctionName,
 };
 
 use super::*;
@@ -118,7 +118,7 @@ where
                       return Ok(Self::Missing(inp.span_since(&valid_start)));
                     }
 
-                    let name = FunctionCallName::new(Ident::new(span, ident));
+                    let name = FunctionName::new(Ident::new(span, ident));
                     parse_arguments(inp, valid_start, name, || SyntaxKind::Comma)?
                   }
                 }
@@ -128,7 +128,7 @@ where
                 inp.skip();
                 let ident_end = inp.cursor();
                 let name =
-                  FunctionCallName::new(Ident::new(span, inp.slice(&valid_start..&ident_end)));
+                  FunctionName::new(Ident::new(span, inp.slice(&valid_start..&ident_end)));
 
                 let tok: Option<Lexed<'_, AstToken<S>>> = inp.peek();
                 match tok {
@@ -170,14 +170,14 @@ where
                     // construct a function call expression but missing identifier
                     FunctionCall::new(
                       inp.span_since(&valid_start),
-                      FunctionCallName::new(ident),
+                      FunctionName::new(ident),
                       Vec::new(),
                     )
                   }
                   // Slow path: parse arguments
                   _ => {
                     inp.rewind(valid_ckp);
-                    parse_arguments(inp, valid_start, FunctionCallName::new(ident), || {
+                    parse_arguments(inp, valid_start, FunctionName::new(ident), || {
                       SyntaxKind::Comma
                     })?
                   }
@@ -195,7 +195,7 @@ fn parse_arguments<'a, 'p, S, E>(
   inp: &mut InputRef<'a, 'p, AstTokenizer<'a, S>, E>,
   expr: impl Parser<'a, AstTokenizer<'a, S>, Recoverable<Expression<S>>, E> + Clone + 'a,
   start: Cursor<'a, 'p, AstTokenizer<'a, S>>,
-  name: FunctionCallName<S>,
+  name: FunctionName<S>,
   sep_kind: impl Fn() -> SyntaxKind + Clone + 'a,
 ) -> Result<FunctionCall<S>, AstParserError<'a, S>>
 where

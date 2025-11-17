@@ -1,4 +1,4 @@
-use lexsol::types::{LitBool, LitDecimal, LitHexadecimal, LitNumber, punct::Dot};
+use lexsol::types::punct::Dot;
 use logosky::{
   chumsky::separated::separated_by,
   error::{ErrorNode, Missing},
@@ -7,7 +7,7 @@ use logosky::{
 };
 
 use crate::{
-  error::{AstLexerErrors, InvalidPathSegment, InvalidPathSegmentValue, TrailingDot},
+  error::{AstLexerErrors, InvalidPathSegment, SemiIdentifierKnowledge, TrailingDot},
   scaffold::ast::path::PathSegment,
 };
 
@@ -21,63 +21,6 @@ const fn is_path_segment_token<S>(tok: &AstToken<S>) -> bool {
     AstToken::EvmBuiltin(_) => true,
 
     _ => false,
-  }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, TryUnwrap)]
-enum MaybePathSegmentToken<S> {
-  Leave,
-  Continue,
-  Break,
-  Switch,
-  Case,
-  Default,
-  Function,
-  Let,
-  If,
-  For,
-  LitBool(LitBool<S>),
-  LitDecimal(LitDecimal<S>),
-  LitHexadecimal(LitHexadecimal<S>),
-  #[cfg(feature = "evm")]
-  EvmBuiltin(lexsol::yul::EvmBuiltinFunction),
-  // valid path segment
-  Identifier(S),
-}
-
-impl<S> Require<MaybePathSegmentToken<S>> for AstToken<S> {
-  type Err = Self;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn require(self) -> Result<MaybePathSegmentToken<S>, Self::Err>
-  where
-    Self: Sized,
-  {
-    Ok(match self {
-      Self::Leave => MaybePathSegmentToken::Leave,
-      Self::Continue => MaybePathSegmentToken::Continue,
-      Self::Break => MaybePathSegmentToken::Break,
-      Self::Switch => MaybePathSegmentToken::Switch,
-      Self::Case => MaybePathSegmentToken::Case,
-      Self::Default => MaybePathSegmentToken::Default,
-      Self::Function => MaybePathSegmentToken::Function,
-      Self::Let => MaybePathSegmentToken::Let,
-      Self::If => MaybePathSegmentToken::If,
-      Self::For => MaybePathSegmentToken::For,
-      Self::Identifier(ident) => MaybePathSegmentToken::Identifier(ident),
-      Self::Lit(lit) => match lit {
-        Lit::Boolean(val) => MaybePathSegmentToken::LitBool(val),
-        Lit::Number(val) => match val {
-          LitNumber::Decimal(val) => MaybePathSegmentToken::LitDecimal(val),
-          LitNumber::Hexadecimal(val) => MaybePathSegmentToken::LitHexadecimal(val),
-          lit => return Err(Self::Lit(Lit::Number(lit))),
-        },
-        lit => return Err(Self::Lit(lit)),
-      },
-      #[cfg(feature = "evm")]
-      Self::EvmBuiltin(val) => MaybePathSegmentToken::EvmBuiltin(val),
-      tok => return Err(tok),
-    })
   }
 }
 
@@ -146,32 +89,32 @@ impl<S> PathSegment<S> {
         Err((false, Self::new(Ident::error(exa.span()))))
       }
       Lexed::Token(Spanned { span, data: tok }) => {
-        match <AstToken<S> as Require<MaybePathSegmentToken<S>>>::require(tok) {
+        match <AstToken<S> as Require<SemiIdentifierToken<S>>>::require(tok) {
           Ok(seg) => {
             let err = match seg {
-              MaybePathSegmentToken::LitBool(val) => {
-                InvalidPathSegmentValue::LitBool(Spanned::new(span, val.map(|_| ())))
+              SemiIdentifierToken::LitBool(val) => {
+                SemiIdentifierKnowledge::LitBool(Spanned::new(span, val)).into()
               }
-              MaybePathSegmentToken::LitDecimal(val) => {
-                InvalidPathSegmentValue::LitDecimal(Spanned::new(span, val.map(|_| ())))
+              SemiIdentifierToken::LitDecimal(val) => {
+                SemiIdentifierKnowledge::LitDecimal(Spanned::new(span, val)).into()
               }
-              MaybePathSegmentToken::LitHexadecimal(val) => {
-                InvalidPathSegmentValue::LitHexadecimal(Spanned::new(span, val.map(|_| ())))
+              SemiIdentifierToken::LitHexadecimal(val) => {
+                SemiIdentifierKnowledge::LitHexadecimal(Spanned::new(span, val)).into()
               }
               #[cfg(feature = "evm")]
-              MaybePathSegmentToken::EvmBuiltin(val) => {
+              SemiIdentifierToken::EvmBuiltin(val) => {
                 // if this is not a leading path segment, then evm builtin fn can be used as a path segment
                 if !is_leading {
                   return Ok((false, Self::new(Ident::new(span, S::from(exa.slice())))));
                 }
-                InvalidPathSegmentValue::EvmBuiltinFunction(Spanned::new(span, val))
+                SemiIdentifierKnowledge::EvmBuiltinFunction(Spanned::new(span, val)).into()
               }
 
               // valid path segment token, nothing to do.
-              MaybePathSegmentToken::Identifier(ident) => {
+              SemiIdentifierToken::Identifier(ident) => {
                 return Ok((false, Self::new(Ident::new(span, ident))));
               }
-              _ => InvalidPathSegmentValue::Keyword(Keyword::new(span, ())),
+              _ => SemiIdentifierKnowledge::Keyword(Keyword::new(span, S::from(exa.slice()))).into(),
             };
 
             let err = InvalidPathSegment::with_knowledge(span, err);
@@ -179,7 +122,7 @@ impl<S> PathSegment<S> {
 
             Ok((
               false,
-              PathSegment::new(Ident::new(span, S::from(exa.slice()))),
+              Self::new(Ident::new(span, S::from(exa.slice()))),
             ))
           }
           Err(tok) => {
@@ -244,7 +187,7 @@ impl<S> Path<S> {
             false
           }
           Lexed::Token(Spanned { span, data: tok }) => {
-            match <AstToken<S> as Require<MaybePathSegmentToken<S>>>::require(tok) {
+            match <AstToken<S> as Require<SemiIdentifierToken<S>>>::require(tok) {
               Err(_) => {
                 // not possible to be a path segment token, we should return the single segment path
                 return None;

@@ -6,7 +6,7 @@ pub use lexsol::{
   },
 };
 
-use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
+use derive_more::{From, Into, IsVariant, TryUnwrap, Unwrap};
 use lexsol::{
   types::{
     LitBool, LitDecimal, LitHexadecimal,
@@ -33,6 +33,7 @@ use crate::{
 
 /// The parser error type for Yul syntactic tokens.
 pub type AstParserError<'a, S> = Error<
+  S,
   syntactic::Token<S>,
   SyntaxKind,
   <syntactic::Token<S> as Token<'a>>::Char,
@@ -41,7 +42,7 @@ pub type AstParserError<'a, S> = Error<
 
 /// The parser error type for Yul lossless tokens.
 pub type LosslessParserError<'a, S> =
-  Error<lossless::Token<S>, SyntaxKind, <lossless::Token<S> as Token<'a>>::Char, LimitExceeded>;
+  Error<S, lossless::Token<S>, SyntaxKind, <lossless::Token<S> as Token<'a>>::Char, LimitExceeded>;
 
 /// An unknown statement error.
 pub type UnknownStatement<Char, Lang = YUL> = UnknownLexeme<Char, Statement<Lang>>;
@@ -61,26 +62,40 @@ pub type MissingComma<Lang = YUL> = Missing<Comma, Lang>;
 /// A missing dot error.
 pub type MissingDot<Lang = YUL> = Missing<Dot, Lang>;
 
-/// The invalid path error.
-pub type InvalidPathSegment<Lang = YUL> = Invalid<InvalidPathSegmentValue<Lang>>;
+/// The invalid path segment error.
+pub type InvalidPathSegment<S, Lang = YUL> = Invalid<InvalidPathSegmentKnowledge<S, Lang>>;
 
-/// A knowledge of invalid path.
+/// The invalid function name error.
+pub type InvalidFunctionName<S, Lang = YUL> = Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
+
+/// A knowledge of invalid function name.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
+#[repr(transparent)]
+pub struct InvalidFunctionNameKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
+
+/// A knowledge of invalid path segment.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
+#[repr(transparent)]
+pub struct InvalidPathSegmentKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
+
+/// A knowledge of semi-identifier, which means it seems like an identifier but is not.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum InvalidPathSegmentValue<Lang = YUL> {
+pub enum SemiIdentifierKnowledge<S, Lang = YUL> {
+  /// EVM builtin function
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
   EvmBuiltinFunction(Spanned<lexsol::yul::EvmBuiltinFunction>),
-  /// The value of the identifier cannot be used as a path.
-  Identifier(Ident<(), Lang>),
-  /// The keyword cannot be used as a path.
-  Keyword(Keyword<(), Lang>),
-  /// The lit bool
-  LitBool(Spanned<LitBool<()>>),
-  LitDecimal(Spanned<LitDecimal<()>>),
-  LitHexadecimal(Spanned<LitHexadecimal<()>>),
+  /// The keyword
+  Keyword(Keyword<S, Lang>),
+  /// The boolean literal
+  LitBool(Spanned<LitBool<S>>),
+  /// The decimal literal
+  LitDecimal(Spanned<LitDecimal<S>>),
+  /// The hexadecimal literal
+  LitHexadecimal(Spanned<LitHexadecimal<S>>),
 }
 
 // /// The parser error type for Yul.
@@ -90,7 +105,7 @@ pub enum InvalidPathSegmentValue<Lang = YUL> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lang = YUL> {
+pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lang = YUL> {
   /// Lexer error
   Lexer(LexerErrors<Char, StateError>),
   /// Undelimited brace
@@ -111,8 +126,10 @@ pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lang =
   UnknownStatement(UnknownStatement<Char>),
   /// Unknown expression
   UnknownExpression(UnknownExpression<Char>),
-  /// Invalid path segment of Yul
-  InvalidPathSegment(InvalidPathSegment<Lang>),
+  /// Invalid path segment
+  InvalidPathSegment(InvalidPathSegment<S, Lang>),
+  /// Invalid function name
+  InvalidFunctionName(InvalidFunctionName<S, Lang>),
   /// Missing comma
   MissingComma(MissingComma<Lang>),
   /// Missing dot
@@ -130,11 +147,7 @@ pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lang =
   Other(Spanned<Message>),
 }
 
-impl<T, TK, Char, StateError> Error<T, TK, Char, StateError>
-where
-  T: for<'a> Token<'a>,
-  TK: 'static,
-{
+impl<S, T, TK, Char, StateError> Error<S, T, TK, Char, StateError> {
   /// Creates an end-of-token-stream error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn eot(span: Span) -> Self {
