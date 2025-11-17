@@ -45,7 +45,7 @@ impl<S> FunctionName<S> {
               }
               // valid function name token, nothing to do.
               SemiIdentifierToken::Identifier(ident) => {
-                return Ok((false, Self::new(Ident::new(span, ident))));
+                return Ok(Self::new(Ident::new(span, ident)));
               }
               _ => {
                 SemiIdentifierKnowledge::Keyword(Keyword::new(span, S::from(exa.slice()))).into()
@@ -55,7 +55,7 @@ impl<S> FunctionName<S> {
             let err = InvalidFunctionName::with_knowledge(span, err);
             emitter.emit(err.into());
 
-            Ok((false, Self::new(Ident::new(span, S::from(exa.slice())))))
+            Ok(Self::new(Ident::new(span, S::from(exa.slice()))))
           }
           Err(tok) => {
             emitter.emit(
@@ -81,7 +81,7 @@ impl<S> FunctionName<S> {
           Ok(seg)
         }
         // on ok case, we never need rewind.
-        Ok((_, seg)) => Ok(seg),
+        Ok(seg) => Ok(seg),
       }
     })
   }

@@ -105,14 +105,14 @@ impl<S> PathSegment<S> {
               SemiIdentifierToken::EvmBuiltin(val) => {
                 // if this is not a leading path segment, then evm builtin fn can be used as a path segment
                 if !is_leading {
-                  return Ok((false, Self::new(Ident::new(span, S::from(exa.slice())))));
+                  return Ok(Self::new(Ident::new(span, S::from(exa.slice()))));
                 }
                 SemiIdentifierKnowledge::EvmBuiltinFunction(Spanned::new(span, val)).into()
               }
 
               // valid path segment token, nothing to do.
               SemiIdentifierToken::Identifier(ident) => {
-                return Ok((false, Self::new(Ident::new(span, ident))));
+                return Ok(Self::new(Ident::new(span, ident)));
               }
               _ => {
                 SemiIdentifierKnowledge::Keyword(Keyword::new(span, S::from(exa.slice()))).into()
@@ -122,7 +122,7 @@ impl<S> PathSegment<S> {
             let err = InvalidPathSegment::with_knowledge(span, err);
             emitter.emit(err.into());
 
-            Ok((false, Self::new(Ident::new(span, S::from(exa.slice())))))
+            Ok(Self::new(Ident::new(span, S::from(exa.slice()))))
           }
           Err(tok) => {
             emitter.emit(
@@ -148,7 +148,7 @@ impl<S> PathSegment<S> {
           Ok(seg)
         }
         // on ok case, we never need rewind.
-        Ok((_, seg)) => Ok(seg),
+        Ok(seg) => Ok(seg),
       }
     })
   }
