@@ -1,7 +1,15 @@
-use lexsol::types::punct::Dot;
-use logosky::{chumsky::separated::separated_by, error::Missing, types::Recoverable};
+use lexsol::types::{LitBool, LitDecimal, LitHexadecimal, LitNumber, punct::Dot};
+use logosky::{
+  chumsky::separated::separated_by,
+  error::{ErrorNode, Missing},
+  types::Keyword,
+  utils::Span,
+};
 
-use crate::{error::{AstLexerErrors, TrailingDot}, scaffold::ast::path::PathSegment};
+use crate::{
+  error::{AstLexerErrors, InvalidPathSegment, InvalidPathSegmentValue, TrailingDot},
+  scaffold::ast::path::PathSegment,
+};
 
 use super::*;
 
@@ -11,133 +19,301 @@ const fn is_path_segment_token<S>(tok: &AstToken<S>) -> bool {
     AstToken::Identifier(_) => true,
     #[cfg(feature = "evm")]
     AstToken::EvmBuiltin(_) => true,
+
     _ => false,
   }
 }
 
-impl<'a, S> Parseable<'a, AstTokenizer<'a, S>, AstToken<S>, AstParserError<'a, S>> for Recoverable<Path<S>>
-where
-  S: Clone + 'a,
-  AstToken<S>: Token<'a>,
-  <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
-  <<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
-  AstTokenizer<'a, S>: LogoStream<'a, AstToken<S>>,
-{
-  fn parser<E>() -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone
+#[derive(Debug, Clone, PartialEq, Eq, TryUnwrap)]
+enum MaybePathSegmentToken<S> {
+  Leave,
+  Continue,
+  Break,
+  Switch,
+  Case,
+  Default,
+  Function,
+  Let,
+  If,
+  For,
+  LitBool(LitBool<S>),
+  LitDecimal(LitDecimal<S>),
+  LitHexadecimal(LitHexadecimal<S>),
+  #[cfg(feature = "evm")]
+  EvmBuiltin(lexsol::yul::EvmBuiltinFunction),
+  // valid path segment
+  Identifier(S),
+}
+
+impl<S> Require<MaybePathSegmentToken<S>> for AstToken<S> {
+  type Err = Self;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn require(self) -> Result<MaybePathSegmentToken<S>, Self::Err>
   where
-    Self: Sized + 'a,
-    AstTokenizer<'a, S>: LogoStream<'a, AstToken<S>, Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
+    Self: Sized,
+  {
+    Ok(match self {
+      Self::Leave => MaybePathSegmentToken::Leave,
+      Self::Continue => MaybePathSegmentToken::Continue,
+      Self::Break => MaybePathSegmentToken::Break,
+      Self::Switch => MaybePathSegmentToken::Switch,
+      Self::Case => MaybePathSegmentToken::Case,
+      Self::Default => MaybePathSegmentToken::Default,
+      Self::Function => MaybePathSegmentToken::Function,
+      Self::Let => MaybePathSegmentToken::Let,
+      Self::If => MaybePathSegmentToken::If,
+      Self::For => MaybePathSegmentToken::For,
+      Self::Identifier(ident) => MaybePathSegmentToken::Identifier(ident),
+      Self::Lit(lit) => match lit {
+        Lit::Boolean(val) => MaybePathSegmentToken::LitBool(val),
+        Lit::Number(val) => match val {
+          LitNumber::Decimal(val) => MaybePathSegmentToken::LitDecimal(val),
+          LitNumber::Hexadecimal(val) => MaybePathSegmentToken::LitHexadecimal(val),
+          lit => return Err(Self::Lit(Lit::Number(lit))),
+        },
+        lit => return Err(Self::Lit(lit)),
+      },
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(val) => MaybePathSegmentToken::EvmBuiltin(val),
+      tok => return Err(tok),
+    })
+  }
+}
+
+impl<S> PathSegment<S> {
+  pub fn leading_segment_parser_with_recovery<'a, E>()
+  -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
+  where
+    S: Clone
+      + ErrorNode
+      + From<<<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>
+      + 'a,
     AstToken<S>: Token<'a>,
+    <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
+    AstTokenizer<'a, S>: LogoStream<
+        'a,
+        AstToken<S>,
+        Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
+      >,
     AstParserError<'a, S>: 'a,
-    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a
+    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
+  {
+    Self::parser_with_recovery_inner(true)
+  }
+
+  pub fn following_segment_parser_with_recovery<'a, E>()
+  -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
+  where
+    S: Clone
+      + ErrorNode
+      + From<<<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>
+      + 'a,
+    AstToken<S>: Token<'a>,
+    <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
+    AstTokenizer<'a, S>: LogoStream<
+        'a,
+        AstToken<S>,
+        Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
+      >,
+    AstParserError<'a, S>: 'a,
+    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
+  {
+    Self::parser_with_recovery_inner(false)
+  }
+
+  fn parser_with_recovery_inner<'a, E>(
+    is_leading: bool,
+  ) -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
+  where
+    S: Clone
+      + ErrorNode
+      + From<<<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>
+      + 'a,
+    AstToken<S>: Token<'a>,
+    <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
+    AstTokenizer<'a, S>: LogoStream<
+        'a,
+        AstToken<S>,
+        Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
+      >,
+    AstParserError<'a, S>: 'a,
+    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
+  {
+    let parser = any().validate(move |tok: Lexed<'_, AstToken<S>>, exa, emitter| match tok {
+      Lexed::Error(err) => {
+        emitter.emit(AstParserError::from(err));
+        Err((false, Self::new(Ident::error(exa.span()))))
+      }
+      Lexed::Token(Spanned { span, data: tok }) => {
+        match <AstToken<S> as Require<MaybePathSegmentToken<S>>>::require(tok) {
+          Ok(seg) => {
+            let err = match seg {
+              MaybePathSegmentToken::LitBool(val) => {
+                InvalidPathSegmentValue::LitBool(Spanned::new(span, val.map(|_| ())))
+              }
+              MaybePathSegmentToken::LitDecimal(val) => {
+                InvalidPathSegmentValue::LitDecimal(Spanned::new(span, val.map(|_| ())))
+              }
+              MaybePathSegmentToken::LitHexadecimal(val) => {
+                InvalidPathSegmentValue::LitHexadecimal(Spanned::new(span, val.map(|_| ())))
+              }
+              #[cfg(feature = "evm")]
+              MaybePathSegmentToken::EvmBuiltin(val) => {
+                // if this is not a leading path segment, then evm builtin fn can be used as a path segment
+                if !is_leading {
+                  return Ok((false, Self::new(Ident::new(span, S::from(exa.slice())))));
+                }
+                InvalidPathSegmentValue::EvmBuiltinFunction(Spanned::new(span, val))
+              }
+
+              // valid path segment token, nothing to do.
+              MaybePathSegmentToken::Identifier(ident) => {
+                return Ok((false, Self::new(Ident::new(span, ident))));
+              }
+              _ => InvalidPathSegmentValue::Keyword(Keyword::new(span, ())),
+            };
+
+            let err = InvalidPathSegment::with_knowledge(span, err);
+            emitter.emit(err.into());
+
+            Ok((
+              false,
+              PathSegment::new(Ident::new(span, S::from(exa.slice()))),
+            ))
+          }
+          Err(tok) => {
+            emitter.emit(
+              UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier).into(),
+            );
+            Err((
+              true,
+              Self::new(Ident::missing(Span::new(span.start(), span.start()))),
+            ))
+          }
+        }
+      }
+    });
+
+    custom(move |inp| {
+      let ckp = inp.save();
+
+      match inp.parse(parser)? {
+        Err((rewind, seg)) => {
+          if rewind {
+            inp.rewind(ckp);
+          }
+          Ok(seg)
+        }
+        // on ok case, we never need rewind.
+        Ok((_, seg)) => Ok(seg),
+      }
+    })
+  }
+}
+
+impl<S> Path<S> {
+  pub fn parser_with_recovery<'a, E>() -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
+  where
+    S: Clone
+      + ErrorNode
+      + From<<<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>
+      + 'a,
+    AstToken<S>: Token<'a>,
+    <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
+    AstTokenizer<'a, S>: LogoStream<
+        'a,
+        AstToken<S>,
+        Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
+      >,
+    AstParserError<'a, S>: 'a,
+    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
   {
     custom(move |inp| {
-      let before = inp.cursor();
+      let valid_start = inp.cursor();
 
-      let seg: Option<Ident<S>> = inp.parse(any().validate(|tok: Lexed<'_, AstToken<S>>, _, emitter| {
-        match tok {
-          Lexed::Error(err) => {
-            emitter.emit(AstParserError::from(err));
-            None
+      let seg = inp.parse(PathSegment::leading_segment_parser_with_recovery())?;
+
+      let seg_end = inp.save();
+      let seg_span = seg.span();
+      // check if the next token is a dot, if so continue parsing segments
+      let peeked = inp.parse(any().validate(|tok: Lexed<'_, AstToken<S>>, exa, emitter| {
+        Some(match tok {
+          Lexed::Token(Spanned { data: tok, .. }) if tok.is_dot() => {
+            // rewind = false, consume the dot
+            false
           }
           Lexed::Token(Spanned { span, data: tok }) => {
-            match tok.try_unwrap_identifier() {
-              Ok(ident) => Some(Ident::new(span, ident)),
-              Err(tok) => {
-                emitter.emit(
-                  UnexpectedToken::expected_one_with_found(
-                    span,
-                    tok.input,
-                    SyntaxKind::Identifier,
-                  )
-                  .into(),
-                );
-                None
+            match <AstToken<S> as Require<MaybePathSegmentToken<S>>>::require(tok) {
+              Err(_) => {
+                // not possible to be a path segment token, we should return the single segment path
+                return None;
+              }
+              Ok(_) => {
+                emitter.emit(Missing::<Dot, YUL>::between(seg_span, span).into());
+                // rewind = true, missing dot, and the token is a bad path segment token
+                true
               }
             }
           }
-        }
-      }))?;
+          Lexed::Error(_) => {
+            emitter.emit(Missing::<Dot, YUL>::between(seg_span, exa.span()).into());
+            // rewind = true, missing dot, and the token is a bad path segment token
+            true
+          }
+        })
+      }));
 
-      Ok(Self::Node(match seg {
-        None => {
-          return Ok(Recoverable::Missing(inp.span_since(&before)));
+      match peeked {
+        // consume the dot, nothing to do
+        Ok(Some(false)) => {}
+        // not a dot, missing dot error has been emitted
+        Ok(Some(true)) => {
+          inp.rewind(seg_end);
+        }
+        // not a dot, just return the path with single segment
+        Ok(None) => {
+          inp.rewind(seg_end);
+          return Ok(Path::new(
+            inp.span_since(&valid_start),
+            [seg].into_iter().collect(),
+          ));
+        }
+        // lexer error, just return the path with single segment
+        Err(_) => {
+          return Ok(Path::new(
+            inp.span_since(&valid_start),
+            [seg].into_iter().collect(),
+          ));
+        }
+      }
+
+      let ckp = inp.save();
+      let remaining_segs = inp.parse(separated_by::<_, _, _, _, Vec<_>, Dot, _>(
+        PathSegment::following_segment_parser_with_recovery(),
+        |t: &AstToken<S>| t.is_dot(),
+        |t| !is_path_segment_token(t),
+        || SyntaxKind::Dot,
+        |tok, sep, emitter| {
+          emitter.emit(TrailingDot::from_suffix(tok, *sep.span()).into());
         },
-        Some(seg) => {
-          let mut segments = Vec::with_capacity(4);
-          let first_segment_span = seg.span();
-          segments.push(PathSegment::new(seg));
+      ));
 
-          // check if the next token is a dot, if so continue parsing segments
-          let tok: Option<Lexed<'_, AstToken<S>>> = inp.peek();
-          match tok {
-            Some(Lexed::Token(Spanned { data: tok, .. })) if tok.is_dot() => {
-              inp.skip(); // consume the dot
-            }
-            Some(Lexed::Token(Spanned { span, data: tok })) => {
-              if !is_path_segment_token(&tok) {
-                return Ok(Self::Node(Path::new(inp.span_since(&before), segments)));
-              }
-
-              let _ = inp.parse(any().or_not().validate(|_, _, emitter| {
-                emitter.emit(
-                  Missing::<Dot, YUL>::between(
-                    first_segment_span,
-                    span
-                  )
-                  .into(),
-                );
-              }).rewind());
-            }
-            _ => {}
-          }
-
-          // attempt to parse following segments separated by dots
-          let ckp = inp.save();
-          let remaining_segs = inp.parse(separated_by::<_, _, _, _, Vec<_>, Dot, _>(any().try_map_with(|t: Lexed<'_, AstToken<S>>, exa| {
-            match t {
-              Lexed::Token(Spanned { span, data: tok }) => {
-                match tok {
-                  AstToken::Identifier(ident) => {
-                    Ok(PathSegment::new(Ident::new(span, ident)))
-                  }
-                  #[cfg(feature = "evm")]
-                  AstToken::EvmBuiltin(_) => {
-                    Ok(PathSegment::new(Ident::new(span, exa.slice())))
-                  }
-                  tok => Err(
-                    UnexpectedToken::expected_one_with_found(
-                      span,
-                      tok,
-                      SyntaxKind::PathSegment,
-                    )
-                    .into(),
-                  ),
-                }
-              },
-              Lexed::Error(e) => Err(e.into()),
-            }
-          }),
-          |t: &AstToken<S>| t.is_dot(),
-          |t| !is_path_segment_token(t),
-          || SyntaxKind::Dot,
-          |tok, sep, emitter| {
-            emitter.emit(TrailingDot::from_suffix(tok, *sep.span()).into()); 
-          }
-        ));
-
-          match remaining_segs {
-            Err(_) => {
-              inp.rewind(ckp);
-              Path::new(inp.span_since(&before), segments)
-            }
-            Ok(remaining_segs) => {
-              segments.extend(remaining_segs.data);
-              Path::new(inp.span_since(&before), segments)
-            }
-          }
+      Ok(match remaining_segs {
+        Err(_) => {
+          inp.rewind(ckp);
+          Path::new(inp.span_since(&valid_start), [seg].into_iter().collect())
         }
-      }))
+        Ok(remaining_segs) => {
+          let (_, remaining) = remaining_segs.into_components();
+          let cap = 1 + remaining.len();
+
+          let mut segments = Vec::with_capacity(cap);
+          segments.push(seg);
+          segments.extend(remaining);
+          Path::new(inp.span_since(&valid_start), segments)
+        }
+      })
     })
   }
 }

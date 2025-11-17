@@ -17,6 +17,7 @@ pub use statement::Statement;
 
 mod assignment;
 mod expression;
+mod function_call;
 mod path;
 mod statement;
 
@@ -48,35 +49,6 @@ pub type FunctionCallName<S> = ast::statement::function_call::FunctionCallName<S
 /// Spec: [Yul Function Call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
 pub type FunctionCall<S> =
   ast::statement::function_call::FunctionCall<FunctionCallName<S>, Expression<S>>;
-
-// impl<'a, S, I, T, Error> Parseable<'a, I, T, Error>
-//   for Expression<S>
-// where
-//   T: PunctuatorToken<'a> + IdentifierToken<'a> + LitToken<'a> + Require<Lit<S>>,
-//   FunctionCallName<S>: Parseable<'a, I, T, Error>,
-//   Error: From<<T::Logos as Logos<'a>>::Error>
-//     + From<UnexpectedEot>
-//     + From<UnexpectedToken<'a, T, SyntaxKind>>,
-// {
-//   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-//   where
-//     Self: Sized + 'a,
-//     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-//     T: Token<'a>,
-//     Error: 'a,
-//     E: ParserExtra<'a, I, Error = Error> + 'a,
-//   {
-//     recursive(|expr| {
-//       let fncall_parser = FunctionCall::parser(expr);
-
-//       choice((
-//         Path::parser().map(Self::Path),
-//         fncall_parser.map(Self::FunctionCall),
-//         Literal::parser().map(Self::Literal),
-//       ))
-//     })
-//   }
-// }
 
 /// The single-target assignment type for Yul.
 ///
@@ -178,75 +150,3 @@ pub type FunctionDefinition<S> = ast::statement::function_definition::FunctionDe
   FunctionDefinitionReturnParameters<S>,
   Block<S>,
 >;
-
-// impl<
-//   'a,
-//   S,
-//   I,
-//   T,
-//   Error,
-// > Parseable<'a, I, T, Error>
-//   for Statement<S>
-// where
-//   T: KeywordToken<'a> + PunctuatorToken<'a>,
-//   Expression<S>: Parseable<'a, I, T, Error>,
-//   str: Equivalent<T>,
-//   Error: From<<T::Logos as Logos<'a>>::Error>
-//     + From<UnexpectedEot>
-//     + From<UnexpectedToken<'a, T, SyntaxKind>>
-//     + 'a,
-// {
-//   fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-//   where
-//     Self: Sized + 'a,
-//     I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-//     T: Token<'a>,
-//     Error: 'a,
-//     E: ParserExtra<'a, I, Error = Error> + 'a,
-//   {
-//     recursive(|statement| {
-//       custom(move |inp| {
-//         let before = inp.cursor();
-
-//         match inp.peek() {
-//           None => Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
-//           Some(Lexed::Error(e)) => Err(<Error as core::convert::From<_>>::from(e)),
-//           Some(Lexed::Token(Spanned { span, data: tok })) => Ok(match () {
-//             () if Equivalent::equivalent("leave", &tok) => {
-//               inp.skip();
-//               Self::Leave(Leave::new(span))
-//             }
-//             () if Equivalent::equivalent("break", &tok) => {
-//               inp.skip();
-//               Self::Break(Break::new(span))
-//             }
-//             () if Equivalent::equivalent("continue", &tok) => {
-//               inp.skip();
-//               Self::Continue(Continue::new(span))
-//             }
-//             () if tok.is_brace_open() => {
-//               inp.skip();
-//               let statements = inp.parse(
-//                 statement
-//                   .clone()
-//                   .repeated()
-//                   .collect()
-//                   .then_ignore(brace_close(|| SyntaxKind::RBrace.into())),
-//               )?;
-//               Self::Block(Block::new(inp.span_since(&before), statements))
-//             }
-//             _ => inp.parse(choice((
-//               VariableDeclaration::parser().map(Self::VariableDeclaration),
-//               Assignment::parser().map(Self::Assignment),
-//               FunctionCall::parser().map(Self::FunctionCall),
-//               IfStatement::parser().map(Self::IfStatement),
-//               ForStatement::parser().map(Self::ForStatement),
-//               SwitchStatement::parser().map(Self::SwitchStatement),
-//               FunctionDefinition::parser().map(Self::FunctionDefinition),
-//             )))?,
-//           }),
-//         }
-//       })
-//     })
-//   }
-// }

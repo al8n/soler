@@ -1,16 +1,15 @@
 use lexsol::types::punct::Comma;
 use logosky::{
   chumsky::{
-    delimited::DelimitedByParen,
-    separated::separated_by,
-    token::{punct::comma, recovery::{
-      emit_error_until_token, emit_error_until_token_inclusive, emit_until_token, emit_until_token_inclusive, emit_with
-    }},
-  }, error::{ErrorNode, UnexpectedToken, UnknownLexeme}, syntax::Syntax, types::Recoverable, utils::{AsSpan, Span}
+    delimited::DelimitedByParen, separated::separated_by, token::recovery::emit_error_until_token,
+  },
+  error::{ErrorNode, UnexpectedToken},
+  types::Recoverable,
+  utils::{AsSpan, Span},
 };
 
 use crate::{
-  error::{AstLexerErrors, UnknownExpression, TrailingComma},
+  error::{AstLexerErrors, TrailingComma, UnknownExpression},
   scaffold::ast::statement::function_call::FunctionCallName,
 };
 
@@ -67,8 +66,6 @@ impl<S: Clone> ExpressionSyncPointToken<S> {
     }
   }
 }
-
-
 
 /// The expression type for Yul.
 ///
@@ -166,7 +163,7 @@ where
             ExpressionSyncPointToken::Lit(lit) => {
               inp.skip();
               Expression::Literal(Spanned::new(span, lit))
-            },
+            }
             ExpressionSyncPointToken::Identifier(ident) => {
               let start = inp.cursor();
               let ckp = inp.save();
@@ -178,14 +175,22 @@ where
               match tok {
                 Some(Lexed::Token(tok)) if tok.is_paren_open() => {
                   // parse the exprs
-                  let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<_, _, _, _, Vec<_>, Comma, _>(
+                  let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
+                    _,
+                    _,
+                    _,
+                    _,
+                    Vec<_>,
+                    Comma,
+                    _,
+                  >(
                     expr.clone().map(|expr: Self| expr.unwrap_node()),
                     |t: &AstToken<S>| t.is_comma(),
                     |t: &AstToken<S>| t.is_r_paren(),
                     || SyntaxKind::Comma,
                     |tok, sep, emitter| {
-                      emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into()); 
-                    }
+                      emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into());
+                    },
                   )))?;
 
                   match exprs {
@@ -197,29 +202,31 @@ where
                         exprs.data,
                       ))
                     }
-                    Err(span) => {
-                      Expression::FunctionCall(FunctionCall::new(
-                        inp.span_since(&start),
-                        FunctionCallName::new(ident),
-                        Vec::new(),
-                      ))
-                    }
+                    Err(_) => Expression::FunctionCall(FunctionCall::new(
+                      inp.span_since(&start),
+                      FunctionCallName::new(ident),
+                      Vec::new(),
+                    )),
                   }
                 }
                 Some(Lexed::Token(tok)) if tok.is_dot() => {
                   inp.rewind(ckp);
-
-                  let segments = inp.parse(any().separated_by(comma(|| SyntaxKind::Comma)).map(|t| {
-                    
-                  }).repeated());
-                  // // rewind to before identifier so the path parser can consume it
-                  // inp.rewind(before_ident_checkpoint);
-                  // Expression::Path(parse_path(expr.clone())?)
-
-
-                  todo!()
+                  match inp.parse(Recoverable::<Path<S>>::parser())? {
+                    Recoverable::Node(path) => Expression::Path(path),
+                    Recoverable::Missing(_) => {
+                      unreachable!(
+                        "path parser should always return a Node here as we have already parsed the first segment"
+                      )
+                    }
+                    Recoverable::Error(_) => {
+                      unreachable!("path parser should not return an Error here")
+                    }
+                  }
                 }
-                _ => Expression::Path(Path::new(span, [PathSegment::new(ident)].into_iter().collect())),
+                _ => Expression::Path(Path::new(
+                  span,
+                  [PathSegment::new(ident)].into_iter().collect(),
+                )),
               }
             }
             #[cfg(feature = "evm")]
@@ -229,14 +236,22 @@ where
               let end = inp.cursor();
               let name = FunctionCallName::new(Ident::new(span, inp.slice(&start..&end)));
               // parse the exprs
-              let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<_, _, _, _, Vec<_>, Comma, _>(
+              let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
+                _,
+                _,
+                _,
+                _,
+                Vec<_>,
+                Comma,
+                _,
+              >(
                 expr.clone().map(|expr: Self| expr.unwrap_node()),
                 |t: &AstToken<S>| t.is_comma(),
                 |t: &AstToken<S>| t.is_r_paren(),
                 || SyntaxKind::Comma,
                 |tok, sep, emitter| {
-                  emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into()); 
-                }
+                  emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into());
+                },
               )))?;
 
               match exprs {
@@ -248,13 +263,11 @@ where
                     exprs.data,
                   ))
                 }
-                Err(span) => {
-                  Expression::FunctionCall(FunctionCall::new(
-                    inp.span_since(&start),
-                    name,
-                    Vec::new(),
-                  ))
-                }
+                Err(_) => Expression::FunctionCall(FunctionCall::new(
+                  inp.span_since(&start),
+                  name,
+                  Vec::new(),
+                )),
               }
             }
             // infer to function call, missing identifier case
@@ -288,14 +301,22 @@ where
               }
 
               // parse the exprs
-              let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<_, _, _, _, Vec<_>, Comma, _>(
+              let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
+                _,
+                _,
+                _,
+                _,
+                Vec<_>,
+                Comma,
+                _,
+              >(
                 expr.clone().map(|expr: Self| expr.unwrap_node()),
                 |t: &AstToken<S>| t.is_comma(),
                 |t: &AstToken<S>| t.is_r_paren(),
                 || SyntaxKind::Comma,
                 |tok, sep, emitter| {
-                  emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into()); 
-                }
+                  emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into());
+                },
               )))?;
 
               match exprs {
@@ -307,13 +328,11 @@ where
                     exprs.data,
                   ))
                 }
-                Err(span) => {
-                  Expression::FunctionCall(FunctionCall::new(
-                    inp.span_since(&cur),
-                    FunctionCallName::new(ident),
-                    Vec::new(),
-                  ))
-                }
+                Err(_) => Expression::FunctionCall(FunctionCall::new(
+                  inp.span_since(&cur),
+                  FunctionCallName::new(ident),
+                  Vec::new(),
+                )),
               }
             }
           },
@@ -321,4 +340,250 @@ where
       })
     })
   }
+}
+
+pub(super) fn recoverable_parser<'a, S, E>(
+  fncall: impl Parser<'a, AstTokenizer<'a, S>, Recoverable<FunctionCall<S>>, E> + Clone + 'a,
+) -> impl Parser<'a, AstTokenizer<'a, S>, Recoverable<Expression<S>>, AstParserError<'a, S>> + Clone + 'a
+where
+  S: Clone + 'a,
+  AstToken<S>: Token<'a>,
+  <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
+  <<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
+  AstTokenizer<'a, S>: LogoStream<
+      'a,
+      AstToken<S>,
+      Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
+    >,
+  AstParserError<'a, S>: 'a,
+  E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
+  Ident<S>: ErrorNode,
+{
+  recursive(|expr| {
+    custom(move |inp| {
+      let before = inp.cursor();
+
+      let result = inp.parse(
+        emit_error_until_token(|Spanned { span, data: tok }, emitter| {
+          match <AstToken<S> as Require<ExpressionSyncPointToken<S>>>::require(tok) {
+            Ok(sync_point) => Some(Spanned::new(span, sync_point)),
+            Err(other) => {
+              emitter.emit(
+                UnexpectedToken::expected_one_of_with_found(
+                  span,
+                  other,
+                  &[SyntaxKind::Identifier, SyntaxKind::Lit],
+                )
+                .into(),
+              );
+              None
+            }
+          }
+        })
+        .validate(|(skipped, t), exa, emitter| {
+          if skipped > 0 {
+            emitter.emit(UnknownExpression::from_range(exa.span(), Default::default()).into());
+          }
+          if let Some(ref t) = t {
+            if t.is_l_paren() {
+              emitter.emit(
+                UnexpectedToken::expected_one_with_found(
+                  t.span,
+                  t.data().to_token(),
+                  SyntaxKind::Identifier,
+                )
+                .into(),
+              );
+            }
+          }
+          t
+        }),
+      )?;
+
+      Ok(Recoverable::Node(match result {
+        None => return Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
+        Some(Spanned { span, data: tok }) => match tok {
+          ExpressionSyncPointToken::Lit(lit) => {
+            inp.skip();
+            Expression::Literal(Spanned::new(span, lit))
+          }
+          ExpressionSyncPointToken::Identifier(ident) => {
+            let ident_start = inp.cursor();
+            let ckp = inp.save();
+            let ident = Ident::new(span, ident);
+
+            inp.skip();
+
+            let tok: Option<Lexed<'_, AstToken<S>>> = inp.peek();
+            match tok {
+              Some(Lexed::Token(tok)) if tok.is_paren_open() => {
+                inp.rewind(ckp);
+                let fncall: Recoverable<FunctionCall<S>> = inp.parse(fncall.clone())?;
+
+                match fncall {
+                  Recoverable::Node(node) => Expression::FunctionCall(node),
+                  _ => unreachable!(
+                    "function call parser should always return a Node here as we have already checked the next two tokens are identifier and the opening parenthesis"
+                  ),
+                }
+              }
+              Some(Lexed::Token(tok)) if tok.is_dot() => {
+                inp.rewind(ckp);
+                match inp.parse(Recoverable::<Path<S>>::parser())? {
+                  Recoverable::Node(path) => Expression::Path(path),
+                  Recoverable::Missing(_) => {
+                    unreachable!(
+                      "path parser should always return a Node here as we have already parsed the first segment"
+                    )
+                  }
+                  Recoverable::Error(_) => {
+                    unreachable!("path parser should not return an Error here")
+                  }
+                }
+              }
+              _ => Expression::Path(Path::new(
+                span,
+                [PathSegment::new(ident)].into_iter().collect(),
+              )),
+            }
+          }
+          #[cfg(feature = "evm")]
+          ExpressionSyncPointToken::EvmBuiltin(val) => {
+            let fncall = inp.parse(fncall.clone().validate(|r, exa, emitter| {
+              match r {
+                Recoverable::Node(node) => Expression::FunctionCall(node),
+                // start with a evm builtin but failed to parse as function call,
+                // infer it as a path, but when evm feature is enabled, evm builtin functions
+                // are kind of strict keywords, so we emit an error here.
+                Recoverable::Missing(_) => {
+                  use crate::error::{InvalidPath, InvalidPathValue};
+
+                  emitter.emit(
+                    InvalidPath::with_knowledge(
+                      span,
+                      InvalidPathValue::EvmBuiltinFunction(Spanned::new(span, val)),
+                    )
+                    .into(),
+                  );
+
+                  let mut segments = Ident::new(span);
+                  Expression::Path()
+                }
+                Recoverable::Error(span) => {
+                  // emitter.emit();
+                  None
+                }
+              }
+            }))?;
+
+            match fncall {}
+
+            // let start = inp.cursor();
+            // inp.skip();
+            // let end = inp.cursor();
+            // let name = FunctionCallName::new(Ident::new(span, inp.slice(&start..&end)));
+            // // parse the exprs
+            // let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
+            //   _,
+            //   _,
+            //   _,
+            //   _,
+            //   Vec<_>,
+            //   Comma,
+            //   _,
+            // >(
+            //   expr.clone().map(|expr: Self| expr.unwrap_node()),
+            //   |t: &AstToken<S>| t.is_comma(),
+            //   |t: &AstToken<S>| t.is_r_paren(),
+            //   || SyntaxKind::Comma,
+            //   |tok, sep, emitter| {
+            //     emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into());
+            //   },
+            // )))?;
+
+            // match exprs {
+            //   Ok(exprs) => {
+            //     let (_, exprs) = exprs.into_components();
+            //     Expression::FunctionCall(FunctionCall::new(
+            //       inp.span_since(&start),
+            //       name,
+            //       exprs.data,
+            //     ))
+            //   }
+            //   Err(_) => Expression::FunctionCall(FunctionCall::new(
+            //     inp.span_since(&start),
+            //     name,
+            //     Vec::new(),
+            //   )),
+            // }
+          }
+          // infer to function call, missing identifier case
+          ExpressionSyncPointToken::LParen => {
+            // let ident = Ident::missing(span);
+
+            // let cur = inp.cursor();
+            // let ck = inp.save();
+            // inp.skip();
+
+            // // Fast path: check if the next token is a right parenthesis
+            // let tok: Option<Lexed<'_, AstToken<S>>> = inp.peek();
+            // match tok {
+            //   None => {
+            //     inp.skip();
+            //     return Err(UnexpectedEot::eot(inp.span_since(&cur)).into());
+            //   }
+            //   Some(Lexed::Token(tok)) if tok.is_r_paren() => {
+            //     // empty arguments
+            //     inp.skip();
+            //     // construct a function call expression but missing identifier
+            //     return Ok(Self::Node(Expression::FunctionCall(FunctionCall::new(
+            //       inp.span_since(&cur),
+            //       FunctionCallName::new(ident),
+            //       Vec::new(),
+            //     ))));
+            //   }
+            //   _ => {
+            //     inp.rewind(ck);
+            //   }
+            // }
+
+            // // parse the exprs
+            // let exprs = inp.parse(DelimitedByParen::recoverable_parser(separated_by::<
+            //   _,
+            //   _,
+            //   _,
+            //   _,
+            //   Vec<_>,
+            //   Comma,
+            //   _,
+            // >(
+            //   expr.clone().map(|expr: Self| expr.unwrap_node()),
+            //   |t: &AstToken<S>| t.is_comma(),
+            //   |t: &AstToken<S>| t.is_r_paren(),
+            //   || SyntaxKind::Comma,
+            //   |tok, sep, emitter| {
+            //     emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into());
+            //   },
+            // )))?;
+
+            // match exprs {
+            //   Ok(exprs) => {
+            //     let (_, exprs) = exprs.into_components();
+            //     Expression::FunctionCall(FunctionCall::new(
+            //       inp.span_since(&cur),
+            //       FunctionCallName::new(ident),
+            //       exprs.data,
+            //     ))
+            //   }
+            //   Err(_) => Expression::FunctionCall(FunctionCall::new(
+            //     inp.span_since(&cur),
+            //     FunctionCallName::new(ident),
+            //     Vec::new(),
+            //   )),
+            // }
+          }
+        },
+      }))
+    })
+  })
 }

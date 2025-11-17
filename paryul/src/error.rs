@@ -7,13 +7,23 @@ pub use lexsol::{
 };
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use lexsol::{types::punct::{Comma, Dot}, yul::{lossless, syntactic}};
+use lexsol::{
+  types::{
+    LitBool, LitDecimal, LitHexadecimal,
+    punct::{Comma, Dot},
+  },
+  yul::{lossless, syntactic},
+};
 use logosky::{
   Token,
   error::{
-    Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace, UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnexpectedToken, UnknownLexeme, UnopenedBrace, UnopenedParen
+    Invalid, Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace, UndelimitedParen,
+    UnexpectedEot, UnexpectedSuffix, UnexpectedToken, UnknownLexeme, UnopenedBrace, UnopenedParen,
   },
-  utils::{Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded},
+  types::{Ident, Keyword},
+  utils::{
+    Message, Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded,
+  },
 };
 
 use crate::{
@@ -51,6 +61,28 @@ pub type MissingComma<Lang = YUL> = Missing<Comma, Lang>;
 /// A missing dot error.
 pub type MissingDot<Lang = YUL> = Missing<Dot, Lang>;
 
+/// The invalid path error.
+pub type InvalidPathSegment<Lang = YUL> = Invalid<InvalidPathSegmentValue<Lang>>;
+
+/// A knowledge of invalid path.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
+#[non_exhaustive]
+#[unwrap(ref, ref_mut)]
+#[try_unwrap(ref, ref_mut)]
+pub enum InvalidPathSegmentValue<Lang = YUL> {
+  #[cfg(feature = "evm")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
+  EvmBuiltinFunction(Spanned<lexsol::yul::EvmBuiltinFunction>),
+  /// The value of the identifier cannot be used as a path.
+  Identifier(Ident<(), Lang>),
+  /// The keyword cannot be used as a path.
+  Keyword(Keyword<(), Lang>),
+  /// The lit bool
+  LitBool(Spanned<LitBool<()>>),
+  LitDecimal(Spanned<LitDecimal<()>>),
+  LitHexadecimal(Spanned<LitHexadecimal<()>>),
+}
+
 // /// The parser error type for Yul.
 // pub type ParserError<'a, T> = Error<<T as Token<'a>>::Char, <<<T as Token<'a>>::Logos as Logos<'a>>::Extras as State>::Error>;
 
@@ -58,7 +90,7 @@ pub type MissingDot<Lang = YUL> = Missing<Dot, Lang>;
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
+pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lang = YUL> {
   /// Lexer error
   Lexer(LexerErrors<Char, StateError>),
   /// Undelimited brace
@@ -79,10 +111,12 @@ pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
   UnknownStatement(UnknownStatement<Char>),
   /// Unknown expression
   UnknownExpression(UnknownExpression<Char>),
+  /// Invalid path segment of Yul
+  InvalidPathSegment(InvalidPathSegment<Lang>),
   /// Missing comma
-  MissingComma(MissingComma<YUL>),
+  MissingComma(MissingComma<Lang>),
   /// Missing dot
-  MissingDot(MissingDot<YUL>),
+  MissingDot(MissingDot<Lang>),
   /// Trailing comma
   TrailingComma(TrailingComma<Char>),
   /// Trailing dot
@@ -91,9 +125,16 @@ pub enum Error<T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
   State(Spanned<StateError>),
   /// End of token stream
   Eot(UnexpectedEot),
+  /// Other error
+  #[from(skip)]
+  Other(Spanned<Message>),
 }
 
-impl<T, TK, Char, StateError> Error<T, TK, Char, StateError> {
+impl<T, TK, Char, StateError> Error<T, TK, Char, StateError>
+where
+  T: for<'a> Token<'a>,
+  TK: 'static,
+{
   /// Creates an end-of-token-stream error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn eot(span: Span) -> Self {
@@ -112,5 +153,11 @@ impl<T, TK, Char, StateError> Error<T, TK, Char, StateError> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn missing_comma(err: Missing<Comma, YUL>) -> Self {
     Self::MissingComma(err)
+  }
+
+  /// Creates an other error with the given message.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn other(span: Span, msg: impl Into<Message>) -> Self {
+    Self::Other(Spanned::new(span, msg.into()))
   }
 }

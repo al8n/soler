@@ -22,6 +22,17 @@ pub enum LitBool<S> {
   False(S),
 }
 
+impl<S> LitBool<S> {
+  /// Map
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitBool<U> {
+    match self {
+      Self::True(s) => LitBool::True(f(s)),
+      Self::False(s) => LitBool::False(f(s)),
+    }
+  }
+}
+
 /// The kind of string literal
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 pub enum LitNumberKind {
@@ -60,6 +71,12 @@ impl<S> LitDecimal<S> {
   {
     self.0
   }
+
+  /// Map
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitDecimal<U> {
+    LitDecimal(f(self.0))
+  }
 }
 
 /// The hexadecimal number literal for Yul or Solidity
@@ -90,6 +107,12 @@ impl<S> LitHexadecimal<S> {
     S: Copy,
   {
     self.0
+  }
+
+  /// Map
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitHexadecimal<U> {
+    LitHexadecimal(f(self.0))
   }
 }
 
@@ -134,6 +157,15 @@ impl<S> LitNumber<S> {
     match self {
       Self::Decimal(_) => LitNumberKind::Decimal,
       Self::Hexadecimal(_) => LitNumberKind::Hex,
+    }
+  }
+
+  /// Map
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitNumber<U> {
+    match self {
+      Self::Decimal(s) => LitNumber::Decimal(s.map(f)),
+      Self::Hexadecimal(s) => LitNumber::Hexadecimal(s.map(f)),
     }
   }
 }
