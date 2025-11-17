@@ -2,7 +2,10 @@ use crate::{SyntaxKind, YUL, error::AstParserError, scaffold::ast};
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use lexsol::types::{LitBool, LitDecimal, LitHexadecimal, LitNumber, keywords::{Break, Continue, Leave}};
+use lexsol::types::{
+  LitBool, LitDecimal, LitHexadecimal, LitNumber,
+  keywords::{Break, Continue, Leave},
+};
 use logosky::{
   IdentifierToken, KeywordToken, Lexed, LitToken, LogoStream, Logos, PunctuatorToken, Require,
   Source, Token,
@@ -27,7 +30,7 @@ pub type AstToken<S> = lexsol::yul::syntactic::Token<S>;
 /// The tokenizer type for Yul AST nodes.
 pub type AstTokenizer<'a, S> = lexsol::yul::syntactic::Lexer<'a, S>;
 
-#[derive(Debug, Clone, PartialEq, Eq, TryUnwrap)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, TryUnwrap)]
 enum SemiIdentifierToken<S> {
   Leave,
   Continue,
@@ -45,6 +48,30 @@ enum SemiIdentifierToken<S> {
   #[cfg(feature = "evm")]
   EvmBuiltin(lexsol::yul::EvmBuiltinFunction),
   Identifier(S),
+}
+
+impl<S: Clone> SemiIdentifierToken<S> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn to_token(&self) -> AstToken<S> {
+    match self {
+      Self::Leave => AstToken::Leave,
+      Self::Continue => AstToken::Continue,
+      Self::Break => AstToken::Break,
+      Self::Switch => AstToken::Switch,
+      Self::Case => AstToken::Case,
+      Self::Default => AstToken::Default,
+      Self::Function => AstToken::Function,
+      Self::Let => AstToken::Let,
+      Self::If => AstToken::If,
+      Self::For => AstToken::For,
+      Self::LitBool(lit) => AstToken::Lit(Lit::Boolean(lit.clone())),
+      Self::LitDecimal(lit) => AstToken::Lit(Lit::Number(LitNumber::Decimal(lit.clone()))),
+      Self::LitHexadecimal(lit) => AstToken::Lit(Lit::Number(LitNumber::Hexadecimal(lit.clone()))),
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(name) => AstToken::EvmBuiltin(*name),
+      Self::Identifier(ident) => AstToken::Identifier(ident.clone()),
+    }
+  }
 }
 
 impl<S> Require<SemiIdentifierToken<S>> for AstToken<S> {
@@ -66,7 +93,6 @@ impl<S> Require<SemiIdentifierToken<S>> for AstToken<S> {
       Self::Let => SemiIdentifierToken::Let,
       Self::If => SemiIdentifierToken::If,
       Self::For => SemiIdentifierToken::For,
-      Self::Identifier(ident) => SemiIdentifierToken::Identifier(ident),
       Self::Lit(lit) => match lit {
         Lit::Boolean(val) => SemiIdentifierToken::LitBool(val),
         Lit::Number(val) => match val {
@@ -76,6 +102,7 @@ impl<S> Require<SemiIdentifierToken<S>> for AstToken<S> {
         },
         lit => return Err(Self::Lit(lit)),
       },
+      Self::Identifier(ident) => SemiIdentifierToken::Identifier(ident),
       #[cfg(feature = "evm")]
       Self::EvmBuiltin(val) => SemiIdentifierToken::EvmBuiltin(val),
       tok => return Err(tok),

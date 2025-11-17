@@ -1,8 +1,4 @@
-use logosky::{
-  error::ErrorNode,
-  types::Keyword,
-  utils::Span,
-};
+use logosky::{error::ErrorNode, types::Keyword, utils::Span};
 
 use crate::error::{AstLexerErrors, InvalidFunctionName, SemiIdentifierKnowledge};
 
@@ -51,16 +47,15 @@ impl<S> FunctionName<S> {
               SemiIdentifierToken::Identifier(ident) => {
                 return Ok((false, Self::new(Ident::new(span, ident))));
               }
-              _ => SemiIdentifierKnowledge::Keyword(Keyword::new(span, S::from(exa.slice()))).into(),
+              _ => {
+                SemiIdentifierKnowledge::Keyword(Keyword::new(span, S::from(exa.slice()))).into()
+              }
             };
 
             let err = InvalidFunctionName::with_knowledge(span, err);
             emitter.emit(err.into());
 
-            Ok((
-              false,
-              Self::new(Ident::new(span, S::from(exa.slice()))),
-            ))
+            Ok((false, Self::new(Ident::new(span, S::from(exa.slice())))))
           }
           Err(tok) => {
             emitter.emit(
