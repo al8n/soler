@@ -22,6 +22,7 @@ mod assignment;
 mod expression;
 mod function_call;
 mod function_name;
+mod ident_list;
 mod name;
 mod path;
 mod statement;
@@ -146,8 +147,8 @@ pub type SingleTargetAssignment<S> =
 /// The multi-target assignment type for Yul.
 ///
 /// Spec: [Yul Multiple Target Assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
-pub type MultipleTargetAssignment<S> =
-  ast::statement::assignment::MultipleTargetAssignment<Path<S>, Expression<S>>;
+pub type MultipleTargetsAssignment<S> =
+  ast::statement::assignment::MultipleTargetsAssignment<Path<S>, FunctionCall<S>>;
 
 /// The assignment type for Yul.
 ///

@@ -69,8 +69,24 @@ pub type InvalidFunctionName<S, Lang = YUL> = Invalid<InvalidFunctionNameKnowled
 /// The invalid variable name error.
 pub type InvalidVariableName<S, Lang = YUL> = Invalid<InvalidVariableNameKnowledge<S, Lang>>;
 
+/// An incomplete single variable declaration error.
+pub type IncompleteSingleVariableDeclaration<Lang = YUL> =
+  IncompleteSyntax<SingleVariableDeclaration<Lang>>;
+
+/// An incomplete multiple variables declaration error.
+pub type IncompleteMultipleVariablesDeclaration<Lang = YUL> =
+  IncompleteSyntax<MultipleVariablesDeclaration<Lang>>;
+
 /// An incomplete variable declaration error.
 pub type IncompleteVariableDeclaration<Lang = YUL> = IncompleteSyntax<VariableDeclaration<Lang>>;
+
+/// An incomplete single target assignment error.
+pub type IncompleteSingleTargetAssignment<Lang = YUL> =
+  IncompleteSyntax<SingleTargetAssignment<Lang>>;
+
+/// An incomplete multiple targets assignment error.
+pub type IncompleteMultipleTargetsAssignment<Lang = YUL> =
+  IncompleteSyntax<MultipleTargetsAssignment<Lang>>;
 
 /// A knowledge of invalid function name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
@@ -143,8 +159,16 @@ pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
   InvalidFunctionName(InvalidFunctionName<S>),
   /// Invalid variable name
   InvalidVariableName(InvalidVariableName<S>),
+  /// Incomplete single variable declaration
+  IncompleteSingleVariableDeclaration(IncompleteSingleVariableDeclaration),
+  /// Incomplete multiple variables declaration
+  IncompleteMultipleVariablesDeclaration(IncompleteMultipleVariablesDeclaration),
   /// Incomplete variable declaration
   IncompleteVariableDeclaration(IncompleteVariableDeclaration),
+  /// Incomplete single target assignment
+  IncompleteSingleTargetAssignment(IncompleteSingleTargetAssignment),
+  /// Incomplete multiple targets assignment
+  IncompleteMultipleTargetsAssignment(IncompleteMultipleTargetsAssignment),
   /// Missing comma
   MissingComma(MissingComma),
   /// Missing dot

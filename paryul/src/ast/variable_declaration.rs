@@ -11,10 +11,13 @@ use logosky::{
 
 use crate::{
   error::{
-    AstLexerErrors, IncompleteVariableDeclaration, InvalidVariableName, SemiIdentifierKnowledge,
-    TrailingComma,
+    AstLexerErrors, IncompleteMultipleVariablesDeclaration, IncompleteSingleVariableDeclaration,
+    IncompleteVariableDeclaration, InvalidVariableName, SemiIdentifierKnowledge, TrailingComma,
   },
-  syntax::VariableDeclarationComponent,
+  syntax::{
+    MultipleVariablesDeclarationComponent, SingleVariableDeclarationComponent,
+    VariableDeclarationComponent,
+  },
 };
 
 use super::*;
@@ -25,9 +28,9 @@ enum Kind {
 }
 
 impl<S> VariableDeclaration<S> {
-  /// Attempts to parse a Yul function call expression with error recovery.
+  /// Attempts to parse a Yul variable declaration with error recovery.
   ///
-  /// If the content is not possible to be a function call, returns `None`, and no valid token is consumed.
+  /// If the content is not possible to be a variable declaration, returns `None`, and no valid token is consumed.
   pub fn parser_with_recovery<'a, E>()
   -> impl Parser<'a, AstTokenizer<'a, S>, Option<Self>, E> + Clone + 'a
   where
@@ -130,7 +133,7 @@ impl<S> VariableDeclaration<S> {
         .validate(|(_, tok), _, emitter| {
           if tok.is_none() {
             emitter.emit(
-              IncompleteVariableDeclaration::new(let_span, VariableDeclarationComponent::Assignee)
+              IncompleteVariableDeclaration::new(let_span, VariableDeclarationComponent::Lhs)
                 .into(),
             );
           }
@@ -183,11 +186,11 @@ impl<S> VariableDeclaration<S> {
                 if expr.is_none() {
                   let tail_span = exa.span();
                   let span = Span::new(let_span.start(), tail_span.end());
-                  let mut err = IncompleteVariableDeclaration::new(
+                  let mut err = IncompleteSingleVariableDeclaration::new(
                     span,
-                    VariableDeclarationComponent::Assignee,
+                    SingleVariableDeclarationComponent::Name,
                   );
-                  err.push(VariableDeclarationComponent::Expression);
+                  err.push(SingleVariableDeclarationComponent::Expression);
                   emitter.emit(err.into());
                 }
                 expr
@@ -243,12 +246,12 @@ impl<S> VariableDeclaration<S> {
                       Some(None) => {
                         let tail_span = exa.span();
                         let span = Span::new(let_span.start(), tail_span.end());
-                        let mut err = IncompleteVariableDeclaration::new(
+                        let mut err = IncompleteMultipleVariablesDeclaration::new(
                           span,
-                          VariableDeclarationComponent::FunctionCall,
+                          MultipleVariablesDeclarationComponent::FunctionCall,
                         );
                         if num_variables == 1 {
-                          err.push_front(VariableDeclarationComponent::Assignee);
+                          err.push_front(MultipleVariablesDeclarationComponent::Names);
                         }
                         emitter.emit(err.into());
                         None
@@ -311,9 +314,9 @@ impl<S> VariableDeclaration<S> {
                       // has colon assign but missing expression
                       Some(None) => {
                         emitter.emit(
-                          IncompleteVariableDeclaration::new(
+                          IncompleteSingleVariableDeclaration::new(
                             Span::new(let_span.start(), exa.span().end()),
-                            VariableDeclarationComponent::Expression,
+                            SingleVariableDeclarationComponent::Expression,
                           )
                           .into(),
                         );
@@ -344,9 +347,9 @@ impl<S> VariableDeclaration<S> {
                       // has colon assign but missing expression
                       Some(None) => {
                         emitter.emit(
-                          IncompleteVariableDeclaration::new(
+                          IncompleteMultipleVariablesDeclaration::new(
                             Span::new(let_span.start(), exa.span().end()),
-                            VariableDeclarationComponent::FunctionCall,
+                            MultipleVariablesDeclarationComponent::FunctionCall,
                           )
                           .into(),
                         );

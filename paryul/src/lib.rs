@@ -96,10 +96,30 @@ pub enum SyntaxKind {
   /// Spec: [Yul Block](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulBlock)
   Block,
 
+  /// Single variable declaration
+  ///
+  /// Spec: [Yul Single Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
+  SingleVariableDeclaration,
+
+  /// Multiple variables declaration
+  ///
+  /// Spec: [Yul Multiple Variables Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
+  MultipleVariablesDeclaration,
+
   /// Variable Declaration
   ///
   /// Spec: [Yul variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
   VariableDeclaration,
+
+  /// Single target assignment
+  ///
+  /// Spec: [Yul Single Target Assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
+  SingleTargetAssignment,
+
+  /// Multiple targets assignment
+  ///
+  /// Spec: [Yul Multiple Target Assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
+  MultipleTargetAssignment,
 
   /// Assignment
   ///

@@ -1,6 +1,9 @@
 use core::marker::PhantomData;
 
-use logosky::{types::Ident, utils::Span};
+use logosky::{
+  types::Ident,
+  utils::{AsSpan, Span},
+};
 
 use crate::YUL;
 
@@ -22,6 +25,13 @@ impl<S, Lang> From<Ident<S, Lang>> for Name<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn from(ident: Ident<S, Lang>) -> Self {
     Self::new(ident)
+  }
+}
+
+impl<S, Lang> AsSpan<Span> for Name<S, Lang> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_span(&self) -> &Span {
+    self.ident.span_ref()
   }
 }
 

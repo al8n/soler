@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
+use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use logosky::{
   KeywordToken, Lexed, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token,
   chumsky::{
@@ -30,7 +30,7 @@ use crate::{SyntaxKind, YUL};
 pub struct SingleTargetAssignment<Path, Expr, Lang = YUL> {
   span: Span,
   path: Path,
-  expr: Expr,
+  expr: Option<Expr>,
   _m: PhantomData<Lang>,
 }
 
@@ -38,6 +38,17 @@ impl<Path, Expr, Lang> SingleTargetAssignment<Path, Expr, Lang> {
   /// Create a new single assignment.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, path: Path, expr: Expr) -> Self {
+    Self::new_in(span, path, Some(expr))
+  }
+
+  /// Create a partial single assignment without expression.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new_partial(span: Span, path: Path) -> Self {
+    Self::new_in(span, path, None)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  const fn new_in(span: Span, path: Path, expr: Option<Expr>) -> Self {
     Self {
       span,
       path,
@@ -60,8 +71,8 @@ impl<Path, Expr, Lang> SingleTargetAssignment<Path, Expr, Lang> {
 
   /// Get the expression of the single assignment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn expr(&self) -> &Expr {
-    &self.expr
+  pub const fn expr(&self) -> Option<&Expr> {
+    self.expr.as_ref()
   }
 }
 
@@ -100,20 +111,31 @@ where
 ///
 /// See [Yul assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct MultipleTargetAssignment<Path, FunctionCall, Container = Vec<Path>, Lang = YUL> {
+pub struct MultipleTargetsAssignment<Path, FunctionCall, Container = Vec<Path>, Lang = YUL> {
   span: Span,
   paths: Container,
-  fn_call: FunctionCall,
+  fn_call: Option<FunctionCall>,
   _m: PhantomData<Lang>,
   _p: PhantomData<Path>,
 }
 
 impl<Path, FunctionCall, Container, Lang>
-  MultipleTargetAssignment<Path, FunctionCall, Container, Lang>
+  MultipleTargetsAssignment<Path, FunctionCall, Container, Lang>
 {
   /// Create a new multiple assignment.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, paths: Container, fn_call: FunctionCall) -> Self {
+    Self::new_in(span, paths, Some(fn_call))
+  }
+
+  /// Create a partial multiple assignment without function call.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new_partial(span: Span, paths: Container) -> Self {
+    Self::new_in(span, paths, None)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  const fn new_in(span: Span, paths: Container, fn_call: Option<FunctionCall>) -> Self {
     Self {
       span,
       paths,
@@ -137,13 +159,13 @@ impl<Path, FunctionCall, Container, Lang>
 
   /// Get the function call of the multiple assignment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn function_call(&self) -> &FunctionCall {
-    &self.fn_call
+  pub const fn function_call(&self) -> Option<&FunctionCall> {
+    self.fn_call.as_ref()
   }
 }
 
 impl<'a, Path, FunctionCall, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
-  for MultipleTargetAssignment<Path, FunctionCall, Container, Lang>
+  for MultipleTargetsAssignment<Path, FunctionCall, Container, Lang>
 where
   T: KeywordToken<'a> + OperatorToken<'a> + PunctuatorToken<'a>,
   str: Equivalent<T>,
@@ -181,7 +203,7 @@ where
 /// ```
 ///
 /// See [Yul assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, TryUnwrap, Unwrap)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
@@ -189,7 +211,7 @@ pub enum Assignment<Path, Expr, FunctionCall, Container = Vec<Path>, Lang = YUL>
   /// A single target assignment.
   Single(SingleTargetAssignment<Path, Expr, Lang>),
   /// A multiple target assignment.
-  Multiple(MultipleTargetAssignment<Path, FunctionCall, Container, Lang>),
+  Multiple(MultipleTargetsAssignment<Path, FunctionCall, Container, Lang>),
 }
 
 impl<'a, Path, Expr, FunctionCall, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
@@ -249,7 +271,7 @@ where
                   }
                   () if tok.is_colon_eq_assign() => {
                     let fn_call = inp.parse(FunctionCall::parser())?;
-                    break Self::Multiple(MultipleTargetAssignment::new(
+                    break Self::Multiple(MultipleTargetsAssignment::new(
                       inp.span_since(&before),
                       paths,
                       fn_call,
