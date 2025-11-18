@@ -119,7 +119,7 @@ impl<Statement, Container, Lang> Block<Statement, Container, Lang> {
     T: Token<'a>,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    DelimitedByBrace::recoverable_parser::<I, T, Error, Lang::SyntaxKind, E>(
+    DelimitedByBrace::recoverable_parser::<I, T, Lang::SyntaxKind, E>(
       statement_parser.repeated().collect(),
     )
     .map(|db| match db {

@@ -203,6 +203,14 @@ pub enum SyntaxKind {
   ///
   /// Spec: [Yul identifier](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulIdentifier)
   Identifier,
+
+  /// EVM builtin function name
+  ///
+  /// Spec: [Yul EVM Builtin Function](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEvmBuiltin)
+  #[cfg(feature = "evm")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
+  EvmBuiltinFunctionName,
+
   // /// Token syntax kind
   // Token(TK),
 }
