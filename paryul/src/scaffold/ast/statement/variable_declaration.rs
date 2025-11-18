@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
+use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use logosky::{
   KeywordToken, Lexed, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token,
   chumsky::{
@@ -12,10 +12,79 @@ use logosky::{
   },
   error::{UnexpectedEot, UnexpectedToken},
   syntax::Language,
-  utils::{Span, Spanned, cmp::Equivalent},
+  types::Ident,
+  utils::{AsSpan, Span, Spanned, cmp::Equivalent},
 };
 
 use crate::{SyntaxKind, YUL};
+
+/// A scaffold AST node for a Yul function call name.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct VariableName<S, Lang = YUL> {
+  ident: Ident<S, Lang>,
+  _lang: PhantomData<Lang>,
+}
+
+impl<S, Lang> AsSpan<Span> for VariableName<S, Lang> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn as_span(&self) -> &Span {
+    self.ident.span_ref()
+  }
+}
+
+impl<S, Lang> From<Ident<S, Lang>> for VariableName<S, Lang> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn from(ident: Ident<S, Lang>) -> Self {
+    Self::new(ident)
+  }
+}
+
+impl<S, Lang> VariableName<S, Lang> {
+  /// Create a new path segment.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn new(ident: Ident<S, Lang>) -> Self {
+    Self {
+      ident,
+      _lang: PhantomData,
+    }
+  }
+
+  /// Returns the span of the path segment.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn span(&self) -> Span {
+    self.ident.span()
+  }
+
+  /// Get the identifier of the path segment.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn ident(&self) -> &Ident<S, Lang> {
+    &self.ident
+  }
+
+  /// Consume the name and return the span and identifier.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_components(self) -> (Span, Ident<S, Lang>) {
+    (self.ident.span(), self.ident)
+  }
+
+  /// Returns `true` if the variable name is valid node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_valid(&self) -> bool {
+    self.ident.is_valid()
+  }
+
+  /// Returns `true` if the variable name is an error node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_error(&self) -> bool {
+    self.ident.is_error()
+  }
+
+  /// Returns `true` if the variable name is a missing node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_missing(&self) -> bool {
+    self.ident.is_missing()
+  }
+}
 
 /// A scaffold AST for a single variable declaration in Yul.
 ///
@@ -107,7 +176,7 @@ where
 ///
 /// See [Yul variable declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct MultipleVariableDeclaration<Name, FunctionCall, Container = Vec<Name>, Lang = YUL> {
+pub struct MultipleVariablesDeclaration<Name, FunctionCall, Container = Vec<Name>, Lang = YUL> {
   span: Span,
   names: Container,
   fn_call: Option<FunctionCall>,
@@ -116,7 +185,7 @@ pub struct MultipleVariableDeclaration<Name, FunctionCall, Container = Vec<Name>
 }
 
 impl<Name, FunctionCall, Container, Lang>
-  MultipleVariableDeclaration<Name, FunctionCall, Container, Lang>
+  MultipleVariablesDeclaration<Name, FunctionCall, Container, Lang>
 {
   /// Create a new multiple variable declaration.
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -159,7 +228,7 @@ impl<Name, FunctionCall, Container, Lang>
 }
 
 impl<'a, Name, FunctionCall, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
-  for MultipleVariableDeclaration<Name, FunctionCall, Container, Lang>
+  for MultipleVariablesDeclaration<Name, FunctionCall, Container, Lang>
 where
   T: KeywordToken<'a> + PunctuatorToken<'a> + OperatorToken<'a>,
   str: Equivalent<T>,
@@ -206,7 +275,7 @@ where
 /// ```
 ///
 /// See [Yul variable declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, Unwrap, TryUnwrap)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, From, IsVariant, Unwrap, TryUnwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
@@ -214,7 +283,7 @@ pub enum VariableDeclaration<Name, Expr, FunctionCall, Container = Vec<Name>, La
   /// A single variable declaration.
   Single(SingleVariableDeclaration<Name, Expr, Lang>),
   /// A multiple variables declaration.
-  Multiple(MultipleVariableDeclaration<Name, FunctionCall, Container, Lang>),
+  Multiple(MultipleVariablesDeclaration<Name, FunctionCall, Container, Lang>),
 }
 
 impl<'a, Name, Expr, FunctionCall, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
@@ -277,7 +346,7 @@ where
 
               match inp.next() {
                 None => {
-                  return Ok(Self::Multiple(MultipleVariableDeclaration::new(
+                  return Ok(Self::Multiple(MultipleVariablesDeclaration::new(
                     inp.span_since(&before),
                     names,
                     None,
@@ -290,7 +359,7 @@ where
                   }
                   () if tok.is_colon_eq_assign() => {
                     let fn_call = inp.parse(FunctionCall::parser())?;
-                    return Ok(Self::Multiple(MultipleVariableDeclaration::new(
+                    return Ok(Self::Multiple(MultipleVariablesDeclaration::new(
                       inp.span_since(&before),
                       names,
                       Some(fn_call),

@@ -1,0 +1,90 @@
+use logosky::{error::ErrorNode, types::Keyword, utils::Span};
+
+use crate::{
+  error::{AstLexerErrors, SemiIdentifierKnowledge},
+  scaffold::ast::name::Name,
+};
+
+use super::*;
+
+impl<S> Name<S> {
+  pub(crate) fn parser_with_recovery<'a, E>(
+    f: impl Fn(Span, SemiIdentifierKnowledge<S>) -> AstParserError<'a, S> + Copy + 'a,
+  ) -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
+  where
+    S: Clone
+      + ErrorNode
+      + From<<<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>
+      + 'a,
+    AstToken<S>: Token<'a>,
+    <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
+    AstTokenizer<'a, S>: LogoStream<
+        'a,
+        AstToken<S>,
+        Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
+      >,
+    AstParserError<'a, S>: 'a,
+    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
+  {
+    let parser = any().validate(move |tok: Lexed<'_, AstToken<S>>, exa, emitter| match tok {
+      Lexed::Error(err) => {
+        emitter.emit(AstParserError::from(err));
+        Err((false, Self::new(Ident::error(exa.span()))))
+      }
+      Lexed::Token(Spanned { span, data: tok }) => {
+        match <AstToken<S> as Require<SemiIdentifierToken<S>>>::require(tok) {
+          Ok(seg) => {
+            let err = match seg {
+              SemiIdentifierToken::LitBool(val) => {
+                SemiIdentifierKnowledge::LitBool(Spanned::new(span, val))
+              }
+              SemiIdentifierToken::LitDecimal(val) => {
+                SemiIdentifierKnowledge::LitDecimal(Spanned::new(span, val))
+              }
+              SemiIdentifierToken::LitHexadecimal(val) => {
+                SemiIdentifierKnowledge::LitHexadecimal(Spanned::new(span, val))
+              }
+              #[cfg(feature = "evm")]
+              SemiIdentifierToken::EvmBuiltin(val) => {
+                SemiIdentifierKnowledge::EvmBuiltinFunction(Spanned::new(span, val))
+              }
+              // valid function name token, nothing to do.
+              SemiIdentifierToken::Identifier(ident) => {
+                return Ok(Self::new(Ident::new(span, ident)));
+              }
+              _ => SemiIdentifierKnowledge::Keyword(Keyword::new(span, S::from(exa.slice()))),
+            };
+
+            emitter.emit(f(span, err));
+
+            Ok(Self::new(Ident::new(span, S::from(exa.slice()))))
+          }
+          Err(tok) => {
+            emitter.emit(
+              UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier).into(),
+            );
+            Err((
+              true,
+              Self::new(Ident::missing(Span::new(span.start(), span.start()))),
+            ))
+          }
+        }
+      }
+    });
+
+    custom(move |inp| {
+      let ckp = inp.save();
+
+      match inp.parse(parser)? {
+        Err((rewind, seg)) => {
+          if rewind {
+            inp.rewind(ckp);
+          }
+          Ok(seg)
+        }
+        // on ok case, we never need rewind.
+        Ok(seg) => Ok(seg),
+      }
+    })
+  }
+}

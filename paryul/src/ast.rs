@@ -22,8 +22,11 @@ mod assignment;
 mod expression;
 mod function_call;
 mod function_name;
+mod name;
 mod path;
 mod statement;
+mod variable_declaration;
+mod variable_name;
 
 /// The token type for Yul AST nodes.
 pub type AstToken<S> = lexsol::yul::syntactic::Token<S>;
@@ -152,18 +155,23 @@ pub type MultipleTargetAssignment<S> =
 pub type Assignment<S> =
   ast::statement::assignment::Assignment<Path<S>, Expression<S>, FunctionCall<S>>;
 
+/// The variable name type for Yul.
+///
+/// Spec: [Yul Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
+pub type VariableName<S> = ast::statement::variable_declaration::VariableName<S>;
+
 /// The single variable declaration type for Yul.
 ///
 /// Spec: [Yul Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
 pub type SingleVariableDeclaration<S> =
-  ast::statement::variable_declaration::SingleVariableDeclaration<Ident<S>, Expression<S>>;
+  ast::statement::variable_declaration::SingleVariableDeclaration<VariableName<S>, Expression<S>>;
 
 /// The multiple variable declaration type for Yul.
 ///
 /// Spec: [Yul Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
-pub type MultipleVariableDeclaration<S> =
-  ast::statement::variable_declaration::MultipleVariableDeclaration<
-    FunctionName<S>,
+pub type MultipleVariablesDeclaration<S> =
+  ast::statement::variable_declaration::MultipleVariablesDeclaration<
+    VariableName<S>,
     FunctionCall<S>,
   >;
 
@@ -171,7 +179,7 @@ pub type MultipleVariableDeclaration<S> =
 ///
 /// Spec: [Yul Variable Declaration](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulVariableDeclaration)
 pub type VariableDeclaration<S> = ast::statement::variable_declaration::VariableDeclaration<
-  FunctionName<S>,
+  VariableName<S>,
   Expression<S>,
   FunctionCall<S>,
 >;

@@ -59,6 +59,30 @@ impl<S, Lang> PathSegment<S, Lang> {
   pub const fn ident(&self) -> &Ident<S, Lang> {
     &self.ident
   }
+
+  /// Consume the path segment and return the identifier.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_components(self) -> (Span, Ident<S, Lang>) {
+    (self.ident.span(), self.ident)
+  }
+
+  /// Returns `true` if the path segment is a valid path segment.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_valid(&self) -> bool {
+    self.ident.is_valid()
+  }
+
+  /// Returns `true` if the path segment is an error node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_error(&self) -> bool {
+    self.ident.is_error()
+  }
+
+  /// Returns `true` if the path segment is a missing node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_missing(&self) -> bool {
+    self.ident.is_missing()
+  }
 }
 
 #[cfg(not(feature = "evm"))]
@@ -156,6 +180,35 @@ impl<Segment, Container, Lang> AsSpan<Span> for Path<Segment, Container, Lang> {
   }
 }
 
+impl<S, Container, Lang> Path<PathSegment<S, Lang>, Container, Lang> {
+  /// Returns `true` if all segments in the path are valid.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn is_valid(&self) -> bool
+  where
+    Container: AsRef<[PathSegment<S, Lang>]>,
+  {
+    self.segments.as_ref().iter().all(|seg| seg.is_valid())
+  }
+
+  /// Returns `true` if any segment in the path is an error node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn is_error(&self) -> bool
+  where
+    Container: AsRef<[PathSegment<S, Lang>]>,
+  {
+    self.segments.as_ref().iter().any(|seg| seg.is_error())
+  }
+
+  /// Returns `true` if any segment in the path is a missing node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn is_missing(&self) -> bool
+  where
+    Container: AsRef<[PathSegment<S, Lang>]>,
+  {
+    self.segments.as_ref().iter().any(|seg| seg.is_missing())
+  }
+}
+
 impl<Segment, Container, Lang> Path<Segment, Container, Lang> {
   /// Create a new path.
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -199,6 +252,15 @@ impl<Segment, Container, Lang> Path<Segment, Container, Lang> {
     Container: AsRef<[Segment]>,
   {
     self.segments.as_ref()
+  }
+
+  /// Returns `true` if the path has no segments.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn is_empty(&self) -> bool
+  where
+    Container: AsRef<[Segment]>,
+  {
+    self.segments.as_ref().is_empty()
   }
 
   /// Returns a parser for the Path with the given segment parser.

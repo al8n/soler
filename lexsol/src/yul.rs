@@ -165,20 +165,27 @@ mod evm {
         #[non_exhaustive]
         #[cfg(feature = "evm")]
         #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-        pub enum EvmBuiltinFunction {
+        pub enum EvmBuiltinFunction<S = ()> {
           $(
             #[doc = "'" $name "'"]
-            [<$name:camel>],
+            [<$name:camel>](S),
           )+
         }
 
         impl EvmBuiltinFunction {
+          $(
+            #[doc = "Constant for the built-in function '" $name "'"]
+            pub const [<$name: upper>]: Self = Self::[<$name: camel>](());
+          )+
+        }
+
+        impl<S> EvmBuiltinFunction<S> {
           /// Returns the string representation of the built-in function
           #[cfg_attr(not(tarpaulin), inline(always))]
           pub const fn as_str(&self) -> &'static str {
             match self {
               $(
-                Self::[<$name:camel>] => stringify!($name),
+                Self::[<$name:camel>](_) => stringify!($name),
               )+
             }
           }
@@ -191,11 +198,24 @@ mod evm {
               _ => false,
             }
           }
+
+          /// Maps the inner type to another type
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          pub fn map<U, F>(self, mut f: F) -> EvmBuiltinFunction<U>
+          where
+            F: FnOnce(S) -> U,
+          {
+            match self {
+              $(
+                Self::[<$name:camel>](s) => EvmBuiltinFunction::[<$name:camel>](f(s)),
+              )+
+            }
+          }
         }
 
-        impl logosky::utils::cmp::Equivalent<EvmBuiltinFunction> for str {
+        impl<S> logosky::utils::cmp::Equivalent<EvmBuiltinFunction<S>> for str {
           #[cfg_attr(not(tarpaulin), inline(always))]
-          fn equivalent(&self, other: &EvmBuiltinFunction) -> bool {
+          fn equivalent(&self, other: &EvmBuiltinFunction<S>) -> bool {
             other.as_str().equivalent(self)
           }
         }

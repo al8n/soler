@@ -142,7 +142,7 @@ impl<S> FunctionCall<S> {
   {
     custom(move |inp| {
       let (_, result) = inp.parse(emit_error_until_token(
-        |Spanned { span, data: tok }, emitter| {
+        |Spanned { span, data: tok }, _, emitter| {
           Some(
             match <AstToken<S> as Require<FunctionCallSyncPointToken<S>>>::require(tok) {
               Ok(tok) => {
@@ -231,7 +231,7 @@ impl<S> FunctionCall<S> {
             DelimitedByParen::recoverable_parser(separated_by::<_, _, _, _, Vec<_>, Comma, _>(
               expr_parser(),
               |t| t.is_comma(),
-              |t| t.is_paren_close(),
+              |t| t.is_some_and(|t| t.is_paren_close()),
               || SyntaxKind::Comma,
               |tok, sep, emitter| {
                 emitter.emit(TrailingComma::from_suffix(tok, *sep.span()).into());

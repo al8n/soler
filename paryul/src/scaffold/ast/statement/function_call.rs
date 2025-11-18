@@ -60,6 +60,30 @@ impl<S, Lang> FunctionName<S, Lang> {
   pub const fn ident(&self) -> &Ident<S, Lang> {
     &self.ident
   }
+
+  /// Consume the name and return the span and identifier.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_components(self) -> (Span, Ident<S, Lang>) {
+    (self.ident.span(), self.ident)
+  }
+
+  /// Returns `true` if the function name is a valid function name.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn is_valid(&self) -> bool {
+    self.ident.is_valid()
+  }
+
+  /// Returns `true` if the function name is an error node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_error(&self) -> bool {
+    self.ident.is_error()
+  }
+
+  /// Returns `true` if the function name is a missing node.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_missing(&self) -> bool {
+    self.ident.is_missing()
+  }
 }
 
 #[cfg(not(feature = "evm"))]

@@ -1,13 +1,13 @@
 use logosky::error::ErrorNode;
 
 use crate::{
-  error::{AstLexerErrors, InvalidFunctionName},
+  error::{AstLexerErrors, InvalidVariableName},
   scaffold::ast::name::Name,
 };
 
 use super::*;
 
-impl<S> FunctionName<S> {
+impl<S> VariableName<S> {
   pub fn parser_with_recovery<'a, E>() -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
   where
     S: Clone
@@ -25,7 +25,7 @@ impl<S> FunctionName<S> {
     E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
   {
     Name::<S>::parser_with_recovery(|span, k| {
-      InvalidFunctionName::with_knowledge(span, k.into()).into()
+      InvalidVariableName::with_knowledge(span, k.into()).into()
     })
     .map(|name| Self::new(name.into()))
   }

@@ -246,6 +246,45 @@ impl<S> Token<S> {
       _ => false,
     }
   }
+
+  /// Returns `true` if the token is a keyword.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_keyword(&self) -> bool {
+    matches!(
+      self,
+      Self::Leave
+        | Self::Continue
+        | Self::Break
+        | Self::Switch
+        | Self::Case
+        | Self::Default
+        | Self::Function
+        | Self::Let
+        | Self::If
+        | Self::For
+    )
+  }
+
+  /// Returns `true` if the token is a semi identifier.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn is_semi_identifier(&self) -> bool {
+    match self {
+      Self::Leave
+      | Self::Continue
+      | Self::Break
+      | Self::Switch
+      | Self::Case
+      | Self::Default
+      | Self::Function
+      | Self::Let
+      | Self::If
+      | Self::For
+      | Self::Identifier(_) => true,
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(_) => true,
+      _ => false,
+    }
+  }
 }
 
 impl<'a, S: 'a> TriviaToken<'a> for Token<S>

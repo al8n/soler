@@ -17,8 +17,9 @@ use lexsol::{
 use logosky::{
   Token,
   error::{
-    Invalid, Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace, UndelimitedParen,
-    UnexpectedEot, UnexpectedSuffix, UnexpectedToken, UnknownLexeme, UnopenedBrace, UnopenedParen,
+    IncompleteSyntax, Invalid, Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace,
+    UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnexpectedToken, UnknownLexeme,
+    UnopenedBrace, UnopenedParen,
   },
   types::{Ident, Keyword},
   utils::{
@@ -26,10 +27,7 @@ use logosky::{
   },
 };
 
-use crate::{
-  SyntaxKind, YUL,
-  syntax::{Expression, Statement},
-};
+use crate::{SyntaxKind, YUL, syntax::*};
 
 /// The parser error type for Yul syntactic tokens.
 pub type AstParserError<'a, S> = Error<
@@ -68,10 +66,21 @@ pub type InvalidPathSegment<S, Lang = YUL> = Invalid<InvalidPathSegmentKnowledge
 /// The invalid function name error.
 pub type InvalidFunctionName<S, Lang = YUL> = Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
 
+/// The invalid variable name error.
+pub type InvalidVariableName<S, Lang = YUL> = Invalid<InvalidVariableNameKnowledge<S, Lang>>;
+
+/// An incomplete variable declaration error.
+pub type IncompleteVariableDeclaration<Lang = YUL> = IncompleteSyntax<VariableDeclaration<Lang>>;
+
 /// A knowledge of invalid function name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
 pub struct InvalidFunctionNameKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
+
+/// A knowledge of invalid variable name.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
+#[repr(transparent)]
+pub struct InvalidVariableNameKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
 
 /// A knowledge of invalid path segment.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
@@ -88,6 +97,8 @@ pub enum SemiIdentifierKnowledge<S, Lang = YUL> {
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
   EvmBuiltinFunction(Spanned<lexsol::yul::EvmBuiltinFunction>),
+  /// The identifier, some language may reserve certain identifiers as contextual keywords
+  Identifier(Ident<S, Lang>),
   /// The keyword
   Keyword(Keyword<S, Lang>),
   /// The boolean literal
@@ -105,7 +116,7 @@ pub enum SemiIdentifierKnowledge<S, Lang = YUL> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lang = YUL> {
+pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
   /// Lexer error
   Lexer(LexerErrors<Char, StateError>),
   /// Undelimited brace
@@ -127,13 +138,17 @@ pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = (), Lan
   /// Unknown expression
   UnknownExpression(UnknownExpression<Char>),
   /// Invalid path segment
-  InvalidPathSegment(InvalidPathSegment<S, Lang>),
+  InvalidPathSegment(InvalidPathSegment<S>),
   /// Invalid function name
-  InvalidFunctionName(InvalidFunctionName<S, Lang>),
+  InvalidFunctionName(InvalidFunctionName<S>),
+  /// Invalid variable name
+  InvalidVariableName(InvalidVariableName<S>),
+  /// Incomplete variable declaration
+  IncompleteVariableDeclaration(IncompleteVariableDeclaration),
   /// Missing comma
-  MissingComma(MissingComma<Lang>),
+  MissingComma(MissingComma),
   /// Missing dot
-  MissingDot(MissingDot<Lang>),
+  MissingDot(MissingDot),
   /// Trailing comma
   TrailingComma(TrailingComma<Char>),
   /// Trailing dot

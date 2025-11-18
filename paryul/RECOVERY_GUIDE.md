@@ -4,9 +4,7 @@ When building the Yul parser, apply error recovery at nodes that provide natural
 
 | SyntaxKind           | Recommended Sync Points                             | Notes                                                                                   |
 |----------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
-| `VariableDeclaration`| `;`, `}`                                            | Treated as a statement; sync to next statement boundary                                 |
 | `Assignment`         | `;`, `}`                                            | Same as above                                                                           |
-| `FunctionCall`       | `;`, `}`                                            | Calls that appear as standalone statements                                              |
 | `IfStatement`        | Closing `}` of the body (and optional `else`)       | Keeps the enclosing scope intact even if the body fails                                 |
 | `ForStatement`       | Closing `}` of the loop body                        | Skip to loop end                                                                        |
 | `SwitchStatement`    | Closing `}` of the switch block                     | Aligns with the next statement                                                          |

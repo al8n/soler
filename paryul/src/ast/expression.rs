@@ -98,14 +98,16 @@ impl<S> Expression<S> {
   {
     recursive(move |expr| {
       custom(move |inp| {
-        let (_, result) = inp.parse(emit_error_until_token(|Spanned { span, data: tok }, _| {
-          Some(
-            match <AstToken<S> as Require<ExpressionSyncPointToken<S>>>::require(tok) {
-              Ok(tok) => Ok(Spanned::new(span, tok)),
-              Err(tok) => Err(Spanned::new(span, tok)),
-            },
-          )
-        }))?;
+        let (_, result) = inp.parse(emit_error_until_token(
+          |Spanned { span, data: tok }, _, _| {
+            Some(
+              match <AstToken<S> as Require<ExpressionSyncPointToken<S>>>::require(tok) {
+                Ok(tok) => Ok(Spanned::new(span, tok)),
+                Err(tok) => Err(Spanned::new(span, tok)),
+              },
+            )
+          },
+        ))?;
 
         let valid_start = inp.cursor();
         let valid_ckp = inp.save();

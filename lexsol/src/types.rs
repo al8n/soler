@@ -1,4 +1,5 @@
 use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
+use logosky::{types::Ident, utils::Spanned};
 
 /// The keywords
 pub mod keywords;
@@ -30,6 +31,17 @@ impl<S> LitBool<S> {
       Self::True(s) => LitBool::True(f(s)),
       Self::False(s) => LitBool::False(f(s)),
     }
+  }
+
+  /// Converts into ident
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+    let span = this.span;
+    let source = match this.data {
+      LitBool::True(s) => s,
+      LitBool::False(s) => s,
+    };
+    Ident::new(span, source)
   }
 }
 
@@ -72,6 +84,12 @@ impl<S> LitDecimal<S> {
     self.0
   }
 
+  /// Converts into ident
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+    Ident::new(this.span, this.data.0)
+  }
+
   /// Map
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitDecimal<U> {
@@ -107,6 +125,12 @@ impl<S> LitHexadecimal<S> {
     S: Copy,
   {
     self.0
+  }
+
+  /// Converts into ident
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+    Ident::new(this.span, this.data.0)
   }
 
   /// Map
@@ -158,6 +182,17 @@ impl<S> LitNumber<S> {
       Self::Decimal(_) => LitNumberKind::Decimal,
       Self::Hexadecimal(_) => LitNumberKind::Hex,
     }
+  }
+
+  /// Converts into ident
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+    let (span, data) = (this.span, this.data);
+    let source = match data {
+      LitNumber::Decimal(lit) => lit.0,
+      LitNumber::Hexadecimal(lit) => lit.0,
+    };
+    Ident::new(span, source)
   }
 
   /// Map

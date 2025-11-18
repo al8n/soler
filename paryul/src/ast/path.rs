@@ -234,7 +234,10 @@ impl<S> Path<S> {
       let remaining_segs = inp.parse(separated_by::<_, _, _, _, Vec<_>, Dot, _>(
         PathSegment::following_segment_parser_with_recovery(),
         |t: &AstToken<S>| t.is_dot(),
-        |t| !is_path_segment_token(t),
+        |t| match t {
+          None => true,
+          Some(tok) => !is_path_segment_token(tok),
+        },
         || SyntaxKind::Dot,
         |tok, sep, emitter| {
           emitter.emit(TrailingDot::from_suffix(tok, *sep.span()).into());
