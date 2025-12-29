@@ -12,8 +12,8 @@ metadata.workspace = true
 
 [features]
 default = ["std", "evm"]
-alloc = ["lexsol/alloc", "logosky/alloc"]
-std = ["lexsol/std", "logosky/default"]
+alloc = ["lexsol/alloc", "tokit/alloc"]
+std = ["lexsol/std", "tokit/default"]
 
 evm = ["lexsol/evm"]
 
@@ -22,7 +22,7 @@ evm = ["lexsol/evm"]
 derive_more.workspace = true
 either = { version = "1", default-features = false }
 lexsol = { workspace = true, features = ["yul"] }
-logosky.workspace = true
+tokit.workspace = true
 
 [lints]
 workspace = true

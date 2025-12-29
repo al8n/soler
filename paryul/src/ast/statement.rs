@@ -1,7 +1,10 @@
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 use logosky::{
-  chumsky::{delimited::DelimitedByBrace, token::recovery::{emit_error_until_token, emit_until_token}},
+  chumsky::{
+    delimited::DelimitedByBrace,
+    token::recovery::{emit_error_until_token, emit_until_token},
+  },
   error::{ErrorNode, UnexpectedToken, UnknownLexeme},
   types::Recoverable,
 };
@@ -34,13 +37,26 @@ impl<S> Require<StatementSyncPointToken<S>> for AstToken<S> {
       AstToken::LBrace => StatementSyncPointToken::LBrace,
       AstToken::LParen => StatementSyncPointToken::LParen,
       other => {
-        return <AstToken<S> as Require<SemiIdentifierToken<S>>>::require(other)
-          .map(From::from);
-      },
+        return <AstToken<S> as Require<SemiIdentifierToken<S>>>::require(other).map(From::from);
+      }
     })
   }
 }
 
+const EXP: &[SyntaxKind] = &[
+  SyntaxKind::leave_KW,
+  SyntaxKind::continue_KW,
+  SyntaxKind::break_KW,
+  SyntaxKind::switch_KW,
+  SyntaxKind::function_KW,
+  SyntaxKind::let_KW,
+  SyntaxKind::if_KW,
+  SyntaxKind::for_KW,
+  SyntaxKind::Identifier,
+  SyntaxKind::LBrace,
+  #[cfg(feature = "evm")]
+  SyntaxKind::EvmBuiltinFunctionName,
+];
 
 /// The AST for Yul statements.
 ///
@@ -78,8 +94,7 @@ impl<S> Statement<S> {
   /// Attempts to parse a Yul expression with error recovery.
   ///
   /// If the content is not possible to be an expression, returns `None`, and no valid token is consumed.
-  pub fn parser_with_recovery<'a, E>()
-  -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
+  pub fn parser_with_recovery<'a, E>() -> impl Parser<'a, AstTokenizer<'a, S>, Self, E> + Clone + 'a
   where
     S: Clone
       + ErrorNode
@@ -103,31 +118,14 @@ impl<S> Statement<S> {
         let result = inp.parse(
           emit_error_until_token(|Spanned { span, data: tok }, _, emitter| {
             match <AstToken<S> as Require<StatementSyncPointToken<S>>>::require(tok) {
-              Ok(sync_tok) => Some(Spanned { span, data: sync_tok }),
+              Ok(sync_tok) => Some(Spanned {
+                span,
+                data: sync_tok,
+              }),
               Err(tok) => {
-                emitter.emit(
-                  UnexpectedToken::expected_one_of_with_found(
-                    span,
-                    tok,
-                    &[
-                      SyntaxKind::leave_KW,
-                      SyntaxKind::continue_KW,
-                      SyntaxKind::break_KW,
-                      SyntaxKind::switch_KW,
-                      SyntaxKind::function_KW,
-                      SyntaxKind::let_KW,
-                      SyntaxKind::if_KW,
-                      SyntaxKind::for_KW,
-                      SyntaxKind::Identifier,
-                      SyntaxKind::LBrace,
-                      #[cfg(feature = "evm")]
-                      SyntaxKind::EvmBuiltinFunctionName,
-                    ],
-                  )
-                  .into(),
-                );
+                emitter.emit(UnexpectedToken::expected_one_of_with_found(span, tok, EXP).into());
                 None
-              },
+              }
             }
           })
           .validate(|(skipped, t), exa, emitter| {
@@ -151,31 +149,78 @@ impl<S> Statement<S> {
           None => return Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
           Some(Spanned { span, data: tok }) => {
             match tok {
-              StatementSyncPointToken::ColonAssign => todo!(),
-              StatementSyncPointToken::LParen => todo!(),
+              StatementSyncPointToken::ColonAssign => {
+                // TODO(al8n): try to recover from an assignment missing LHS
+
+                // skip the bad token, so that the parser can make progress
+                inp.skip();
+                return Err(
+                  UnexpectedToken::expected_one_of_with_found(
+                    inp.span_since(&start_cursor),
+                    AstToken::ColonAssign,
+                    EXP,
+                  )
+                  .into(),
+                );
+              }
+              StatementSyncPointToken::LParen => {
+                // recover from a function call missing the leading identifier
+                let fncall = inp.parse(FunctionCall::parser_with_recovery())?;
+                match fncall {
+                  Some(fncall) => Statement::FunctionCall(fncall),
+                  None => {
+                    // skip the bad token, so that the parser can make progress
+                    inp.skip();
+                    return Err(
+                      UnexpectedToken::expected_one_of_with_found(
+                        inp.span_since(&start_cursor),
+                        AstToken::LParen,
+                        EXP,
+                      )
+                      .into(),
+                    );
+                  }
+                }
+              }
               StatementSyncPointToken::LBrace => {
-                let block = inp.parse(DelimitedByBrace::recoverable_parser(stmt.clone().repeated().collect()))?.unwrap();
-                let (span, statements) = block.into_components();
-                Statement::Block(Block::new(span, statements))
-              },
+                let block = inp.parse(Block::parser_with_recovery_inner(stmt.clone()))?;
+                match block {
+                  Some(block) => Statement::Block(block),
+                  None => {
+                    unreachable!(
+                      "block recovery parser promise if there is a LBrace token, then it must return a block, either valid, or missing components"
+                    );
+                  }
+                }
+              }
               StatementSyncPointToken::Identifier(tok) => match tok {
                 SemiIdentifierToken::Leave => {
                   inp.skip();
                   Statement::Leave(Leave::new(span))
-                },
+                }
                 SemiIdentifierToken::Continue => {
                   inp.skip();
                   Statement::Continue(Continue::new(span))
-                },
+                }
                 SemiIdentifierToken::Break => {
                   inp.skip();
                   Statement::Break(Break::new(span))
-                },
+                }
+                SemiIdentifierToken::Let => {
+                  let var_decl = inp.parse(VariableDeclaration::parser_with_recovery())?;
+                  match var_decl {
+                    Some(var_decl) => Statement::VariableDeclaration(var_decl),
+                    None => {
+                      unreachable!(
+                        "variable declaration recovery parser promise if there is a let token, then it must return a variable declaration, either valid, or missing components"
+                      );
+                    }
+                  }
+                }
                 SemiIdentifierToken::Switch => todo!(),
                 SemiIdentifierToken::Case => todo!(),
                 SemiIdentifierToken::Default => todo!(),
                 SemiIdentifierToken::Function => todo!(),
-                SemiIdentifierToken::Let => todo!(),
                 SemiIdentifierToken::If => todo!(),
                 SemiIdentifierToken::For => todo!(),
                 SemiIdentifierToken::LitBool(lit_bool) => todo!(),
@@ -183,10 +228,26 @@ impl<S> Statement<S> {
                 SemiIdentifierToken::LitHexadecimal(lit_hexadecimal) => todo!(),
                 SemiIdentifierToken::Identifier(_) => todo!(),
                 #[cfg(feature = "evm")]
-                SemiIdentifierToken::EvmBuiltin(evm_builtin_function) => todo!(),
+                SemiIdentifierToken::EvmBuiltin(_) => {
+                  let fncall = inp.parse(FunctionCall::parser_with_recovery())?;
+                  match fncall {
+                    Some(fncall) => Statement::FunctionCall(fncall),
+                    None => {
+                      // // skip the bad token, so that the parser can make progress
+                      // inp.skip();
+                      // return Err(UnexpectedToken::expected_one_of_with_found(
+                      //   inp.span_since(&start_cursor),
+                      //   AstToken::LParen,
+                      //   EXP,
+                      // ).into());
+                      // TODO(al8n): just treat it as an identifier, and let it fallback to other statement types
+                      todo!()
+                    }
+                  }
+                }
               },
             }
-          },
+          }
         })
       })
     })

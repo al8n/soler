@@ -210,7 +210,6 @@ pub enum SyntaxKind {
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
   EvmBuiltinFunctionName,
-
   // /// Token syntax kind
   // Token(TK),
 }

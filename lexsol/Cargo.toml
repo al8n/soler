@@ -11,18 +11,18 @@ description = "Lexsol crate"
 
 [features]
 default = ["std", "evm", "yul", "solidity"]
-alloc = ["logosky/alloc"]
-std = ["logosky/std"]
+alloc = ["tokit/alloc"]
+std = ["tokit/std"]
 
 yul = []
 solidity = []
 evm = []
 
-bytes = ["dep:bytes", "logosky/bytes"]
-hipstr = ["dep:hipstr", "logosky/hipstr"]
+bytes = ["dep:bytes", "tokit/bytes"]
+hipstr = ["dep:hipstr", "tokit/hipstr"]
 
 [dependencies]
-logosky.workspace = true
+tokit.workspace = true
 paste.workspace = true
 thiserror.workspace = true
 derive_more.workspace = true

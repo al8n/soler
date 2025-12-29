@@ -19,6 +19,7 @@ pub use lexsol::yul::Lit;
 pub use statement::Statement;
 
 mod assignment;
+mod block;
 mod expression;
 mod function_call;
 mod function_name;

@@ -85,6 +85,8 @@ impl<S> Assignment<S> {
         0 => {
           // we do not have any valid path, cannot be an assignment
           inp.rewind(start);
+
+          // TODO(al8n): peek next token, if it is `:=`, emit missing LHS error
           return Ok(None);
         }
         // single assignment
