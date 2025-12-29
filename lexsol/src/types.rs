@@ -16,20 +16,38 @@ pub mod punct;
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitBool<S> {
+pub enum LitBool<S = ()> {
   /// The `true` literal
   True(S),
   /// The `false` literal
   False(S),
 }
 
+impl core::fmt::Display for LitBool {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    match self {
+      Self::True(_) => "true".fmt(f),
+      Self::False(_) => "false".fmt(f),
+    }
+  }
+}
+
 impl<S> LitBool<S> {
-  /// Map
+  /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitBool<U> {
     match self {
       Self::True(s) => LitBool::True(f(s)),
       Self::False(s) => LitBool::False(f(s)),
+    }
+  }
+
+  /// Returns the unit literal of this boolean literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitBool<()> {
+    match self {
+      Self::True(_) => LitBool::True(()),
+      Self::False(_) => LitBool::False(()),
     }
   }
 
@@ -46,11 +64,13 @@ impl<S> LitBool<S> {
 }
 
 /// The kind of string literal
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 pub enum LitNumberKind {
   /// Decimal number literal
+  #[display("decimal")]
   Decimal,
   /// Hexadecimal number literal
+  #[display("hexadecimal")]
   Hex,
 }
 
@@ -90,10 +110,16 @@ impl<S> LitDecimal<S> {
     Ident::new(this.span, this.data.0)
   }
 
-  /// Map
+  /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitDecimal<U> {
     LitDecimal(f(self.0))
+  }
+
+  /// Returns the unit literal of this decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitDecimal<()> {
+    LitDecimal(())
   }
 }
 
@@ -133,10 +159,16 @@ impl<S> LitHexadecimal<S> {
     Ident::new(this.span, this.data.0)
   }
 
-  /// Map
+  /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitHexadecimal<U> {
     LitHexadecimal(f(self.0))
+  }
+
+  /// Returns the unit literal of this hexadecimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitHexadecimal<()> {
+    LitHexadecimal(())
   }
 }
 
@@ -195,12 +227,21 @@ impl<S> LitNumber<S> {
     Ident::new(span, source)
   }
 
-  /// Map
+  /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitNumber<U> {
     match self {
       Self::Decimal(s) => LitNumber::Decimal(s.map(f)),
       Self::Hexadecimal(s) => LitNumber::Hexadecimal(s.map(f)),
+    }
+  }
+
+  /// Returns the unit literal of this number literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitNumber<()> {
+    match self {
+      Self::Decimal(d) => LitNumber::Decimal(d.unit()),
+      Self::Hexadecimal(h) => LitNumber::Hexadecimal(h.unit()),
     }
   }
 }
@@ -220,7 +261,7 @@ pub enum LitStrDelimiterKind {
 ///
 /// Spec: [hex string](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexString)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitHexStr<S> {
+pub struct LitHexStr<S = ()> {
   delimiter: LitStrDelimiterKind,
   lit: S,
 }
@@ -261,6 +302,21 @@ impl<S> LitHexStr<S> {
   {
     self.lit
   }
+
+  /// Returns the unit literal of this hex string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitHexStr<()> {
+    LitHexStr::new(self.delimiter, ())
+  }
+
+  /// Maps the inner source to another source
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> LitHexStr<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    LitHexStr::new(self.delimiter, f(self.lit))
+  }
 }
 
 /// The non-empty string literal
@@ -269,7 +325,7 @@ impl<S> LitHexStr<S> {
 /// - [Solidity non-empty string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.NonEmptyStringLiteral)
 /// - [Yul string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulStringLiteral)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitRegularStr<S> {
+pub struct LitRegularStr<S = ()> {
   delimiter: LitStrDelimiterKind,
   lit: S,
 }
@@ -309,5 +365,20 @@ impl<S> LitRegularStr<S> {
     S: Copy,
   {
     self.lit
+  }
+
+  /// Returns the unit literal of this string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitRegularStr<()> {
+    LitRegularStr::new(self.delimiter, ())
+  }
+
+  /// Maps the inner source to another source
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> LitRegularStr<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    LitRegularStr::new(self.delimiter, f(self.lit))
   }
 }

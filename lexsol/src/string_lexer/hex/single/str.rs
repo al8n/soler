@@ -1,6 +1,7 @@
 use tokit::{
-  lexer::Lexable, logos::{Logos, Lexer, Source},
   error::UnexpectedLexeme,
+  lexer::Lexable,
+  logos::{Lexer, Logos, Source},
   utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
@@ -52,7 +53,7 @@ impl StringToken {
   #[inline]
   pub(crate) fn lex_hex<'a, S, T, Error, Container>(
     lexer: &mut SingleQuotedHexStrLexer<Lexer<'a, T>, char, HexStringError, Error>,
-  ) -> Result<LitHexStr<S::Slice<'a>>, Container>
+  ) -> Result<LitHexStr<()>, Container>
   where
     T: Logos<'a, Source = S>,
     S: Source + ?Sized + 'a,
@@ -108,8 +109,7 @@ impl StringToken {
             return Err(errs);
           }
 
-          let src = lexer.slice();
-          return Ok(LitHexStr::single(src));
+          return Ok(LitHexStr::single(()));
         }
         Ok(StringToken::NewLine) => {
           let pos = lexer_span.end + string_lexer.span().start;
@@ -172,7 +172,7 @@ impl StringToken {
 
 impl<'a, S, T, Error, Container>
   Lexable<&mut SingleQuotedHexStrLexer<Lexer<'a, T>, char, HexStringError, Error>, Container>
-  for LitHexStr<S::Slice<'a>>
+  for LitHexStr<()>
 where
   T: Logos<'a, Source = S>,
   S: Source + ?Sized + 'a,

@@ -19,7 +19,7 @@ pub enum LitStrKind {
 /// Spec:
 /// - [Solidity empty string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.EmptyStringLiteral)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitEmptyStr<S> {
+pub struct LitEmptyStr<S = ()> {
   delimiter: LitStrDelimiterKind,
   source: S,
 }
@@ -60,6 +60,21 @@ impl<S> LitEmptyStr<S> {
   {
     self.source
   }
+
+  /// Maps the inner source of the empty string literal to another type
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> LitEmptyStr<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    LitEmptyStr::new(f(self.source), self.delimiter)
+  }
+
+  /// Returns a unit empty string literal with the same delimiter
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitEmptyStr<()> {
+    LitEmptyStr::new((), self.delimiter)
+  }
 }
 
 /// The unicode string literal
@@ -67,7 +82,7 @@ impl<S> LitEmptyStr<S> {
 /// Spec:
 /// - [Solidity unicode string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.UnicodeStringLiteral)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitUnicodeStr<S> {
+pub struct LitUnicodeStr<S = ()> {
   delimiter: LitStrDelimiterKind,
   lit: S,
 }
@@ -108,6 +123,21 @@ impl<S> LitUnicodeStr<S> {
   {
     self.lit
   }
+
+  /// Maps the inner source of the unicode string literal to another type
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> LitUnicodeStr<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    LitUnicodeStr::new(self.delimiter, f(self.lit))
+  }
+
+  /// Returns a unit unicode string literal with the same delimiter
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitUnicodeStr<()> {
+    LitUnicodeStr::new(self.delimiter, ())
+  }
 }
 
 /// The string literal of Solidity
@@ -119,7 +149,7 @@ impl<S> LitUnicodeStr<S> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitStr<S> {
+pub enum LitStr<S = ()> {
   /// The empty string literal
   Empty(LitEmptyStr<S>),
   /// Non-empty string literal
@@ -164,6 +194,31 @@ impl<S> LitStr<S> {
       Self::Hex(_) => LitStrKind::Hex,
       Self::Empty(_) => LitStrKind::Empty,
       Self::Unicode(_) => LitStrKind::Unicode,
+    }
+  }
+
+  /// Maps the inner source of the string literal to another type
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> LitStr<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    match self {
+      Self::Empty(e) => LitStr::Empty(e.map(f)),
+      Self::Regular(r) => LitStr::Regular(r.map(f)),
+      Self::Hex(h) => LitStr::Hex(h.map(f)),
+      Self::Unicode(u) => LitStr::Unicode(u.map(f)),
+    }
+  }
+
+  /// Returns a unit string literal with the same delimiter
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitStr {
+    match self {
+      Self::Empty(e) => LitStr::Empty(e.unit()),
+      Self::Regular(r) => LitStr::Regular(r.unit()),
+      Self::Hex(h) => LitStr::Hex(h.unit()),
+      Self::Unicode(u) => LitStr::Unicode(u.unit()),
     }
   }
 }

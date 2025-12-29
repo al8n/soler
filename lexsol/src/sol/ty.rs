@@ -25,7 +25,7 @@ mod uint;
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Lit<S> {
+pub enum Lit<S = ()>  {
   /// The boolean literal
   Boolean(LitBool<S>),
   /// The string literal
@@ -120,5 +120,28 @@ impl<S> Lit<S> {
   #[inline]
   pub(super) const fn lit_double_quoted_unicode_string(s: S) -> Self {
     Self::String(LitStr::Unicode(LitUnicodeStr::double(s)))
+  }
+
+  /// Maps the inner source of the literal to another type
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> Lit<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    match self {
+      Self::Boolean(b) => Lit::Boolean(b.map(f)),
+      Self::String(s) => Lit::String(s.map(f)),
+      Self::Number(n) => Lit::Number(n.map(f)),
+    }
+  }
+
+  /// Returns the unit of the literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> Lit {
+    match self {
+      Self::Boolean(l) => Lit::Boolean(l.unit()),
+      Self::String(l) => Lit::String(l.unit()),
+      Self::Number(l) => Lit::Number(l.unit()),
+    }
   }
 }

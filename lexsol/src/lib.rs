@@ -30,6 +30,30 @@ mod string_lexer;
 
 mod handlers;
 
+trait TokenBridge<'inp>: tokit::Token<'inp> {
+  type Logos: tokit::logos::Logos<'inp> + ?Sized;
+
+  fn kind(logos: &Self::Logos) -> Self::Kind;
+}
+
+trait SourceBridge<'inp>: tokit::Source<usize> {
+  type Logos: tokit::logos::Source + ?Sized;
+
+  fn to_logos_source(&'inp self) -> &'inp Self::Logos;
+}
+
+#[cfg(feature = "bytes")]
+const _: () = {
+  impl<'inp> SourceBridge<'inp> for bytes::Bytes {
+    type Logos = [u8];
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn to_logos_source(&'inp self) -> &'inp Self::Logos {
+      self.as_ref()
+    }
+  }
+};
+
 #[doc(hidden)]
 pub trait Lxr: sealed::Sealed {}
 

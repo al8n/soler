@@ -1,8 +1,11 @@
 use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
+use token::token;
 #[cfg(feature = "evm")]
 use tokit::Require;
-use tokit::{utils::{cmp::Equivalent, tracker::LimitExceeded}, lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken}};
-use token::token;
+use tokit::{
+  lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
+  utils::{cmp::Equivalent, tracker::LimitExceeded},
+};
 
 use super::Lit;
 
@@ -19,7 +22,9 @@ mod token;
 pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
 
 /// The char type used for the syntactic token.
-pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<'a> as tokit::lexer::source::Slice<'a>>::Char;
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<
+  'a,
+> as tokit::lexer::source::Slice<'a>>::Char;
 /// The error type for lexing based on lossless [`Token`].
 pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
 /// A collection of errors for lossless [`Token`].
@@ -220,14 +225,14 @@ pub enum TokenKind {
   /// Yul literal
   ///
   /// Spec: [Yul literals](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulLiteral)
-  Lit,
+  Lit(Lit),
 
   /// Yul EVM built-in function
   ///
   /// Spec: [Yul evm built-in functions](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEVMBuiltin)
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-  EvmBuiltin,
+  EvmBuiltin(super::EvmBuiltinFunction),
 }
 
 impl<S> Token<S> {
@@ -262,9 +267,9 @@ impl<S> Token<S> {
       Self::LineComment(_) => TokenKind::LineComment,
       Self::MultiLineComment(_) => TokenKind::MultiLineComment,
       Self::Identifier(_) => TokenKind::Identifier,
-      Self::Lit(_) => TokenKind::Lit,
+      Self::Lit(lit) => TokenKind::Lit(lit.unit()),
       #[cfg(feature = "evm")]
-      Self::EvmBuiltin(_) => TokenKind::EvmBuiltin,
+      Self::EvmBuiltin(f) => TokenKind::EvmBuiltin(f.unit()),
     }
   }
 }
@@ -382,9 +387,7 @@ where
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn try_into_identifier(
-    self,
-  ) -> Result<S, Self>
+  fn try_into_identifier(self) -> Result<S, Self>
   where
     Self: Sized,
   {

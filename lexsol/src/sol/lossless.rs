@@ -15,7 +15,9 @@ mod token;
 pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
 
 /// The char type used for the syntactic token.
-pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<'a> as tokit::lexer::source::Slice<'a>>::Char;
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<
+  'a,
+> as tokit::lexer::source::Slice<'a>>::Char;
 /// The error type for lexing based on lossless [`Token`].
 pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
 /// A collection of errors for lossless [`Token`].

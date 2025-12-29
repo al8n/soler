@@ -3,17 +3,18 @@ use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 #[cfg(feature = "evm")]
 use tokit::Require;
 use tokit::{
+  Source, State, Token as TokenT,
   lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
-  utils::{cmp::Equivalent, recursion_tracker::RecursionLimitExceeded},
+  logos::Logos,
+  utils::{SimpleSpan, cmp::Equivalent, recursion_tracker::RecursionLimitExceeded},
 };
 
 use token::token;
 
-use super::Lit;
+use super::{Lexyul, Lit};
 
 use crate::{
-  error::yul as error,
-  types::{LitBool, LitNumber},
+  SourceBridge, TokenBridge, error::yul as error, types::{LitBool, LitNumber}
 };
 
 mod bytes;
@@ -21,15 +22,130 @@ mod str;
 mod token;
 
 /// The syntactic lexer for Yul.
-pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
+pub type Lexer<'a, S = &'a str> = Lexyul<'a, S, Token<<S as Source<usize>>::Slice<'a>>>;
 
 /// The char type used for the syntactic token.
-pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<'a> as tokit::lexer::source::Slice<'a>>::Char;
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as Source<usize>>::Slice<
+  'a,
+> as tokit::lexer::source::Slice<'a>>::Char;
 /// The error type for lexing based on syntactic [`Token`].
 pub type Error<'a, S> = error::Error<Char<'a, S>, RecursionLimitExceeded>;
 /// A collection of errors for syntactic [`Token`].
 pub type Errors<'a, S> = error::Errors<Char<'a, S>, RecursionLimitExceeded>;
 
+impl<'inp, S> tokit::Lexer<'inp> for Lexyul<'inp, S, Token<S::Slice<'inp>>>
+where
+  Token<S::Slice<'inp>>: TokenBridge<'inp, Kind = TokenKind>,
+  <Token<S::Slice<'inp>> as TokenT<'inp>>::Error: From<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Error>
+    + From<<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras as State>::Error>,
+  <Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos: Logos<'inp, Source = <S as SourceBridge<'inp>>::Logos>,
+  <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras: State,
+  S: SourceBridge<'inp>,
+{
+  type State = <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras;
+  type Source = S;
+  type Token = Token<S::Slice<'inp>>;
+  type Span = SimpleSpan;
+  type Offset = usize;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn new(input: &'inp Self::Source) -> Self
+  where
+    Self::State: Default,
+  {
+    let inner = tokit::logos::Lexer::new(input.to_logos_source());
+    Self { input, inner }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn with_state(input: &'inp Self::Source, state: Self::State) -> Self {
+    let inner = tokit::logos::Lexer::with_extras(input.to_logos_source(), state);
+    Self { input, inner }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn check(&self) -> Result<(), <Self::Token as tokit::Token<'inp>>::Error> {
+    self.inner.extras.check().map_err(Into::into)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn state(&self) -> &Self::State {
+    &self.inner.extras
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn state_mut(&mut self) -> &mut Self::State {
+    &mut self.inner.extras
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn into_state(self) -> Self::State {
+    self.inner.extras
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn source(&self) -> &'inp Self::Source {
+    self.input
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn span(&self) -> Self::Span {
+    self.inner.span().into()
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn slice(&self) -> <Self::Source as Source<Self::Offset>>::Slice<'inp> {
+    let span = self.inner.span();
+    self
+      .input
+      .slice(&span.start..&span.end)
+      .expect("slice of the current lexer span should not be None")
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn lex(&mut self) -> Option<Result<Token<S::Slice<'inp>>, <Token<S::Slice<'inp>> as TokenT<'inp>>::Error>> {
+    match self.inner.next() {
+      Some(Ok(tok)) => match self.check() {
+        Ok(_) => Some(Ok(
+          match <Token<S::Slice<'inp>> as TokenBridge<'inp>>::kind(&tok) {
+            TokenKind::ColonAssign => Token::ColonAssign,
+            TokenKind::ThinArrow => Token::ThinArrow,
+            TokenKind::LBrace => Token::LBrace,
+            TokenKind::RBrace => Token::RBrace,
+            TokenKind::LParen => Token::LParen,
+            TokenKind::RParen => Token::RParen,
+            TokenKind::Dot => Token::Dot,
+            TokenKind::Comma => Token::Comma,
+            TokenKind::Leave => Token::Leave,
+            TokenKind::Continue => Token::Continue,
+            TokenKind::Break => Token::Break,
+            TokenKind::Switch => Token::Switch,
+            TokenKind::Case => Token::Case,
+            TokenKind::Default => Token::Default,
+            TokenKind::Function => Token::Function,
+            TokenKind::Let => Token::Let,
+            TokenKind::If => Token::If,
+            TokenKind::For => Token::For,
+            TokenKind::Identifier => Token::Identifier(self.slice()),
+            TokenKind::Lit(lit) => Token::Lit(lit.map(|_| self.slice())),
+            #[cfg(feature = "evm")]
+            TokenKind::EvmBuiltin(f) => {
+              Token::EvmBuiltin(f.map(|_| self.slice()))
+            },
+          }
+        )),
+        Err(e) => Some(Err(e)),
+      },
+      Some(Err(err)) => Some(Err(err.into())),
+      None => None,
+    }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn bump(&mut self, n: &usize) {
+    self.inner.bump(*n);
+  }
+}
 
 /// The syntactic token of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, TryUnwrap, Unwrap)]
@@ -124,7 +240,7 @@ pub enum Token<S> {
   /// Spec: [Yul evm built-in functions](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEVMBuiltin)
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-  EvmBuiltin(super::EvmBuiltinFunction),
+  EvmBuiltin(super::EvmBuiltinFunction<S>),
 }
 
 /// The kind of Yul syntactic token.
@@ -174,13 +290,13 @@ pub enum TokenKind {
   /// Yul literal
   ///
   /// Spec: [Yul literals](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulLiteral)
-  Lit,
+  Lit(Lit),
   /// Yul EVM built-in function
   ///
   /// Spec: [Yul evm built-in functions](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEVMBuiltin)
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-  EvmBuiltin,
+  EvmBuiltin(super::EvmBuiltinFunction),
 }
 
 impl<S> Token<S> {
@@ -207,9 +323,9 @@ impl<S> Token<S> {
       Self::If => TokenKind::If,
       Self::For => TokenKind::For,
       Self::Identifier(_) => TokenKind::Identifier,
-      Self::Lit(_) => TokenKind::Lit,
+      Self::Lit(lit) => TokenKind::Lit(lit.unit()),
       #[cfg(feature = "evm")]
-      Self::EvmBuiltin(_) => TokenKind::EvmBuiltin,
+      Self::EvmBuiltin(evm) => TokenKind::EvmBuiltin(evm.unit()),
     }
   }
 
@@ -403,9 +519,7 @@ where
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn try_into_identifier(
-    self,
-  ) -> Result<S, Self>
+  fn try_into_identifier(self) -> Result<S, Self>
   where
     Self: Sized,
   {
@@ -471,10 +585,10 @@ where
 
 #[cfg(feature = "evm")]
 #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-impl<S> Require<super::EvmBuiltinFunction> for Token<S> {
+impl<S> Require<super::EvmBuiltinFunction<S>> for Token<S> {
   type Err = Self;
 
-  fn require(self) -> Result<super::EvmBuiltinFunction, Self::Err>
+  fn require(self) -> Result<super::EvmBuiltinFunction<S>, Self::Err>
   where
     Self: Sized,
   {

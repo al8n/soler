@@ -1,4 +1,10 @@
-use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
+use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
+use tokit::{
+  Lexer, Source, State, Token,
+  lexer::FromLogos,
+  logos::{self, Logos},
+  utils::SimpleSpan,
+};
 
 /// The lossless lexer for Yul
 pub mod lossless;
@@ -19,12 +25,20 @@ pub(crate) mod sealed {
   pub struct YUL(pub(crate) ());
 }
 
+/// a
+pub struct Lexyul<'inp, S, T: super::TokenBridge<'inp>> {
+  input: &'inp S,
+  inner: logos::Lexer<'inp, T::Logos>,
+}
+
 /// The kind of string literal of Yul
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 pub enum LitStrKind {
   /// Non-empty string literal
+  #[display("string")]
   Regular,
   /// Hex string literal
+  #[display("hex string")]
   Hex,
 }
 
@@ -37,11 +51,31 @@ pub enum LitStrKind {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitStr<S> {
+pub enum LitStr<S = ()> {
   /// Non-empty string literal
   Regular(LitRegularStr<S>),
   /// Hex string literal
   Hex(LitHexStr<S>),
+}
+
+impl core::fmt::Display for LitStr {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    match (self.kind(), self.delimiter_kind()) {
+      (LitStrKind::Regular, LitStrDelimiterKind::Single) => {
+        write!(f, "single-quoted string literal")
+      }
+      (LitStrKind::Regular, LitStrDelimiterKind::Double) => {
+        write!(f, "double-quoted string literal")
+      }
+      (LitStrKind::Hex, LitStrDelimiterKind::Single) => {
+        write!(f, "single-quoted hex string literal")
+      }
+      (LitStrKind::Hex, LitStrDelimiterKind::Double) => {
+        write!(f, "double-quoted hex string literal")
+      }
+    }
+  }
 }
 
 impl<S> From<LitStr<S>> for LitStrKind {
@@ -76,6 +110,27 @@ impl<S> LitStr<S> {
       Self::Hex(_) => LitStrKind::Hex,
     }
   }
+
+  /// Returns the unit literal of this string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> LitStr<()> {
+    match self {
+      Self::Regular(non_empty) => LitStr::Regular(non_empty.unit()),
+      Self::Hex(hex) => LitStr::Hex(hex.unit()),
+    }
+  }
+
+  /// Maps the inner type to another type
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> LitStr<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    match self {
+      Self::Regular(non_empty) => LitStr::Regular(non_empty.map(f)),
+      Self::Hex(hex) => LitStr::Hex(hex.map(f)),
+    }
+  }
 }
 
 /// The literal of Yul
@@ -85,13 +140,25 @@ impl<S> LitStr<S> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Lit<S> {
+pub enum Lit<S = ()> {
   /// The boolean literal
   Boolean(LitBool<S>),
   /// The string literal
   String(LitStr<S>),
   /// The number literal
   Number(LitNumber<S>),
+}
+
+impl core::fmt::Display for Lit {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    use core::fmt::Display;
+    match self {
+      Self::Boolean(b) => b.fmt(f),
+      Self::String(s) => s.fmt(f),
+      Self::Number(n) => n.kind().fmt(f),
+    }
+  }
 }
 
 impl<S> From<LitRegularStr<S>> for Lit<S> {
@@ -147,6 +214,29 @@ impl<S> Lit<S> {
   pub(super) const fn lit_double_quoted_hex_string(s: S) -> Self {
     Self::String(LitStr::Hex(LitHexStr::double(s)))
   }
+
+  /// Maps the inner type to another type
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn map<F, U>(self, f: F) -> Lit<U>
+  where
+    F: FnOnce(S) -> U,
+  {
+    match self {
+      Self::Boolean(b) => Lit::Boolean(b.map(f)),
+      Self::String(s) => Lit::String(s.map(f)),
+      Self::Number(n) => Lit::Number(n.map(f)),
+    }
+  }
+
+  /// Returns the unit literal of this literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn unit(&self) -> Lit<()> {
+    match self {
+      Self::Boolean(b) => Lit::Boolean(b.unit()),
+      Self::String(s) => Lit::String(s.unit()),
+      Self::Number(n) => Lit::Number(n.unit()),
+    }
+  }
 }
 
 #[cfg(feature = "evm")]
@@ -170,6 +260,17 @@ mod evm {
             #[doc = "'" $name "'"]
             [<$name:camel>](S),
           )+
+        }
+
+        impl core::fmt::Display for EvmBuiltinFunction<()> {
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            match self {
+              $(
+                Self::[<$name:camel>](_) => stringify!($name).fmt(f),
+              )+
+            }
+          }
         }
 
         impl EvmBuiltinFunction {
@@ -208,6 +309,16 @@ mod evm {
             match self {
               $(
                 Self::[<$name:camel>](s) => EvmBuiltinFunction::[<$name:camel>](f(s)),
+              )+
+            }
+          }
+
+          /// Returns the unit literal of this built-in function
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          pub const fn unit(&self) -> EvmBuiltinFunction<()> {
+            match self {
+              $(
+                Self::[<$name:camel>](_) => EvmBuiltinFunction::[<$name:camel>](()),
               )+
             }
           }

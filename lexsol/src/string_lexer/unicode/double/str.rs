@@ -1,6 +1,7 @@
 use tokit::{
-  lexer::Lexable, logos::{Logos, Lexer, Source},
   error::UnexpectedLexeme,
+  lexer::Lexable,
+  logos::{Lexer, Logos, Source},
   utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
@@ -54,7 +55,7 @@ impl StringToken {
   #[inline]
   pub(crate) fn lex_unicode<'a, S, T, Error, Container>(
     lexer: &mut DoubleQuotedUnicodeStrLexer<Lexer<'a, T>, char, UnicodeStringError, Error>,
-  ) -> Result<LitUnicodeStr<S::Slice<'a>>, Container>
+  ) -> Result<LitUnicodeStr<()>, Container>
   where
     T: Logos<'a, Source = S>,
     S: Source + ?Sized + 'a,
@@ -87,8 +88,7 @@ impl StringToken {
             return Err(errs);
           }
 
-          let src = lexer.slice();
-          return Ok(LitUnicodeStr::single(src));
+          return Ok(LitUnicodeStr::single(()));
         }
         Ok(StringToken::NewLine) => {
           let pos = lexer_span.end + string_lexer.span().start;
@@ -162,7 +162,7 @@ impl<'a, S, T, Error, Container>
   Lexable<
     &mut DoubleQuotedUnicodeStrLexer<Lexer<'a, T>, char, UnicodeStringError, Error>,
     Container,
-  > for LitUnicodeStr<S::Slice<'a>>
+  > for LitUnicodeStr<()>
 where
   T: Logos<'a, Source = S>,
   S: Source + ?Sized + 'a,

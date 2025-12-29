@@ -44,12 +44,35 @@ macro_rules! token {
       }
 
       #[allow(warnings)]
-      impl<'b $(: $lt)?, $($lt: 'b)?> tokit::lexer::FromLogos<'b> for syntactic::Token<$slice> {
-        type Logos = Token $(<$lt>)?;
+      impl<'b $(: $lt)?, $($lt: 'b)?> crate::TokenBridge<'b> for syntactic::Token<$slice> {
+        type Logos = Token;
 
         #[cfg_attr(not(tarpaulin), inline(always))]
-        fn from_logos(value: Self::Logos) -> Self {
-          value.into()
+        fn kind(value: &Self::Logos) -> syntactic::TokenKind {
+          match value {
+            Token::ColonAssign => syntactic::TokenKind::ColonAssign,
+            Token::ThinArrow => syntactic::TokenKind::ThinArrow,
+            Token::LBrace => syntactic::TokenKind::LBrace,
+            Token::RBrace => syntactic::TokenKind::RBrace,
+            Token::LParen => syntactic::TokenKind::LParen,
+            Token::RParen => syntactic::TokenKind::RParen,
+            Token::Dot => syntactic::TokenKind::Dot,
+            Token::Comma => syntactic::TokenKind::Comma,
+            Token::Leave => syntactic::TokenKind::Leave,
+            Token::Continue => syntactic::TokenKind::Continue,
+            Token::Break => syntactic::TokenKind::Break,
+            Token::Switch => syntactic::TokenKind::Switch,
+            Token::Case => syntactic::TokenKind::Case,
+            Token::Default => syntactic::TokenKind::Default,
+            Token::Function => syntactic::TokenKind::Function,
+            Token::Let => syntactic::TokenKind::Let,
+            Token::If => syntactic::TokenKind::If,
+            Token::For => syntactic::TokenKind::For,
+            Token::Identifier => syntactic::TokenKind::Identifier,
+            Token::Lit(lit) => syntactic::TokenKind::Lit(*lit),
+            #[cfg(feature = "evm")]
+            Token::EvmBuiltin(evm) => syntactic::TokenKind::EvmBuiltin(*evm),
+          }
         }
       }
 
@@ -75,7 +98,7 @@ macro_rules! token {
       #[logos(subpattern digit = "[0-9]")]
       #[logos(subpattern decimal = "0|[1-9][0-9]*")]
       #[logos(subpattern hexadecimal = "0x(?&hex_digit)+")]
-      pub enum Token $(<$lt>)? {
+      pub enum Token {
         #[token(":=")]
         ColonAssign,
         #[token("->")]
@@ -115,10 +138,10 @@ macro_rules! token {
         For,
 
         #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*")]
-        Identifier($slice),
+        Identifier,
 
-        #[token("true", |lexer| Lit::lit_true(lexer.slice()))]
-        #[token("false", |lexer| Lit::lit_false(lexer.slice()))]
+        #[token("true", |_| Lit::lit_true(()))]
+        #[token("false", |_| Lit::lit_false(()))]
         #[regex("(?&decimal)", handlers::$handlers::handle_decimal_suffix)]
         #[regex("[1-9][0-9_]+", handlers::$handlers::handle_malformed_decimal_suffix)]
         #[regex("0(?&digit)+", handlers::$handlers::handle_leading_zero_and_suffix)]
@@ -129,46 +152,46 @@ macro_rules! token {
         #[token("0x", handlers::$handlers::handle_hexadecimal_prefix_with_invalid_following)]
 
         // Double quoted hex string literal lexing
-        #[regex("hex\"(?&hex_string_content)\"", |lexer| Lit::lit_double_quoted_hex_string(lexer.slice()))]
+        #[regex("hex\"(?&hex_string_content)\"", |_| Lit::lit_double_quoted_hex_string(()))]
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex\"", |lexer| {
-          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
 
         // Single quoted hex string literal lexing
-        #[regex("hex'(?&hex_string_content)'", |lexer| Lit::lit_single_quoted_hex_string(lexer.slice()))]
+        #[regex("hex'(?&hex_string_content)'", |_| Lit::lit_single_quoted_hex_string(()))]
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex'", |lexer| {
-          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
 
         // Double quoted non-empty string literal lexing
-        #[regex(r#""(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice()))]
+        #[regex(r#""(?&double_quoted_chars)""#, |_| Lit::lit_double_quoted_regular_string(()))]
         // Error handling branches for double quoted non-empty string literal lexing
         #[token(r#""""#, |lexer| empty_double_quoted_string_error(lexer.span().into()))]
         #[regex(r#""(?&double_quoted_chars)"#, |lexer| unclosed_double_quoted_regular_string_error(lexer.span().into()))]
         #[token("\"", |lexer| {
-          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
         // Single quoted non-empty string literal lexing
-        #[regex(r"'(?&single_quoted_chars)'", |lexer| Lit::lit_single_quoted_regular_string(lexer.slice()))]
+        #[regex(r"'(?&single_quoted_chars)'", |_| Lit::lit_single_quoted_regular_string(()))]
         // Error handling branches for single quoted non-empty string literal lexing
         #[token("''", |lexer| empty_single_quoted_string_error(lexer.span().into()))]
         #[regex(r"'(?&single_quoted_chars)", |lexer| unclosed_single_quoted_regular_string_error(lexer.span().into()))]
         #[token("\'", |lexer| {
-          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
-        Lit(Lit<$slice>),
+        Lit(Lit),
 
         #[cfg(feature = "evm")]
         #[token("stop", |_| EvmBuiltinFunction::STOP)]
@@ -254,76 +277,76 @@ macro_rules! token {
         EvmBuiltin(EvmBuiltinFunction),
       }
 
-      impl$(<$lt>)? From<Token $(<$lt>)?> for syntactic::Token<$slice> {
-        #[cfg_attr(not(tarpaulin), inline(always))]
-        fn from(value: Token $(<$lt>)?) -> Self {
-          match value {
-            Token::ColonAssign => Self::ColonAssign,
-            Token::ThinArrow => Self::ThinArrow,
-            Token::LBrace => Self::LBrace,
-            Token::RBrace => Self::RBrace,
-            Token::LParen => Self::LParen,
-            Token::RParen => Self::RParen,
-            Token::Dot => Self::Dot,
-            Token::Comma => Self::Comma,
-            Token::Leave => Self::Leave,
-            Token::Continue => Self::Continue,
-            Token::Break => Self::Break,
-            Token::Switch => Self::Switch,
-            Token::Case => Self::Case,
-            Token::Default => Self::Default,
-            Token::Function => Self::Function,
-            Token::Let => Self::Let,
-            Token::If => Self::If,
-            Token::For => Self::For,
-            Token::Identifier(slice) => Self::Identifier(slice),
-            Token::Lit(lit) => Self::Lit(lit),
-            #[cfg(feature = "evm")]
-            Token::EvmBuiltin(func) => Self::EvmBuiltin(func),
-          }
-        }
-      }
+      // impl$(<$lt>)? From<Token $(<$lt>)?> for syntactic::Token<$slice> {
+      //   #[cfg_attr(not(tarpaulin), inline(always))]
+      //   fn from(value: Token $(<$lt>)?) -> Self {
+      //     match value {
+      //       Token::ColonAssign => Self::ColonAssign,
+      //       Token::ThinArrow => Self::ThinArrow,
+      //       Token::LBrace => Self::LBrace,
+      //       Token::RBrace => Self::RBrace,
+      //       Token::LParen => Self::LParen,
+      //       Token::RParen => Self::RParen,
+      //       Token::Dot => Self::Dot,
+      //       Token::Comma => Self::Comma,
+      //       Token::Leave => Self::Leave,
+      //       Token::Continue => Self::Continue,
+      //       Token::Break => Self::Break,
+      //       Token::Switch => Self::Switch,
+      //       Token::Case => Self::Case,
+      //       Token::Default => Self::Default,
+      //       Token::Function => Self::Function,
+      //       Token::Let => Self::Let,
+      //       Token::If => Self::If,
+      //       Token::For => Self::For,
+      //       Token::Identifier(slice) => Self::Identifier(slice),
+      //       Token::Lit(lit) => Self::Lit(lit),
+      //       #[cfg(feature = "evm")]
+      //       Token::EvmBuiltin(func) => Self::EvmBuiltin(func),
+      //     }
+      //   }
+      // }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn empty_single_quoted_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn empty_single_quoted_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Error::empty_single_quote(span).into())
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn empty_double_quoted_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn empty_double_quoted_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Error::empty_double_quote(span).into())
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_regular_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_double_quoted_regular_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::String(
           crate::error::StringError::unclosed_double_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_regular_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_single_quoted_regular_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::String(
           crate::error::StringError::unclosed_single_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_hex_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_double_quoted_hex_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_double_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_hex_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_single_quoted_hex_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_single_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut tokit::logos::Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut tokit::logos::Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(Error::from(crate::error::yul::HexadecimalError::malformed(lexer.span().into())).into())
       }
     }

@@ -54,12 +54,43 @@ macro_rules! token {
       }
 
       #[allow(warnings)]
-      impl<'b $(: $lt)?, $($lt: 'b)?> tokit::lexer::FromLogos<'b> for lossless::Token<$slice> {
-        type Logos = Token $(<$lt>)?;
+      impl<'b $(: $lt)?, $($lt: 'b)?> crate::TokenBridge<'b> for lossless::Token<$slice> {
+        type Logos = Token;
 
         #[cfg_attr(not(tarpaulin), inline(always))]
-        fn from_logos(value: Self::Logos) -> Self {
-          value.into()
+        fn kind(value: &Self::Logos) -> lossless::TokenKind {
+          match value {
+            Token::Space => lossless::TokenKind::Space,
+            Token::Tab => lossless::TokenKind::Tab,
+            Token::NewLine => lossless::TokenKind::NewLine,
+            Token::CarriageReturn => lossless::TokenKind::CarriageReturn,
+            Token::CarriageReturnNewLine => lossless::TokenKind::CarriageReturnNewLine,
+            Token::FormFeed => lossless::TokenKind::FormFeed,
+            Token::ColonAssign => lossless::TokenKind::ColonAssign,
+            Token::ThinArrow => lossless::TokenKind::ThinArrow,
+            Token::LBrace => lossless::TokenKind::LBrace,
+            Token::RBrace => lossless::TokenKind::RBrace,
+            Token::LParen => lossless::TokenKind::LParen,
+            Token::RParen => lossless::TokenKind::RParen,
+            Token::Dot => lossless::TokenKind::Dot,
+            Token::Comma => lossless::TokenKind::Comma,
+            Token::Leave => lossless::TokenKind::Leave,
+            Token::Continue => lossless::TokenKind::Continue,
+            Token::Break => lossless::TokenKind::Break,
+            Token::Switch => lossless::TokenKind::Switch,
+            Token::Case => lossless::TokenKind::Case,
+            Token::Default => lossless::TokenKind::Default,
+            Token::Function => lossless::TokenKind::Function,
+            Token::Let => lossless::TokenKind::Let,
+            Token::If => lossless::TokenKind::If,
+            Token::For => lossless::TokenKind::For,
+            Token::LineComment => lossless::TokenKind::LineComment,
+            Token::MultiLineComment => lossless::TokenKind::MultiLineComment,
+            Token::Identifier => lossless::TokenKind::Identifier,
+            Token::Lit(lit) => lossless::TokenKind::Lit(*lit),
+            #[cfg(feature = "evm")]
+            Token::EvmBuiltin(func) => lossless::TokenKind::EvmBuiltin(*func),
+          }
         }
       }
 
@@ -93,7 +124,7 @@ macro_rules! token {
       #[logos(subpattern digit = "[0-9]")]
       #[logos(subpattern decimal = "0|[1-9][0-9]*")]
       #[logos(subpattern hexadecimal = "0x(?&hex_digit)+")]
-      pub enum Token $(<$lt>)? {
+      pub enum Token {
         #[token(" ", |l| l.increase_token())]
         Space,
         #[token("\t", |l| l.increase_token())]
@@ -145,17 +176,17 @@ macro_rules! token {
         #[token("for", |l| l.increase_token())]
         For,
 
-        #[regex(r"//[^\r\n]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        LineComment($slice),
+        #[regex(r"//[^\r\n]*", |lexer| increase_token_then_with(lexer, |_| ()))]
+        LineComment,
 
-        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        MultiLineComment($slice),
+        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_then_with(lexer, |_| ()))]
+        MultiLineComment,
 
-        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        Identifier($slice),
+        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_then_with(lexer, |_| ()))]
+        Identifier,
 
-        #[token("true", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_true(lexer.slice())))]
-        #[token("false", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_false(lexer.slice())))]
+        #[token("true", |lexer| increase_token_then_with(lexer, |_| Lit::lit_true(())))]
+        #[token("false", |lexer| increase_token_then_with(lexer, |_| Lit::lit_false(())))]
         #[regex("(?&decimal)", |lexer| {
           match handlers::$handlers::handle_decimal_suffix(lexer) {
             Ok(lit) => {
@@ -251,12 +282,12 @@ macro_rules! token {
 
         // Double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)\"", |lexer| {
-          increase_token_then_with(lexer, |l| Lit::lit_double_quoted_hex_string(l.slice()))
+          increase_token_then_with(lexer, |_| Lit::lit_double_quoted_hex_string(()))
         })]
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", unclosed_double_quoted_hex_string_error)]
         #[token("hex\"", |lexer| {
-          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          match <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -278,12 +309,12 @@ macro_rules! token {
 
         // Single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)'", |lexer| {
-          increase_token_then_with(lexer, |l| Lit::lit_single_quoted_hex_string(l.slice()))
+          increase_token_then_with(lexer, |_| Lit::lit_single_quoted_hex_string(()))
         })]
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", unclosed_single_quoted_hex_string_error)]
         #[token("hex'", |lexer| {
-          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          match <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -305,13 +336,13 @@ macro_rules! token {
 
         // Double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)""#, |lexer| {
-          increase_token_then_with(lexer, |l| Lit::lit_double_quoted_regular_string(l.slice()))
+          increase_token_then_with(lexer, |_| Lit::lit_double_quoted_regular_string(()))
         })]
         // Error handling branches for double quoted non-empty string literal lexing
         #[token(r#""""#, empty_double_quoted_string_error)]
         #[regex(r#""(?&double_quoted_chars)"#, unclosed_double_quoted_regular_string_error)]
         #[token("\"", |lexer| {
-          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          match <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -332,13 +363,13 @@ macro_rules! token {
         })]
         // Single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)'", |lexer| {
-          increase_token_then_with(lexer, |l| Lit::lit_single_quoted_regular_string(l.slice()))
+          increase_token_then_with(lexer, |_| Lit::lit_single_quoted_regular_string(()))
         })]
         // Error handling branches for single quoted non-empty string literal lexing
         #[token("''", empty_single_quoted_string_error)]
         #[regex(r"'(?&single_quoted_chars)", unclosed_single_quoted_regular_string_error)]
         #[token("\'", |lexer| {
-          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          match <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -357,7 +388,7 @@ macro_rules! token {
             }
           }
         })]
-        Lit(Lit<$slice>),
+        Lit(Lit),
 
         #[cfg(feature = "evm")]
         #[token("stop", |lexer| increase_token_then(lexer, EvmBuiltinFunction::STOP))]
@@ -443,88 +474,50 @@ macro_rules! token {
         EvmBuiltin(EvmBuiltinFunction),
       }
 
-      impl$(<$lt>)? From<Token $(<$lt>)?> for lossless::Token<$slice> {
-        #[cfg_attr(not(tarpaulin), inline(always))]
-        fn from(value: Token $(<$lt>)?) -> Self {
-          match value {
-            Token::Space => Self::Space,
-            Token::Tab => Self::Tab,
-            Token::NewLine => Self::NewLine,
-            Token::CarriageReturn => Self::CarriageReturn,
-            Token::CarriageReturnNewLine => Self::CarriageReturnNewLine,
-            Token::FormFeed => Self::FormFeed,
-            Token::ColonAssign => Self::ColonAssign,
-            Token::ThinArrow => Self::ThinArrow,
-            Token::LBrace => Self::LBrace,
-            Token::RBrace => Self::RBrace,
-            Token::LParen => Self::LParen,
-            Token::RParen => Self::RParen,
-            Token::Dot => Self::Dot,
-            Token::Comma => Self::Comma,
-            Token::Leave => Self::Leave,
-            Token::Continue => Self::Continue,
-            Token::Break => Self::Break,
-            Token::Switch => Self::Switch,
-            Token::Case => Self::Case,
-            Token::Default => Self::Default,
-            Token::Function => Self::Function,
-            Token::Let => Self::Let,
-            Token::If => Self::If,
-            Token::For => Self::For,
-            Token::LineComment(slice) => Self::LineComment(slice),
-            Token::MultiLineComment(slice) => Self::MultiLineComment(slice),
-            Token::Identifier(slice) => Self::Identifier(slice),
-            Token::Lit(lit) => Self::Lit(lit),
-            #[cfg(feature = "evm")]
-            Token::EvmBuiltin(func) => Self::EvmBuiltin(func),
-          }
-        }
-      }
-
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn empty_single_quoted_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn empty_single_quoted_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::empty_single_quote(l.span().into())
         }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn empty_double_quoted_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn empty_double_quoted_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::empty_double_quote(l.span().into())
         }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors>{
+      fn unclosed_double_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors>{
         Err(increase_token_on_err(lexer, |l| {
           crate::error::StringError::unclosed_double_quote(l.span().into()).into()
         }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn unclosed_single_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           crate::error::StringError::unclosed_single_quote(l.span().into()).into()
         }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_hex_string_error <'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn unclosed_double_quoted_hex_string_error <'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           crate::error::HexStringError::unclosed_double_quote(l.span().into()).into()
         }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn unclosed_single_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           crate::error::HexStringError::unclosed_single_quote(l.span().into()).into()
         }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token>) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           crate::error::yul::HexadecimalError::malformed(l.span().into()).into()
         }))
@@ -532,8 +525,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn increase_token_on_err<'b $(: $lt)?, $($lt: 'b,)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)? >,
-        f: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)? >) -> Error,
+        lexer: &mut Lexer<'b, Token>,
+        f: impl FnOnce(&mut Lexer<'b, Token>) -> Error,
       ) -> Errors {
         lexer.increase_token();
         f(lexer).into()
@@ -541,7 +534,7 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn increase_token_then<'b $(: $lt)?, $($lt: 'b,)? O>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)? >,
+        lexer: &mut Lexer<'b, Token>,
         output: O,
       ) -> O {
         lexer.increase_token();
@@ -550,8 +543,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn increase_token_then_with<'b $(: $lt)?, $($lt: 'b,)? O>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)? >,
-        output: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)? >) -> O,
+        lexer: &mut Lexer<'b, Token>,
+        output: impl FnOnce(&mut Lexer<'b, Token>) -> O,
       ) -> O {
         lexer.increase_token();
         output(lexer)

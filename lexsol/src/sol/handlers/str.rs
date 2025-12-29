@@ -1,6 +1,6 @@
 use tokit::{
-  logos::{Logos, Source, Lexer},
   error::ErrorContainer,
+  logos::{Lexer, Logos, Source},
   utils::{Lexeme, PositionedChar, SimpleSpan},
 };
 

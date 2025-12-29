@@ -407,11 +407,11 @@ macro_rules! token {
 
         #[token("fixed")]
         #[regex("fixed[1-9][0-9]*x[1-9][0-9]*")]
-        Fixed($slice),
+        Fixed,
 
         #[token("ufixed")]
         #[regex("ufixed[1-9][0-9]*x[1-9][0-9]*")]
-        UFixed($slice),
+        UFixed,
 
         // ==================================== Boolean literals ====================================
         #[token("true", |lexer| Lit::lit_true(lexer.slice()))]
@@ -425,7 +425,7 @@ macro_rules! token {
         // Error handling branches for double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)"#, |lexer| unclosed_double_quoted_regular_string_error(lexer.span().into()))]
         #[token("\"", |lexer| {
-          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -434,7 +434,7 @@ macro_rules! token {
         // Error handling branches for single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)", |lexer| unclosed_single_quoted_regular_string_error(lexer.span().into()))]
         #[token("\'", |lexer| {
-          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -445,7 +445,6 @@ macro_rules! token {
         #[regex("hex\"(?&hex_string_content)", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex\"", |lexer| {
           <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
-            .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
         // Single quoted hex string literal lexing
@@ -453,7 +452,7 @@ macro_rules! token {
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex'", |lexer| {
-          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -462,7 +461,7 @@ macro_rules! token {
         #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice()))]
         // Error handling branches for double quoted unicode string literal lexing
         #[token("unicode\"", |lexer| {
-            <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
+            <LitUnicodeStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
               .map(Into::into)
               .map_err(Errors::from_underlying)
         })]
@@ -470,7 +469,7 @@ macro_rules! token {
         #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice()))]
         // Error handling branches for single quoted unicode string literal lexing
         #[token("unicode\'", |lexer| {
-            <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
+            <LitUnicodeStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
               .map(Into::into)
               .map_err(Errors::from_underlying)
         })]
@@ -484,10 +483,10 @@ macro_rules! token {
         #[regex(r"(?&dec_int)(?:\.(?&dec_int))?(?&dec_exp)?", handlers::$handlers::handle_decimal_suffix)]
         #[regex(r"0(?&dec_int)(?:\.(?&dec_int))?(?&dec_exp)?", handlers::$handlers::handle_leading_zero_and_suffix)]
         #[regex("[1-9][0-9_]+", handlers::$handlers::handle_malformed_decimal_suffix)]
-        Lit(Lit<$slice>),
+        Lit(Lit),
 
         #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*")]
-        Identifier($slice),
+        Identifier,
       }
 
       impl$(<$lt>)? From<Token $(<$lt>)?> for syntactic::Token<$slice> {

@@ -463,7 +463,6 @@ macro_rules! token {
           match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
             DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
           )
-          .map(Into::into)
           .map_err(Errors::from_underlying) {
             Ok(lit) => {
               lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
@@ -488,7 +487,6 @@ macro_rules! token {
           match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
             SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
           )
-          .map(Into::into)
           .map_err(Errors::from_underlying) {
             Ok(lit) => {
               lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
@@ -514,7 +512,6 @@ macro_rules! token {
           match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
             DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
           )
-          .map(Into::into)
           .map_err(Errors::from_underlying) {
             Ok(lit) => {
               lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
@@ -539,7 +536,6 @@ macro_rules! token {
           match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
             SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
           )
-          .map(Into::into)
           .map_err(Errors::from_underlying) {
             Ok(lit) => {
               lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
@@ -564,7 +560,6 @@ macro_rules! token {
             match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
               DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
             )
-            .map(Into::into)
             .map_err(Errors::from_underlying) {
               Ok(lit) => {
                 lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
@@ -588,7 +583,6 @@ macro_rules! token {
             match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
               SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
             )
-            .map(Into::into)
             .map_err(Errors::from_underlying) {
               Ok(lit) => {
                 lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
