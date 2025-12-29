@@ -1,7 +1,6 @@
-use logosky::{
-  Lexable, Logos, Source,
+use tokit::{
+  lexer::Lexable, logos::{Logos, Lexer, Source},
   error::UnexpectedLexeme,
-  logos::Lexer,
   utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
@@ -12,7 +11,7 @@ use crate::{
 
 #[derive(Logos, Copy, Clone)]
 #[logos(
-  crate = logosky::logos,
+  crate = tokit::logos,
   extras = Option<StringToken>,
 )]
 #[logos(subpattern character = r"[^'\r\n\\]")]

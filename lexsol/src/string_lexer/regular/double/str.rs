@@ -1,7 +1,6 @@
-use logosky::{
-  Lexable, Logos, Source,
+use tokit::{
+  lexer::Lexable, logos::{Logos, Lexer, Source},
   error::UnexpectedLexeme,
-  logos::Lexer,
   utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
@@ -13,7 +12,7 @@ use crate::{
 
 #[derive(Logos)]
 #[logos(
-  crate = logosky::logos,
+  crate = tokit::logos,
 )]
 #[logos(subpattern double_quoted_printable = "[\u{0020}-\u{0021}\u{0023}-\u{005B}\u{005D}-\u{007E}]")]
 #[logos(subpattern double_quoted_char = "(?&double_quoted_printable)")]

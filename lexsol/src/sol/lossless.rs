@@ -1,7 +1,7 @@
 use super::{Denomination, FixedBytes, Int, Lit, Uint};
 
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{Token as TokenT, utils::tracker::LimitExceeded};
+use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
+use tokit::utils::tracker::LimitExceeded;
 
 use token::token;
 
@@ -12,14 +12,14 @@ mod str;
 mod token;
 
 /// The lossless lexer for Solidity.
-pub type Lexer<'a, S = &'a str> = logosky::Tokenizer<'a, Token<S>>;
+pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
 
-/// The char type used for the lossless token.
-pub type TokenChar<'a, S> = <Token<S> as TokenT<'a>>::Char;
+/// The char type used for the syntactic token.
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<'a> as tokit::lexer::source::Slice<'a>>::Char;
 /// The error type for lexing based on lossless [`Token`].
-pub type Error<'a, S> = error::Error<<Token<S> as TokenT<'a>>::Char, LimitExceeded>;
+pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
 /// A collection of errors for lossless [`Token`].
-pub type Errors<'a, S> = error::Errors<<Token<S> as TokenT<'a>>::Char, LimitExceeded>;
+pub type Errors<'a, S> = error::Errors<Char<'a, S>, LimitExceeded>;
 
 /// The lossless token of Solidity.
 ///
@@ -506,7 +506,7 @@ pub enum Token<S> {
 }
 
 /// The structural kind of a Solidity lossless token.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 #[non_exhaustive]
 pub enum TokenKind {
   /// ' '

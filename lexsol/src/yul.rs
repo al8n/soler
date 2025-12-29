@@ -201,7 +201,7 @@ mod evm {
 
           /// Maps the inner type to another type
           #[cfg_attr(not(tarpaulin), inline(always))]
-          pub fn map<U, F>(self, mut f: F) -> EvmBuiltinFunction<U>
+          pub fn map<U, F>(self, f: F) -> EvmBuiltinFunction<U>
           where
             F: FnOnce(S) -> U,
           {
@@ -213,7 +213,7 @@ mod evm {
           }
         }
 
-        impl<S> logosky::utils::cmp::Equivalent<EvmBuiltinFunction<S>> for str {
+        impl<S> tokit::utils::cmp::Equivalent<EvmBuiltinFunction<S>> for str {
           #[cfg_attr(not(tarpaulin), inline(always))]
           fn equivalent(&self, other: &EvmBuiltinFunction<S>) -> bool {
             other.as_str().equivalent(self)

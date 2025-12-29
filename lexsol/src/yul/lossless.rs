@@ -1,25 +1,29 @@
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{Token as TokenT, utils::tracker::LimitExceeded};
-
+use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
+#[cfg(feature = "evm")]
+use tokit::Require;
+use tokit::{utils::{cmp::Equivalent, tracker::LimitExceeded}, lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken}};
 use token::token;
 
 use super::Lit;
 
-use crate::error::yul as error;
+use crate::{
+  error::yul as error,
+  types::{LitBool, LitNumber},
+};
 
 mod bytes;
 mod str;
 mod token;
 
-/// The lossless lexer for Yul.
-pub type Lexer<'a, S = &'a str> = logosky::Tokenizer<'a, Token<S>>;
+/// The syntactic lexer for Yul.
+pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
 
-/// The char type used for the lossless token.
-pub type TokenChar<'a, S> = <Token<S> as TokenT<'a>>::Char;
+/// The char type used for the syntactic token.
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<'a> as tokit::lexer::source::Slice<'a>>::Char;
 /// The error type for lexing based on lossless [`Token`].
-pub type Error<'a, S> = error::Error<<Token<S> as TokenT<'a>>::Char, LimitExceeded>;
+pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
 /// A collection of errors for lossless [`Token`].
-pub type Errors<'a, S> = error::Errors<<Token<S> as TokenT<'a>>::Char, LimitExceeded>;
+pub type Errors<'a, S> = error::Errors<Char<'a, S>, LimitExceeded>;
 
 /// The lossless token of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, TryUnwrap, Unwrap)]
@@ -149,7 +153,7 @@ pub enum Token<S> {
 }
 
 /// The kind of Yul lossless token
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 #[non_exhaustive]
 pub enum TokenKind {
   /// ' '
@@ -262,5 +266,197 @@ impl<S> Token<S> {
       #[cfg(feature = "evm")]
       Self::EvmBuiltin(_) => TokenKind::EvmBuiltin,
     }
+  }
+}
+
+impl<'a, S: 'a> PunctuatorToken<'a> for Token<S>
+where
+  Token<S>: tokit::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_open_brace(&self) -> bool {
+    matches!(self, Self::LBrace)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_close_brace(&self) -> bool {
+    matches!(self, Self::RBrace)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_open_paren(&self) -> bool {
+    matches!(self, Self::LParen)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_close_paren(&self) -> bool {
+    matches!(self, Self::RParen)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_dot(&self) -> bool {
+    matches!(self, Self::Dot)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_comma(&self) -> bool {
+    matches!(self, Self::Comma)
+  }
+}
+
+impl<'a, S: 'a> OperatorToken<'a> for Token<S>
+where
+  Token<S>: tokit::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_colon_eq_assign(&self) -> bool {
+    matches!(self, Self::ColonAssign)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_arrow(&self) -> bool {
+    matches!(self, Self::ThinArrow)
+  }
+}
+
+impl<'a, S: 'a> LitToken<'a> for Token<S>
+where
+  Token<S>: tokit::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_literal(&self) -> bool {
+    matches!(self, Self::Lit(_))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_decimal_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Number(LitNumber::Decimal(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_hexadecimal_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Number(LitNumber::Hexadecimal(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_boolean_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Boolean(_)))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_true_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Boolean(LitBool::True(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_false_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::Boolean(LitBool::False(_))))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_string_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::String(_)))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_inline_string_literal(&self) -> bool {
+    matches!(self, Self::Lit(Lit::String(_)))
+  }
+}
+
+impl<'a, S: 'a> IdentifierToken<'a, S> for Token<S>
+where
+  Token<S>: tokit::Token<'a>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn is_identifier(&self) -> bool {
+    matches!(self, Self::Identifier(_))
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn identifier(&self) -> Option<&S> {
+    match self {
+      Self::Identifier(s) => Some(s),
+      _ => None,
+    }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn try_into_identifier(
+    self,
+  ) -> Result<S, Self>
+  where
+    Self: Sized,
+  {
+    self.try_unwrap_identifier().map_err(|e| e.input)
+  }
+}
+
+impl<'a, S: 'a> KeywordToken<'a> for Token<S>
+where
+  Token<S>: tokit::Token<'a>,
+  str: Equivalent<S>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn keyword(&self) -> Option<&'static str> {
+    match self {
+      Self::Leave => Some("leave"),
+      Self::Continue => Some("continue"),
+      Self::Break => Some("break"),
+      Self::Switch => Some("switch"),
+      Self::Case => Some("case"),
+      Self::Default => Some("default"),
+      Self::Function => Some("function"),
+      Self::Let => Some("let"),
+      Self::If => Some("if"),
+      Self::For => Some("for"),
+      _ => None,
+    }
+  }
+}
+
+impl<S> Equivalent<Token<S>> for str
+where
+  str: Equivalent<S>,
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn equivalent(&self, other: &Token<S>) -> bool {
+    match other {
+      Token::Leave => self.eq("leave"),
+      Token::Continue => self.eq("continue"),
+      Token::Break => self.eq("break"),
+      Token::Switch => self.eq("switch"),
+      Token::Case => self.eq("case"),
+      Token::Default => self.eq("default"),
+      Token::Function => self.eq("function"),
+      Token::Let => self.eq("let"),
+      Token::If => self.eq("if"),
+      Token::For => self.eq("for"),
+      Token::LBrace => self.eq("{"),
+      Token::RBrace => self.eq("}"),
+      Token::LParen => self.eq("("),
+      Token::RParen => self.eq(")"),
+      Token::Dot => self.eq("."),
+      Token::Comma => self.eq(","),
+      Token::ColonAssign => self.eq(":="),
+      Token::ThinArrow => self.eq("->"),
+      Token::Identifier(s) => self.equivalent(s),
+      #[cfg(feature = "evm")]
+      Token::EvmBuiltin(b) => self.eq(b.as_str()),
+      _ => false,
+    }
+  }
+}
+
+#[cfg(feature = "evm")]
+#[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
+impl<S> Require<super::EvmBuiltinFunction> for Token<S> {
+  type Err = Self;
+
+  fn require(self) -> Result<super::EvmBuiltinFunction, Self::Err>
+  where
+    Self: Sized,
+  {
+    self.try_unwrap_evm_builtin().map_err(|e| e.input)
   }
 }

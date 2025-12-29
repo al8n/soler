@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   KeywordToken, Lexed, LogoStream, Logos, OperatorToken, PunctuatorToken, Source, Token,
   chumsky::{
     IterParser, Parseable, Parser,

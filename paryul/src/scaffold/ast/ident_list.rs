@@ -3,9 +3,9 @@ use core::marker::PhantomData;
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 #[cfg(feature = "evm")]
-use logosky::{Require, syntax::Language, utils::Spanned};
+use tokit::{Require, syntax::Language, utils::Spanned};
 
-use logosky::{
+use tokit::{
   IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
     Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
@@ -126,7 +126,7 @@ impl<Ident, Container, Lang> IdentList<Ident, Container, Lang> {
     Lang: Language,
     Lang::SyntaxKind: From<SyntaxKind> + 'e,
     Ident:
-      From<logosky::types::Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>, Lang>>,
+      From<tokit::types::Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>, Lang>>,
     E::Error: From<<T::Logos as Logos<'a>>::Error>
       + From<UnexpectedToken<'e, T, Lang::SyntaxKind>>
       + From<UnexpectedEot>
@@ -142,7 +142,7 @@ impl<Ident, Container, Lang> IdentList<Ident, Container, Lang> {
         Lexed::Error(err) => Err(E::Error::from(err)),
         Lexed::Token(Spanned { span, data: tok }) => {
           let ident = match tok.try_into_identifier() {
-            Ok(ident) => logosky::types::Ident::new(span, ident),
+            Ok(ident) => tokit::types::Ident::new(span, ident),
             Err(tok) => {
               return Err(
                 UnexpectedToken::expected_one_with_found(span, tok, SyntaxKind::Identifier.into())
@@ -166,7 +166,7 @@ impl<'a, Ident, Container, Lang, I, T, Error> Parseable<'a, I, T, Error>
 where
   T: IdentifierToken<'a> + PunctuatorToken<'a>,
   T::Logos: Logos<'a>,
-  Ident: From<logosky::types::Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>, Lang>>,
+  Ident: From<tokit::types::Ident<<<T::Logos as Logos<'a>>::Source as Source>::Slice<'a>, Lang>>,
   Lang: Language,
   Lang::SyntaxKind: From<SyntaxKind> + 'a,
   Error: From<<T::Logos as Logos<'a>>::Error>

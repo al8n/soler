@@ -1,5 +1,5 @@
 use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{types::Ident, utils::Spanned};
+use tokit::{types::Ident, utils::Spanned};
 
 /// The keywords
 pub mod keywords;

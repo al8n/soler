@@ -1,7 +1,6 @@
-use logosky::{
-  Lexable, Logos, Source,
+use tokit::{
+  lexer::Lexable, logos::{Logos, Lexer, Source},
   error::UnexpectedLexeme,
-  logos::Lexer,
   utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
@@ -14,7 +13,7 @@ type StringError = crate::error::StringError<u8>;
 
 #[derive(Logos)]
 #[logos(
-  crate = logosky::logos,
+  crate = tokit::logos,
   source = [u8],
 )]
 #[logos(subpattern single_quoted_printable = "[\u{0020}-\u{0026}\u{0028}-\u{005B}\u{005D}-\u{007E}]")]

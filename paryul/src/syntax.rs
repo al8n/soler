@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use derive_more::Display;
-use logosky::{
+use tokit::{
   syntax::Syntax,
   utils::{
     GenericArrayDeque,

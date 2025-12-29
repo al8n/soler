@@ -1,8 +1,7 @@
-use logosky::{
-  Logos, Source,
+use tokit::{
+  logos::{Logos, Lexer, Source},
   error::ErrorContainer,
-  logos::Lexer,
-  utils::{Lexeme, PositionedChar, Span},
+  utils::{Lexeme, PositionedChar, SimpleSpan},
 };
 
 use crate::{
@@ -51,7 +50,7 @@ where
     let pc = PositionedChar::with_position('0', zero_start_at);
     Lexeme::Char(pc)
   } else {
-    Lexeme::Range(Span::new(zero_start_at, zero_start_at + zeros))
+    Lexeme::Range(SimpleSpan::new(zero_start_at, zero_start_at + zeros))
   };
 
   DecimalError::LeadingZeros(l).into()
@@ -128,7 +127,7 @@ where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<str>,
 {
-  let span: Span = lexer.span().into();
+  let span: SimpleSpan = lexer.span().into();
   let malformed = Error::from(DecimalError::malformed(span));
   match handle_suffix::<_, _, Extras, DecimalError>(lexer, Lit::lit_decimal, |l| {
     DecimalError::unexpected_suffix(span, l)

@@ -3,9 +3,9 @@ use core::marker::PhantomData;
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 #[cfg(feature = "evm")]
-use logosky::{Require, syntax::Language, utils::Spanned};
+use tokit::{Require, syntax::Language, utils::Spanned};
 
-use logosky::{
+use tokit::{
   IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
     Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,
@@ -103,7 +103,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    logosky::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
+    tokit::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
       |ident: Spanned<S>| {
         let (span, ident) = ident.into_components();
         PathSegment::new(Ident::new(span, ident))

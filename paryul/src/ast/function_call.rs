@@ -1,5 +1,5 @@
 use lexsol::types::punct::Comma;
-use logosky::{
+use tokit::{
   chumsky::{
     delimited::DelimitedByParen, separated::separated_by, token::recovery::emit_error_until_token,
   },

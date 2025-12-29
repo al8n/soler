@@ -1,5 +1,5 @@
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
     Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,

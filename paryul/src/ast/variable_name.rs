@@ -1,4 +1,4 @@
-use logosky::error::ErrorNode;
+use tokit::error::ErrorNode;
 
 use crate::{
   error::{AstLexerErrors, InvalidVariableName},

@@ -24,7 +24,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [workspace.dependencies]
 paste = "1"
 logos = { version = "0.15", default-features = false, features = ["export_derive"] }
-tokit = { version = "0.0.0", default-features = false, path = "../logosky" }
+tokit = { version = "0.0.0", default-features = false, path = "../logosky", features = ["logos"] }
 thiserror = { version = "2", default-features = false }
 derive_more = { version = "2", default-features = false, features = ["display", "from", "unwrap", "try_unwrap", "is_variant", "deref_mut"] }
 

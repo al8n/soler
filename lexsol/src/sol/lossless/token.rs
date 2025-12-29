@@ -2,10 +2,9 @@ macro_rules! token {
   ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
-      use logosky::{
-        Lexable,
-        Logos,
-        logos::Lexer,
+      use tokit::{
+        lexer::Lexable,
+        logos::{Logos, Lexer},
         utils::tracker::{LimitExceeded, Limiter, Tracker},
         error::ErrorContainer,
       };
@@ -31,21 +30,35 @@ macro_rules! token {
       type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 
       #[allow(warnings)]
-      impl<'b $(: $lt)?, $($lt: 'b)?> logosky::Token<'b> for lossless::Token<$slice> {
+      impl<'b $(: $lt)?, $($lt: 'b)?> tokit::Token<'b> for lossless::Token<$slice> {
         type Kind = lossless::TokenKind;
-        type Char = $char;
-        type Logos = Token $(<$lt>)?;
+        type Error = Errors;
 
         #[cfg_attr(not(tarpaulin), inline(always))]
         fn kind(&self) -> Self::Kind {
           self.kind()
+        }
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn is_trivia(&self) -> bool {
+          match self {
+            lossless::Token::Space
+            | lossless::Token::Tab
+            | lossless::Token::NewLine
+            | lossless::Token::CarriageReturn
+            | lossless::Token::CarriageReturnNewLine
+            | lossless::Token::FormFeed
+            | lossless::Token::LineComment(_)
+            | lossless::Token::MultiLineComment(_) => true,
+            _ => false,
+          }
         }
       }
 
       /// Token
       #[derive(Logos, Clone, Debug, PartialEq, Eq, Hash)]
       #[logos(
-        crate = logosky::logos,
+        crate = tokit::logos,
         source = $source,
         extras = Limiter,
         error(Errors, |l| {
@@ -83,378 +96,372 @@ macro_rules! token {
       // exponent: e or E, optional +/-, then digits-with-underscores
       #[logos(subpattern dec_exp   = r"[eE][+-]?(?&dec_int)")]
       pub enum Token $(<$lt>)? {
-        #[token(" ", increase_token_and_check_on_token)]
+        #[token(" ", |lexer| lexer.increase_token())]
         Space,
-        #[token("\t", increase_token_and_check_on_token)]
+        #[token("\t", |lexer| lexer.increase_token())]
         Tab,
-        #[token("\n", increase_token_and_check_on_token)]
+        #[token("\n", |lexer| lexer.increase_token())]
         NewLine,
-        #[token("\r", increase_token_and_check_on_token)]
+        #[token("\r", |lexer| lexer.increase_token())]
         CarriageReturn,
-        #[token("\r\n", increase_token_and_check_on_token)]
+        #[token("\r\n", |lexer| lexer.increase_token())]
         CarriageReturnNewLine,
-        #[token("\u{000C}", increase_token_and_check_on_token)]
+        #[token("\u{000C}", |lexer| lexer.increase_token())]
         FormFeed,
 
-        #[token("abstract", increase_token_and_check_on_token)]
+        #[token("abstract", |lexer| lexer.increase_token())]
         Abstract,
-        #[token("address", increase_token_and_check_on_token)]
+        #[token("address", |lexer| lexer.increase_token())]
         Address,
-        #[token("anonymous", increase_token_and_check_on_token)]
+        #[token("anonymous", |lexer| lexer.increase_token())]
         Anonymous,
-        #[token("as", increase_token_and_check_on_token)]
+        #[token("as", |lexer| lexer.increase_token())]
         As,
-        #[token("assembly", increase_token_and_check_on_token)]
+        #[token("assembly", |lexer| lexer.increase_token())]
         Assembly,
-        #[token("bool", increase_token_and_check_on_token)]
+        #[token("bool", |lexer| lexer.increase_token())]
         Bool,
-        #[token("break", increase_token_and_check_on_token)]
+        #[token("break", |lexer| lexer.increase_token())]
         Break,
-        #[token("bytes", increase_token_and_check_on_token)]
+        #[token("bytes", |lexer| lexer.increase_token())]
         Bytes,
-        #[token("calldata", increase_token_and_check_on_token)]
+        #[token("calldata", |lexer| lexer.increase_token())]
         Calldata,
-        #[token("catch", increase_token_and_check_on_token)]
+        #[token("catch", |lexer| lexer.increase_token())]
         Catch,
-        #[token("constant", increase_token_and_check_on_token)]
+        #[token("constant", |lexer| lexer.increase_token())]
         Constant,
-        #[token("constructor", increase_token_and_check_on_token)]
+        #[token("constructor", |lexer| lexer.increase_token())]
         Constructor,
-        #[token("continue", increase_token_and_check_on_token)]
+        #[token("continue", |lexer| lexer.increase_token())]
         Continue,
-        #[token("contract", increase_token_and_check_on_token)]
+        #[token("contract", |lexer| lexer.increase_token())]
         Contract,
-        #[token("delete", increase_token_and_check_on_token)]
+        #[token("delete", |lexer| lexer.increase_token())]
         Delete,
-        #[token("do", increase_token_and_check_on_token)]
+        #[token("do", |lexer| lexer.increase_token())]
         Do,
-        #[token("else", increase_token_and_check_on_token)]
+        #[token("else", |lexer| lexer.increase_token())]
         Else,
-        #[token("emit", increase_token_and_check_on_token)]
+        #[token("emit", |lexer| lexer.increase_token())]
         Emit,
-        #[token("enum", increase_token_and_check_on_token)]
+        #[token("enum", |lexer| lexer.increase_token())]
         Enum,
-        #[token("event", increase_token_and_check_on_token)]
+        #[token("event", |lexer| lexer.increase_token())]
         Event,
-        #[token("external", increase_token_and_check_on_token)]
+        #[token("external", |lexer| lexer.increase_token())]
         External,
-        #[token("fallback", increase_token_and_check_on_token)]
+        #[token("fallback", |lexer| lexer.increase_token())]
         Fallback,
-        #[token("for", increase_token_and_check_on_token)]
+        #[token("for", |lexer| lexer.increase_token())]
         For,
-        #[token("function", increase_token_and_check_on_token)]
+        #[token("function", |lexer| lexer.increase_token())]
         Function,
-        #[token("if", increase_token_and_check_on_token)]
+        #[token("if", |lexer| lexer.increase_token())]
         If,
-        #[token("immutable", increase_token_and_check_on_token)]
+        #[token("immutable", |lexer| lexer.increase_token())]
         Immutable,
-        #[token("import", increase_token_and_check_on_token)]
+        #[token("import", |lexer| lexer.increase_token())]
         Import,
-        #[token("indexed", increase_token_and_check_on_token)]
+        #[token("indexed", |lexer| lexer.increase_token())]
         Indexed,
-        #[token("interface", increase_token_and_check_on_token)]
+        #[token("interface", |lexer| lexer.increase_token())]
         Interface,
-        #[token("internal", increase_token_and_check_on_token)]
+        #[token("internal", |lexer| lexer.increase_token())]
         Internal,
-        #[token("is", increase_token_and_check_on_token)]
+        #[token("is", |lexer| lexer.increase_token())]
         Is,
-        #[token("library", increase_token_and_check_on_token)]
+        #[token("library", |lexer| lexer.increase_token())]
         Library,
-        #[token("mapping", increase_token_and_check_on_token)]
+        #[token("mapping", |lexer| lexer.increase_token())]
         Mapping,
-        #[token("memory", increase_token_and_check_on_token)]
+        #[token("memory", |lexer| lexer.increase_token())]
         Memory,
-        #[token("modifier", increase_token_and_check_on_token)]
+        #[token("modifier", |lexer| lexer.increase_token())]
         Modifier,
-        #[token("new", increase_token_and_check_on_token)]
+        #[token("new", |lexer| lexer.increase_token())]
         New,
-        #[token("override", increase_token_and_check_on_token)]
+        #[token("override", |lexer| lexer.increase_token())]
         Override,
-        #[token("payable", increase_token_and_check_on_token)]
+        #[token("payable", |lexer| lexer.increase_token())]
         Payable,
-        #[token("private", increase_token_and_check_on_token)]
+        #[token("private", |lexer| lexer.increase_token())]
         Private,
-        #[token("public", increase_token_and_check_on_token)]
+        #[token("public", |lexer| lexer.increase_token())]
         Public,
-        #[token("pure", increase_token_and_check_on_token)]
+        #[token("pure", |lexer| lexer.increase_token())]
         Pure,
-        #[token("pragma", increase_token_and_check_on_token)]
+        #[token("pragma", |lexer| lexer.increase_token())]
         Pragma,
-        #[token("receive", increase_token_and_check_on_token)]
+        #[token("receive", |lexer| lexer.increase_token())]
         Receive,
-        #[token("return", increase_token_and_check_on_token)]
+        #[token("return", |lexer| lexer.increase_token())]
         Return,
-        #[token("returns", increase_token_and_check_on_token)]
+        #[token("returns", |lexer| lexer.increase_token())]
         Returns,
-        #[token("storage", increase_token_and_check_on_token)]
+        #[token("storage", |lexer| lexer.increase_token())]
         Storage,
-        #[token("string", increase_token_and_check_on_token)]
+        #[token("string", |lexer| lexer.increase_token())]
         String,
-        #[token("struct", increase_token_and_check_on_token)]
+        #[token("struct", |lexer| lexer.increase_token())]
         Struct,
-        #[token("try", increase_token_and_check_on_token)]
+        #[token("try", |lexer| lexer.increase_token())]
         Try,
-        #[token("type", increase_token_and_check_on_token)]
+        #[token("type", |lexer| lexer.increase_token())]
         Type,
-        #[token("unchecked", increase_token_and_check_on_token)]
+        #[token("unchecked", |lexer| lexer.increase_token())]
         Unchecked,
-        #[token("using", increase_token_and_check_on_token)]
+        #[token("using", |lexer| lexer.increase_token())]
         Using,
-        #[token("view", increase_token_and_check_on_token)]
+        #[token("view", |lexer| lexer.increase_token())]
         View,
-        #[token("virtual", increase_token_and_check_on_token)]
+        #[token("virtual", |lexer| lexer.increase_token())]
         Virtual,
-        #[token("while", increase_token_and_check_on_token)]
+        #[token("while", |lexer| lexer.increase_token())]
         While,
 
-        #[token("(", |lexer| lexer
-          .increase_both_and_check()
-          .map_err(|e| Errors::from(Error::State(e))))]
+        #[token("(", |lexer| lexer.increase_both())]
         LParen,
-        #[token(")", |lexer| lexer.decrease_recursion())]
+        #[token(")", |lexer| lexer.increase_token_and_decrease_recursion())]
         RParen,
-        #[token("[", |lexer| lexer
-          .increase_both_and_check()
-          .map_err(|e| Errors::from(Error::State(e))))]
+        #[token("[", |lexer| lexer.increase_both())]
         LBracket,
-        #[token("]", |lexer| lexer.decrease_recursion())]
+        #[token("]", |lexer| lexer.increase_token_and_decrease_recursion())]
         RBracket,
-        #[token("{", |lexer| lexer
-          .increase_both_and_check()
-          .map_err(|e| Errors::from(Error::State(e))))]
+        #[token("{", |lexer| lexer.increase_both())]
         LBrace,
-        #[token("}", |lexer| lexer.decrease_recursion())]
+        #[token("}", |lexer| lexer.increase_token_and_decrease_recursion())]
         RBrace,
-        #[token(":", increase_token_and_check_on_token)]
+        #[token(":", |lexer| lexer.increase_token())]
         Colon,
-        #[token(";", increase_token_and_check_on_token)]
+        #[token(";", |lexer| lexer.increase_token())]
         Semicolon,
-        #[token(".", increase_token_and_check_on_token)]
+        #[token(".", |lexer| lexer.increase_token())]
         Dot,
-        #[token("?", increase_token_and_check_on_token)]
+        #[token("?", |lexer| lexer.increase_token())]
         Question,
-        #[token("=>", increase_token_and_check_on_token)]
+        #[token("=>", |lexer| lexer.increase_token())]
         FatArrow,
-        #[token("->", increase_token_and_check_on_token)]
+        #[token("->", |lexer| lexer.increase_token())]
         ThinArrow,
-        #[token("=", increase_token_and_check_on_token)]
+        #[token("=", |lexer| lexer.increase_token())]
         Assign,
-        #[token("|=", increase_token_and_check_on_token)]
+        #[token("|=", |lexer| lexer.increase_token())]
         BitOrAssign,
-        #[token("&=", increase_token_and_check_on_token)]
+        #[token("&=", |lexer| lexer.increase_token())]
         BitAndAssign,
-        #[token("^=", increase_token_and_check_on_token)]
+        #[token("^=", |lexer| lexer.increase_token())]
         BitXorAssign,
-        #[token("<<=", increase_token_and_check_on_token)]
+        #[token("<<=", |lexer| lexer.increase_token())]
         ShlAssign,
-        #[token(">>=", increase_token_and_check_on_token)]
+        #[token(">>=", |lexer| lexer.increase_token())]
         SarAssign,
-        #[token(">>>=", increase_token_and_check_on_token)]
+        #[token(">>>=", |lexer| lexer.increase_token())]
         ShrAssign,
-        #[token("+=", increase_token_and_check_on_token)]
+        #[token("+=", |lexer| lexer.increase_token())]
         AddAssign,
-        #[token("-=", increase_token_and_check_on_token)]
+        #[token("-=", |lexer| lexer.increase_token())]
         SubAssign,
-        #[token("*=", increase_token_and_check_on_token)]
+        #[token("*=", |lexer| lexer.increase_token())]
         MulAssign,
-        #[token("/=", increase_token_and_check_on_token)]
+        #[token("/=", |lexer| lexer.increase_token())]
         DivAssign,
-        #[token("%=", increase_token_and_check_on_token)]
+        #[token("%=", |lexer| lexer.increase_token())]
         ModAssign,
-        #[token(",", increase_token_and_check_on_token)]
+        #[token(",", |lexer| lexer.increase_token())]
         Comma,
-        #[token("||", increase_token_and_check_on_token)]
+        #[token("||", |lexer| lexer.increase_token())]
         Or,
-        #[token("&&", increase_token_and_check_on_token)]
+        #[token("&&", |lexer| lexer.increase_token())]
         And,
-        #[token("|", increase_token_and_check_on_token)]
+        #[token("|", |lexer| lexer.increase_token())]
         BitOr,
-        #[token("&", increase_token_and_check_on_token)]
+        #[token("&", |lexer| lexer.increase_token())]
         BitAnd,
-        #[token("^", increase_token_and_check_on_token)]
+        #[token("^", |lexer| lexer.increase_token())]
         BitXor,
-        #[token("<<", increase_token_and_check_on_token)]
+        #[token("<<", |lexer| lexer.increase_token())]
         Shl,
-        #[token(">>", increase_token_and_check_on_token)]
+        #[token(">>", |lexer| lexer.increase_token())]
         Sar,
-        #[token(">>>", increase_token_and_check_on_token)]
+        #[token(">>>", |lexer| lexer.increase_token())]
         Shr,
-        #[token("+", increase_token_and_check_on_token)]
+        #[token("+", |lexer| lexer.increase_token())]
         Add,
-        #[token("-", increase_token_and_check_on_token)]
+        #[token("-", |lexer| lexer.increase_token())]
         Sub,
-        #[token("*", increase_token_and_check_on_token)]
+        #[token("*", |lexer| lexer.increase_token())]
         Mul,
-        #[token("/", increase_token_and_check_on_token)]
+        #[token("/", |lexer| lexer.increase_token())]
         Div,
-        #[token("%", increase_token_and_check_on_token)]
+        #[token("%", |lexer| lexer.increase_token())]
         Mod,
-        #[token("**", increase_token_and_check_on_token)]
+        #[token("**", |lexer| lexer.increase_token())]
         Exp,
-        #[token("==", increase_token_and_check_on_token)]
+        #[token("==", |lexer| lexer.increase_token())]
         Eq,
-        #[token("!=", increase_token_and_check_on_token)]
+        #[token("!=", |lexer| lexer.increase_token())]
         Ne,
-        #[token("<", increase_token_and_check_on_token)]
+        #[token("<", |lexer| lexer.increase_token())]
         Lt,
-        #[token("<=", increase_token_and_check_on_token)]
+        #[token("<=", |lexer| lexer.increase_token())]
         Le,
-        #[token(">", increase_token_and_check_on_token)]
+        #[token(">", |lexer| lexer.increase_token())]
         Gt,
-        #[token(">=", increase_token_and_check_on_token)]
+        #[token(">=", |lexer| lexer.increase_token())]
         Ge,
-        #[token("!", increase_token_and_check_on_token)]
+        #[token("!", |lexer| lexer.increase_token())]
         Not,
-        #[token("~", increase_token_and_check_on_token)]
+        #[token("~", |lexer| lexer.increase_token())]
         BitNot,
-        #[token("++", increase_token_and_check_on_token)]
+        #[token("++", |lexer| lexer.increase_token())]
         Inc,
-        #[token("--", increase_token_and_check_on_token)]
+        #[token("--", |lexer| lexer.increase_token())]
         Dec,
 
-        #[token("bytes1", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES1))]
-        #[token("bytes2", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES2))]
-        #[token("bytes3", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES3))]
-        #[token("bytes4", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES4))]
-        #[token("bytes5", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES5))]
-        #[token("bytes6", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES6))]
-        #[token("bytes7", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES7))]
-        #[token("bytes8", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES8))]
-        #[token("bytes9", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES9))]
-        #[token("bytes10", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES10))]
-        #[token("bytes11", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES11))]
-        #[token("bytes12", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES12))]
-        #[token("bytes13", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES13))]
-        #[token("bytes14", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES14))]
-        #[token("bytes15", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES15))]
-        #[token("bytes16", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES16))]
-        #[token("bytes17", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES17))]
-        #[token("bytes18", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES18))]
-        #[token("bytes19", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES19))]
-        #[token("bytes20", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES20))]
-        #[token("bytes21", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES21))]
-        #[token("bytes22", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES22))]
-        #[token("bytes23", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES23))]
-        #[token("bytes24", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES24))]
-        #[token("bytes25", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES25))]
-        #[token("bytes26", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES26))]
-        #[token("bytes27", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES27))]
-        #[token("bytes28", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES28))]
-        #[token("bytes29", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES29))]
-        #[token("bytes30", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES30))]
-        #[token("bytes31", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES31))]
-        #[token("bytes32", |lexer| increase_token_and_check_on_token_with_output(lexer, FixedBytes::BYTES32))]
+        #[token("bytes1", |lexer| increase_token_then(lexer, FixedBytes::BYTES1))]
+        #[token("bytes2", |lexer| increase_token_then(lexer, FixedBytes::BYTES2))]
+        #[token("bytes3", |lexer| increase_token_then(lexer, FixedBytes::BYTES3))]
+        #[token("bytes4", |lexer| increase_token_then(lexer, FixedBytes::BYTES4))]
+        #[token("bytes5", |lexer| increase_token_then(lexer, FixedBytes::BYTES5))]
+        #[token("bytes6", |lexer| increase_token_then(lexer, FixedBytes::BYTES6))]
+        #[token("bytes7", |lexer| increase_token_then(lexer, FixedBytes::BYTES7))]
+        #[token("bytes8", |lexer| increase_token_then(lexer, FixedBytes::BYTES8))]
+        #[token("bytes9", |lexer| increase_token_then(lexer, FixedBytes::BYTES9))]
+        #[token("bytes10", |lexer| increase_token_then(lexer, FixedBytes::BYTES10))]
+        #[token("bytes11", |lexer| increase_token_then(lexer, FixedBytes::BYTES11))]
+        #[token("bytes12", |lexer| increase_token_then(lexer, FixedBytes::BYTES12))]
+        #[token("bytes13", |lexer| increase_token_then(lexer, FixedBytes::BYTES13))]
+        #[token("bytes14", |lexer| increase_token_then(lexer, FixedBytes::BYTES14))]
+        #[token("bytes15", |lexer| increase_token_then(lexer, FixedBytes::BYTES15))]
+        #[token("bytes16", |lexer| increase_token_then(lexer, FixedBytes::BYTES16))]
+        #[token("bytes17", |lexer| increase_token_then(lexer, FixedBytes::BYTES17))]
+        #[token("bytes18", |lexer| increase_token_then(lexer, FixedBytes::BYTES18))]
+        #[token("bytes19", |lexer| increase_token_then(lexer, FixedBytes::BYTES19))]
+        #[token("bytes20", |lexer| increase_token_then(lexer, FixedBytes::BYTES20))]
+        #[token("bytes21", |lexer| increase_token_then(lexer, FixedBytes::BYTES21))]
+        #[token("bytes22", |lexer| increase_token_then(lexer, FixedBytes::BYTES22))]
+        #[token("bytes23", |lexer| increase_token_then(lexer, FixedBytes::BYTES23))]
+        #[token("bytes24", |lexer| increase_token_then(lexer, FixedBytes::BYTES24))]
+        #[token("bytes25", |lexer| increase_token_then(lexer, FixedBytes::BYTES25))]
+        #[token("bytes26", |lexer| increase_token_then(lexer, FixedBytes::BYTES26))]
+        #[token("bytes27", |lexer| increase_token_then(lexer, FixedBytes::BYTES27))]
+        #[token("bytes28", |lexer| increase_token_then(lexer, FixedBytes::BYTES28))]
+        #[token("bytes29", |lexer| increase_token_then(lexer, FixedBytes::BYTES29))]
+        #[token("bytes30", |lexer| increase_token_then(lexer, FixedBytes::BYTES30))]
+        #[token("bytes31", |lexer| increase_token_then(lexer, FixedBytes::BYTES31))]
+        #[token("bytes32", |lexer| increase_token_then(lexer, FixedBytes::BYTES32))]
         FixedBytes(FixedBytes),
 
-        #[token("wei", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Wei))]
-        #[token("gwei", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Gwei))]
-        #[token("ether", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Ether))]
-        #[token("seconds", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Seconds))]
-        #[token("minutes", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Minutes))]
-        #[token("hours", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Hours))]
-        #[token("days", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Days))]
-        #[token("weeks", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Weeks))]
-        #[token("years", |lexer| increase_token_and_check_on_token_with_output(lexer, Denomination::Years))]
+        #[token("wei", |lexer| increase_token_then(lexer, Denomination::Wei))]
+        #[token("gwei", |lexer| increase_token_then(lexer, Denomination::Gwei))]
+        #[token("ether", |lexer| increase_token_then(lexer, Denomination::Ether))]
+        #[token("seconds", |lexer| increase_token_then(lexer, Denomination::Seconds))]
+        #[token("minutes", |lexer| increase_token_then(lexer, Denomination::Minutes))]
+        #[token("hours", |lexer| increase_token_then(lexer, Denomination::Hours))]
+        #[token("days", |lexer| increase_token_then(lexer, Denomination::Days))]
+        #[token("weeks", |lexer| increase_token_then(lexer, Denomination::Weeks))]
+        #[token("years", |lexer| increase_token_then(lexer, Denomination::Years))]
         Denomination(Denomination),
 
-        #[token("int8", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I8))]
-        #[token("int16", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I16))]
-        #[token("int24", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I24))]
-        #[token("int32", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I32))]
-        #[token("int40", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I40))]
-        #[token("int48", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I48))]
-        #[token("int56", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I56))]
-        #[token("int64", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I64))]
-        #[token("int72", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I72))]
-        #[token("int80", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I80))]
-        #[token("int88", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I88))]
-        #[token("int96", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I96))]
-        #[token("int104", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I104))]
-        #[token("int112", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I112))]
-        #[token("int120", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I120))]
-        #[token("int128", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I128))]
-        #[token("int136", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I136))]
-        #[token("int144", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I144))]
-        #[token("int152", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I152))]
-        #[token("int160", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I160))]
-        #[token("int168", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I168))]
-        #[token("int176", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I176))]
-        #[token("int184", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I184))]
-        #[token("int192", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I192))]
-        #[token("int200", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I200))]
-        #[token("int208", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I208))]
-        #[token("int216", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I216))]
-        #[token("int224", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I224))]
-        #[token("int232", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I232))]
-        #[token("int240", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I240))]
-        #[token("int248", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I248))]
-        #[token("int256", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I256))]
-        #[token("int", |lexer| increase_token_and_check_on_token_with_output(lexer, Int::I256))]
+        #[token("int8", |lexer| increase_token_then(lexer, Int::I8))]
+        #[token("int16", |lexer| increase_token_then(lexer, Int::I16))]
+        #[token("int24", |lexer| increase_token_then(lexer, Int::I24))]
+        #[token("int32", |lexer| increase_token_then(lexer, Int::I32))]
+        #[token("int40", |lexer| increase_token_then(lexer, Int::I40))]
+        #[token("int48", |lexer| increase_token_then(lexer, Int::I48))]
+        #[token("int56", |lexer| increase_token_then(lexer, Int::I56))]
+        #[token("int64", |lexer| increase_token_then(lexer, Int::I64))]
+        #[token("int72", |lexer| increase_token_then(lexer, Int::I72))]
+        #[token("int80", |lexer| increase_token_then(lexer, Int::I80))]
+        #[token("int88", |lexer| increase_token_then(lexer, Int::I88))]
+        #[token("int96", |lexer| increase_token_then(lexer, Int::I96))]
+        #[token("int104", |lexer| increase_token_then(lexer, Int::I104))]
+        #[token("int112", |lexer| increase_token_then(lexer, Int::I112))]
+        #[token("int120", |lexer| increase_token_then(lexer, Int::I120))]
+        #[token("int128", |lexer| increase_token_then(lexer, Int::I128))]
+        #[token("int136", |lexer| increase_token_then(lexer, Int::I136))]
+        #[token("int144", |lexer| increase_token_then(lexer, Int::I144))]
+        #[token("int152", |lexer| increase_token_then(lexer, Int::I152))]
+        #[token("int160", |lexer| increase_token_then(lexer, Int::I160))]
+        #[token("int168", |lexer| increase_token_then(lexer, Int::I168))]
+        #[token("int176", |lexer| increase_token_then(lexer, Int::I176))]
+        #[token("int184", |lexer| increase_token_then(lexer, Int::I184))]
+        #[token("int192", |lexer| increase_token_then(lexer, Int::I192))]
+        #[token("int200", |lexer| increase_token_then(lexer, Int::I200))]
+        #[token("int208", |lexer| increase_token_then(lexer, Int::I208))]
+        #[token("int216", |lexer| increase_token_then(lexer, Int::I216))]
+        #[token("int224", |lexer| increase_token_then(lexer, Int::I224))]
+        #[token("int232", |lexer| increase_token_then(lexer, Int::I232))]
+        #[token("int240", |lexer| increase_token_then(lexer, Int::I240))]
+        #[token("int248", |lexer| increase_token_then(lexer, Int::I248))]
+        #[token("int256", |lexer| increase_token_then(lexer, Int::I256))]
+        #[token("int", |lexer| increase_token_then(lexer, Int::I256))]
         Int(Int),
 
-        #[token("uint8", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U8))]
-        #[token("uint16", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U16))]
-        #[token("uint24", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U24))]
-        #[token("uint32", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U32))]
-        #[token("uint40", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U40))]
-        #[token("uint48", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U48))]
-        #[token("uint56", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U56))]
-        #[token("uint64", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U64))]
-        #[token("uint72", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U72))]
-        #[token("uint80", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U80))]
-        #[token("uint88", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U88))]
-        #[token("uint96", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U96))]
-        #[token("uint104", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U104))]
-        #[token("uint112", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U112))]
-        #[token("uint120", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U120))]
-        #[token("uint128", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U128))]
-        #[token("uint136", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U136))]
-        #[token("uint144", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U144))]
-        #[token("uint152", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U152))]
-        #[token("uint160", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U160))]
-        #[token("uint168", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U168))]
-        #[token("uint176", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U176))]
-        #[token("uint184", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U184))]
-        #[token("uint192", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U192))]
-        #[token("uint200", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U200))]
-        #[token("uint208", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U208))]
-        #[token("uint216", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U216))]
-        #[token("uint224", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U224))]
-        #[token("uint232", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U232))]
-        #[token("uint240", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U240))]
-        #[token("uint248", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U248))]
-        #[token("uint256", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U256))]
-        #[token("uint", |lexer| increase_token_and_check_on_token_with_output(lexer, Uint::U256))]
+        #[token("uint8", |lexer| increase_token_then(lexer, Uint::U8))]
+        #[token("uint16", |lexer| increase_token_then(lexer, Uint::U16))]
+        #[token("uint24", |lexer| increase_token_then(lexer, Uint::U24))]
+        #[token("uint32", |lexer| increase_token_then(lexer, Uint::U32))]
+        #[token("uint40", |lexer| increase_token_then(lexer, Uint::U40))]
+        #[token("uint48", |lexer| increase_token_then(lexer, Uint::U48))]
+        #[token("uint56", |lexer| increase_token_then(lexer, Uint::U56))]
+        #[token("uint64", |lexer| increase_token_then(lexer, Uint::U64))]
+        #[token("uint72", |lexer| increase_token_then(lexer, Uint::U72))]
+        #[token("uint80", |lexer| increase_token_then(lexer, Uint::U80))]
+        #[token("uint88", |lexer| increase_token_then(lexer, Uint::U88))]
+        #[token("uint96", |lexer| increase_token_then(lexer, Uint::U96))]
+        #[token("uint104", |lexer| increase_token_then(lexer, Uint::U104))]
+        #[token("uint112", |lexer| increase_token_then(lexer, Uint::U112))]
+        #[token("uint120", |lexer| increase_token_then(lexer, Uint::U120))]
+        #[token("uint128", |lexer| increase_token_then(lexer, Uint::U128))]
+        #[token("uint136", |lexer| increase_token_then(lexer, Uint::U136))]
+        #[token("uint144", |lexer| increase_token_then(lexer, Uint::U144))]
+        #[token("uint152", |lexer| increase_token_then(lexer, Uint::U152))]
+        #[token("uint160", |lexer| increase_token_then(lexer, Uint::U160))]
+        #[token("uint168", |lexer| increase_token_then(lexer, Uint::U168))]
+        #[token("uint176", |lexer| increase_token_then(lexer, Uint::U176))]
+        #[token("uint184", |lexer| increase_token_then(lexer, Uint::U184))]
+        #[token("uint192", |lexer| increase_token_then(lexer, Uint::U192))]
+        #[token("uint200", |lexer| increase_token_then(lexer, Uint::U200))]
+        #[token("uint208", |lexer| increase_token_then(lexer, Uint::U208))]
+        #[token("uint216", |lexer| increase_token_then(lexer, Uint::U216))]
+        #[token("uint224", |lexer| increase_token_then(lexer, Uint::U224))]
+        #[token("uint232", |lexer| increase_token_then(lexer, Uint::U232))]
+        #[token("uint240", |lexer| increase_token_then(lexer, Uint::U240))]
+        #[token("uint248", |lexer| increase_token_then(lexer, Uint::U248))]
+        #[token("uint256", |lexer| increase_token_then(lexer, Uint::U256))]
+        #[token("uint", |lexer| increase_token_then(lexer, Uint::U256))]
         Uint(Uint),
 
-        #[token("fixed", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
-        #[regex("fixed[1-9][0-9]*x[1-9][0-9]*", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[token("fixed", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
+        #[regex("fixed[1-9][0-9]*x[1-9][0-9]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         Fixed($slice),
 
-        #[token("ufixed", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
-        #[regex("ufixed[1-9][0-9]*x[1-9][0-9]*", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[token("ufixed", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
+        #[regex("ufixed[1-9][0-9]*x[1-9][0-9]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         UFixed($slice),
 
-        #[regex(r"//[^\r\n]*", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[regex(r"//[^\r\n]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         LineComment($slice),
 
-        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         MultiLineComment($slice),
 
         // ==================================== Boolean literals ====================================
-        #[token("true", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_true(lexer.slice())))]
-        #[token("false", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_false(lexer.slice())))]
+        #[token("true", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_true(lexer.slice())))]
+        #[token("false", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_false(lexer.slice())))]
         // ==================================== Empty quoted string literals ====================================
-        #[token("\"\"", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_empty_double_quoted_string(lexer.slice())))]
-        #[token("''", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_empty_single_quoted_string(lexer.slice())))]
+        #[token("\"\"", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_empty_double_quoted_string(lexer.slice())))]
+        #[token("''", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_empty_single_quoted_string(lexer.slice())))]
         // ==================================== Regular string literals ====================================
         // Double quoted non-empty string literal lexing
-        #[regex(r#""(?&double_quoted_chars)""#, |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice())))]
+        #[regex(r#""(?&double_quoted_chars)""#, |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice())))]
         // Error handling branches for double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)"#, unclosed_double_quoted_regular_string_error)]
         #[token("\"", |lexer| {
           match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-            DoubleQuotedRegularStrLexer::<logosky::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
+            DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
           )
           .map(Into::into)
           .map_err(Errors::from_underlying) {
@@ -474,12 +481,12 @@ macro_rules! token {
           }
         })]
         // Single quoted non-empty string literal lexing
-        #[regex(r"'(?&single_quoted_chars)'", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_single_quoted_regular_string(lexer.slice())))]
+        #[regex(r"'(?&single_quoted_chars)'", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_single_quoted_regular_string(lexer.slice())))]
         // Error handling branches for single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)", unclosed_single_quoted_regular_string_error)]
         #[token("\'", |lexer| {
           match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-            SingleQuotedRegularStrLexer::<logosky::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
+            SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
           )
           .map(Into::into)
           .map_err(Errors::from_underlying) {
@@ -500,12 +507,12 @@ macro_rules! token {
         })]
         // ==================================== Hex string literals ====================================
         // Double quoted hex string literal lexing
-        #[regex("hex\"(?&hex_string_content)\"", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_double_quoted_hex_string(lexer.slice())))]
+        #[regex("hex\"(?&hex_string_content)\"", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_double_quoted_hex_string(lexer.slice())))]
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", unclosed_double_quoted_hex_string_error)]
         #[token("hex\"", |lexer| {
           match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-            DoubleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
+            DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
           )
           .map(Into::into)
           .map_err(Errors::from_underlying) {
@@ -525,12 +532,12 @@ macro_rules! token {
           }
         })]
         // Single quoted hex string literal lexing
-        #[regex("hex'(?&hex_string_content)'", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_single_quoted_hex_string(lexer.slice())))]
+        #[regex("hex'(?&hex_string_content)'", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_single_quoted_hex_string(lexer.slice())))]
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", unclosed_single_quoted_hex_string_error)]
         #[token("hex'", |lexer| {
           match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-            SingleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
+            SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
           )
           .map(Into::into)
           .map_err(Errors::from_underlying) {
@@ -551,11 +558,11 @@ macro_rules! token {
         })]
         // ==================================== Unicode string literals ====================================
         // Double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice())))]
+        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice())))]
         // Error handling branches for double quoted unicode string literal lexing
         #[token("unicode\"", |lexer| {
             match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-              DoubleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
+              DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
             )
             .map(Into::into)
             .map_err(Errors::from_underlying) {
@@ -575,11 +582,11 @@ macro_rules! token {
             }
         })]
         // Single quoted unicode string literal lexing
-        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice())))]
+        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice())))]
         // Error handling branches for single quoted unicode string literal lexing
         #[token("unicode\'", |lexer| {
             match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-              SingleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
+              SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
             )
             .map(Into::into)
             .map_err(Errors::from_underlying) {
@@ -692,7 +699,7 @@ macro_rules! token {
         })]
         Lit(Lit<$slice>),
 
-        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         Identifier($slice),
       }
 
@@ -836,90 +843,72 @@ macro_rules! token {
       fn unclosed_double_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
       ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::String(crate::error::StringError::unclosed_double_quote(l.span().into()))
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_single_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
       ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::String(crate::error::StringError::unclosed_single_quote(l.span().into()))
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_double_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
       ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::HexString(crate::error::HexStringError::unclosed_double_quote(l.span().into()))
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_single_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
       ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::HexString(crate::error::HexStringError::unclosed_single_quote(l.span().into()))
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
       ) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::from(crate::error::sol::HexadecimalError::malformed(l.span().into()))
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_error_token<'b $(: $lt)?, $($lt: 'b,)? O>(
+      fn increase_token_on_err<'b $(: $lt)?, $($lt: 'b,)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
         f: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)?>) -> Error,
-      ) -> Result<O, Errors> {
-        match lexer.increase_token_and_check() {
-          Ok(_) => Err(f(lexer).into()),
-          Err(e) => {
-            let mut errs = Errors::with_capacity(2);
-            errs.push(Error::State(e));
-            errs.push(f(lexer));
-            Err(errs)
-          }
-        }
+      ) -> Errors {
+        lexer.increase_token();
+        f(lexer).into()
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_token<'b $(: $lt)?, $($lt: 'b,)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<(), Errors> {
-        lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))
-      }
-
-      #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_token_with_output<'b $(: $lt)?, $($lt: 'b,)? O>(
+      fn increase_token_then<'b $(: $lt)?, $($lt: 'b,)? O>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
         output: O,
-      ) -> Result<O, Errors> {
-        match lexer.increase_token_and_check() {
-          Ok(_) => Ok(output),
-          Err(e) => Err(Errors::from(Error::State(e))),
-        }
+      ) -> O {
+        lexer.increase_token();
+        output
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_token_with<'b $(: $lt)?, $($lt: 'b,)? O>(
+      fn increase_token_then_with<'b $(: $lt)?, $($lt: 'b,)? O>(
         lexer: &mut Lexer<'b, Token $(<$lt>)?>,
         output: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)?>) -> O,
-      ) -> Result<O, Errors> {
-        match lexer.increase_token_and_check() {
-          Ok(_) => Ok(output(lexer)),
-          Err(e) => Err(Errors::from(Error::State(e))),
-        }
+      ) -> O {
+        lexer.increase_token();
+        output(lexer)
       }
     }
   }

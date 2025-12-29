@@ -1,8 +1,7 @@
-use logosky::{
-  Logos, Source,
+use tokit::{
+  logos::{Logos, Lexer, Source},
   error::{UnexpectedEot, UnknownLexeme},
-  logos::Lexer,
-  utils::{Lexeme, PositionedChar, Span},
+  utils::{Lexeme, PositionedChar, SimpleSpan},
 };
 
 use crate::Lxr;
@@ -24,7 +23,7 @@ where
   let mut chars = slice_ref.iter().enumerate();
 
   match chars.next() {
-    None => E::from(UnexpectedEot::eot(span.into())),
+    None => E::from(UnexpectedEot::eot(span.start)),
     Some((idx, first)) => {
       match first {
         b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'$' => {}
@@ -103,7 +102,7 @@ where
     len => {
       let span_start = lexer.span().end;
       let span_end = span_start + len;
-      unexpected_suffix(Lexeme::Range(Span::new(span_start, span_end)))
+      unexpected_suffix(Lexeme::Range(SimpleSpan::new(span_start, span_end)))
     }
   };
 

@@ -1,6 +1,6 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use lexsol::types::keywords::{Break, Continue, Leave};
-use logosky::{
+use tokit::{
   KeywordToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
     IterParser, Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra,

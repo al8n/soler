@@ -1,5 +1,5 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   error::{FixedUnicodeEscapeError, HexEscapeError},
   utils::{CharLen, EscapedLexeme, Lexeme, human_display::DisplayHuman},
 };

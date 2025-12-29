@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use logosky::{
+use tokit::{
   LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
     IterParser, Parser,

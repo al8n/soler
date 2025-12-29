@@ -1,5 +1,5 @@
 use lexsol::types::punct::Dot;
-use logosky::{
+use tokit::{
   chumsky::separated::separated_by,
   error::{ErrorNode, Missing},
   types::Keyword,

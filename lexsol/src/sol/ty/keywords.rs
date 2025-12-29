@@ -1,4 +1,4 @@
-use logosky::keyword;
+use tokit::keyword;
 
 keyword! {
   /// The contextual `from` keyword in Solidity

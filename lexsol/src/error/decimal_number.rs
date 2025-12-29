@@ -1,7 +1,7 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   error::{Malformed, UnexpectedSuffix},
-  utils::{Lexeme, Span, human_display::DisplayHuman},
+  utils::{Lexeme, SimpleSpan, human_display::DisplayHuman},
 };
 
 use crate::Lxr;
@@ -58,7 +58,7 @@ where
 {
   /// Create an unexpected suffix error with the given token and suffix.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unexpected_suffix(token: Span, suffix: Lexeme<Char>) -> Self {
+  pub fn unexpected_suffix(token: SimpleSpan, suffix: Lexeme<Char>) -> Self {
     Self::UnexpectedSuffix(
       UnexpectedSuffix::new(token, suffix).with_knowledge_const(DecimalLiteral::INIT),
     )
@@ -66,7 +66,7 @@ where
 
   /// Create a malformed decimal literal error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn malformed(span: Span) -> Self {
+  pub const fn malformed(span: SimpleSpan) -> Self {
     Self::Malformed(Malformed::with_knowledge(span, DecimalLiteral::INIT))
   }
 }

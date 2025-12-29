@@ -6,7 +6,7 @@ use lexsol::types::{
   LitBool, LitDecimal, LitHexadecimal, LitNumber,
   keywords::{Break, Continue, Leave},
 };
-use logosky::{
+use tokit::{
   IdentifierToken, KeywordToken, Lexed, LitToken, LogoStream, Logos, PunctuatorToken, Require,
   Source, Token,
   chumsky::{Parseable, Parser, extra::ParserExtra, prelude::*, token::punct::brace_close},
@@ -118,7 +118,7 @@ impl<S> Require<SemiIdentifierToken<S>> for AstToken<S> {
 /// The identifier type for Yul.
 ///
 /// Spec: [Yul Identifier](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulIdentifier)
-pub type Ident<S> = logosky::types::Ident<S, YUL>;
+pub type Ident<S> = tokit::types::Ident<S, YUL>;
 
 /// The path segment type for Yul.
 pub type PathSegment<S> = ast::path::PathSegment<S>;

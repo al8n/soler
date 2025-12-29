@@ -1,7 +1,7 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   error::{DefaultContainer, UnexpectedEot, UnknownLexeme},
-  utils::{CharLen, Lexeme, Message, Span, human_display::DisplayHuman},
+  utils::{CharLen, Lexeme, Message, SimpleSpan, human_display::DisplayHuman},
 };
 
 use crate::{
@@ -22,7 +22,7 @@ pub type DecimalError<Char = char> = super::decimal_number::DecimalError<YUL, Ch
 /// The error type for empty regular string literal
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct EmptyStringError {
-  span: Span,
+  span: SimpleSpan,
   kind: LitStrDelimiterKind,
 }
 
@@ -44,13 +44,13 @@ impl core::error::Error for EmptyStringError {}
 impl EmptyStringError {
   /// Create a new empty string literal error with the given delimiter kind.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn new(span: Span, kind: LitStrDelimiterKind) -> Self {
+  pub const fn new(span: SimpleSpan, kind: LitStrDelimiterKind) -> Self {
     Self { span, kind }
   }
 
   /// Get the span of the empty string literal
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn span(&self) -> Span {
+  pub const fn span(&self) -> SimpleSpan {
     self.span
   }
 
@@ -184,25 +184,25 @@ impl<Char, StateError> Error<Char, StateError> {
 
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unknown_lexeme(span: Span) -> Self {
+  pub const fn unknown_lexeme(span: SimpleSpan) -> Self {
     Self::Unknown(UnknownLexeme::new(Lexeme::Range(span), YUL(())))
   }
 
   /// Creates an unexpected end of input error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unexpected_eoi(span: Span) -> Self {
-    Self::UnexpectedEndOfInput(UnexpectedEot::eot(span))
+  pub const fn unexpected_eoi(offset: usize) -> Self {
+    Self::UnexpectedEndOfInput(UnexpectedEot::eot(offset))
   }
 
   /// Creates a empty single-quoted string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn empty_single_quote(span: Span) -> Self {
+  pub const fn empty_single_quote(span: SimpleSpan) -> Self {
     Self::EmptyString(EmptyStringError::new(span, LitStrDelimiterKind::Single))
   }
 
   /// Creates a empty double-quoted string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn empty_double_quote(span: Span) -> Self {
+  pub const fn empty_double_quote(span: SimpleSpan) -> Self {
     Self::EmptyString(EmptyStringError::new(span, LitStrDelimiterKind::Double))
   }
 }

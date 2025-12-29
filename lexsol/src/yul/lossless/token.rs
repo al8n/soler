@@ -2,8 +2,8 @@ macro_rules! token {
   ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
-      use logosky::{
-        Lexable, Logos, logos::Lexer,
+      use tokit::{
+        lexer::Lexable, logos::{Lexer, Logos},
         utils::tracker::{LimitExceeded, Limiter, Tracker},
         error::ErrorContainer,
       };
@@ -28,21 +28,45 @@ macro_rules! token {
       type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 
       #[allow(warnings)]
-      impl<'b $(: $lt)?, $($lt: 'b)?> logosky::Token<'b> for lossless::Token<$slice> {
+      impl<'b $(: $lt)?, $($lt: 'b)?> tokit::Token<'b> for lossless::Token<$slice> {
         type Kind = lossless::TokenKind;
-        type Char = $char;
-        type Logos = Token $(<$lt>)?;
+        type Error = Errors;
 
         #[cfg_attr(not(tarpaulin), inline(always))]
         fn kind(&self) -> Self::Kind {
           self.kind()
+        }
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn is_trivia(&self) -> bool {
+          match self {
+            lossless::Token::Space
+            | lossless::Token::Tab
+            | lossless::Token::NewLine
+            | lossless::Token::CarriageReturn
+            | lossless::Token::CarriageReturnNewLine
+            | lossless::Token::FormFeed
+            | lossless::Token::LineComment(_)
+            | lossless::Token::MultiLineComment(_) => true,
+            _ => false,
+          }
+        }
+      }
+
+      #[allow(warnings)]
+      impl<'b $(: $lt)?, $($lt: 'b)?> tokit::lexer::FromLogos<'b> for lossless::Token<$slice> {
+        type Logos = Token $(<$lt>)?;
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn from_logos(value: Self::Logos) -> Self {
+          value.into()
         }
       }
 
       #[doc(hidden)]
       #[derive(Logos, Clone, Debug)]
       #[logos(
-        crate = logosky::logos,
+        crate = tokit::logos,
         source = $source,
         extras = Limiter,
         error(Errors, |l| {
@@ -70,68 +94,68 @@ macro_rules! token {
       #[logos(subpattern decimal = "0|[1-9][0-9]*")]
       #[logos(subpattern hexadecimal = "0x(?&hex_digit)+")]
       pub enum Token $(<$lt>)? {
-        #[token(" ", increase_token_and_check_on_token)]
+        #[token(" ", |l| l.increase_token())]
         Space,
-        #[token("\t", increase_token_and_check_on_token)]
+        #[token("\t", |l| l.increase_token())]
         Tab,
-        #[token("\n", increase_token_and_check_on_token)]
+        #[token("\n", |l| l.increase_token())]
         NewLine,
-        #[token("\r", increase_token_and_check_on_token)]
+        #[token("\r", |l| l.increase_token())]
         CarriageReturn,
-        #[token("\r\n", increase_token_and_check_on_token)]
+        #[token("\r\n", |l| l.increase_token())]
         CarriageReturnNewLine,
-        #[token("\u{000C}", increase_token_and_check_on_token)]
+        #[token("\u{000C}", |l| l.increase_token())]
         FormFeed,
 
-        #[token(":=", increase_token_and_check_on_token)]
+        #[token(":=", |l| l.increase_token())]
         ColonAssign,
-        #[token("->", increase_token_and_check_on_token)]
+        #[token("->", |l| l.increase_token())]
         ThinArrow,
-        #[token("{", |lexer| lexer.increase_both_and_check().map_err(|e| Errors::from(Error::State(e))))]
+        #[token("{", |lexer| lexer.increase_both())]
         LBrace,
-        #[token("}", |lexer| lexer.decrease_recursion())]
+        #[token("}", |lexer| lexer.increase_token_and_decrease_recursion())]
         RBrace,
-        #[token("(", |lexer| lexer.increase_both_and_check().map_err(|e| Errors::from(Error::State(e))))]
+        #[token("(", |lexer| lexer.increase_both())]
         LParen,
-        #[token(")", |lexer| lexer.decrease_recursion())]
+        #[token(")", |lexer| lexer.increase_token_and_decrease_recursion())]
         RParen,
-        #[token(".", increase_token_and_check_on_token)]
+        #[token(".", |l| l.increase_token())]
         Dot,
-        #[token(",", increase_token_and_check_on_token)]
+        #[token(",", |l| l.increase_token())]
         Comma,
 
-        #[token("leave", increase_token_and_check_on_token)]
+        #[token("leave", |l| l.increase_token())]
         Leave,
-        #[token("continue", increase_token_and_check_on_token)]
+        #[token("continue", |l| l.increase_token())]
         Continue,
-        #[token("break", increase_token_and_check_on_token)]
+        #[token("break", |l| l.increase_token())]
         Break,
-        #[token("switch", increase_token_and_check_on_token)]
+        #[token("switch", |l| l.increase_token())]
         Switch,
-        #[token("case", increase_token_and_check_on_token)]
+        #[token("case", |l| l.increase_token())]
         Case,
-        #[token("default", increase_token_and_check_on_token)]
+        #[token("default", |l| l.increase_token())]
         Default,
-        #[token("function", increase_token_and_check_on_token)]
+        #[token("function", |l| l.increase_token())]
         Function,
-        #[token("let", increase_token_and_check_on_token)]
+        #[token("let", |l| l.increase_token())]
         Let,
-        #[token("if", increase_token_and_check_on_token)]
+        #[token("if", |l| l.increase_token())]
         If,
-        #[token("for", increase_token_and_check_on_token)]
+        #[token("for", |l| l.increase_token())]
         For,
 
-        #[regex(r"//[^\r\n]*", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[regex(r"//[^\r\n]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         LineComment($slice),
 
-        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         MultiLineComment($slice),
 
-        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| lexer.slice()))]
+        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
         Identifier($slice),
 
-        #[token("true", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_true(lexer.slice())))]
-        #[token("false", |lexer| increase_token_and_check_on_token_with(lexer, |lexer| Lit::lit_false(lexer.slice())))]
+        #[token("true", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_true(lexer.slice())))]
+        #[token("false", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_false(lexer.slice())))]
         #[regex("(?&decimal)", |lexer| {
           match handlers::$handlers::handle_decimal_suffix(lexer) {
             Ok(lit) => {
@@ -227,12 +251,12 @@ macro_rules! token {
 
         // Double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)\"", |lexer| {
-          increase_token_and_check_on_token_with(lexer, |l| Lit::lit_double_quoted_hex_string(l.slice()))
+          increase_token_then_with(lexer, |l| Lit::lit_double_quoted_hex_string(l.slice()))
         })]
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", unclosed_double_quoted_hex_string_error)]
         #[token("hex\"", |lexer| {
-          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -254,12 +278,12 @@ macro_rules! token {
 
         // Single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)'", |lexer| {
-          increase_token_and_check_on_token_with(lexer, |l| Lit::lit_single_quoted_hex_string(l.slice()))
+          increase_token_then_with(lexer, |l| Lit::lit_single_quoted_hex_string(l.slice()))
         })]
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", unclosed_single_quoted_hex_string_error)]
         #[token("hex'", |lexer| {
-          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -281,13 +305,13 @@ macro_rules! token {
 
         // Double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)""#, |lexer| {
-          increase_token_and_check_on_token_with(lexer, |l| Lit::lit_double_quoted_regular_string(l.slice()))
+          increase_token_then_with(lexer, |l| Lit::lit_double_quoted_regular_string(l.slice()))
         })]
         // Error handling branches for double quoted non-empty string literal lexing
         #[token(r#""""#, empty_double_quoted_string_error)]
         #[regex(r#""(?&double_quoted_chars)"#, unclosed_double_quoted_regular_string_error)]
         #[token("\"", |lexer| {
-          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<logosky::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -308,13 +332,13 @@ macro_rules! token {
         })]
         // Single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)'", |lexer| {
-          increase_token_and_check_on_token_with(lexer, |l| Lit::lit_single_quoted_regular_string(l.slice()))
+          increase_token_then_with(lexer, |l| Lit::lit_single_quoted_regular_string(l.slice()))
         })]
         // Error handling branches for single quoted non-empty string literal lexing
         #[token("''", empty_single_quoted_string_error)]
         #[regex(r"'(?&single_quoted_chars)", unclosed_single_quoted_regular_string_error)]
         #[token("\'", |lexer| {
-          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<logosky::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
           {
@@ -336,86 +360,86 @@ macro_rules! token {
         Lit(Lit<$slice>),
 
         #[cfg(feature = "evm")]
-        #[token("stop", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::STOP))]
-        #[token("add", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::ADD))]
-        #[token("sub", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SUB))]
-        #[token("mul", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MUL))]
-        #[token("div", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::DIV))]
-        #[token("sdiv", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SDIV))]
-        #[token("mod", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MOD))]
-        #[token("smod", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SMOD))]
-        #[token("exp", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::EXP))]
-        #[token("not", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::NOT))]
-        #[token("lt", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::LT))]
-        #[token("gt", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::GT))]
-        #[token("slt", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SLT))]
-        #[token("sgt", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SGT))]
-        #[token("eq", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::EQ))]
-        #[token("iszero", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::ISZERO))]
-        #[token("and", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::AND))]
-        #[token("or", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::OR))]
-        #[token("xor", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::XOR))]
-        #[token("byte", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::BYTE))]
-        #[token("shl", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SHL))]
-        #[token("shr", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SHR))]
-        #[token("sar", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SAR))]
-        #[token("clz", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CLZ))]
-        #[token("addmod", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::ADDMOD))]
-        #[token("mulmod", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MULMOD))]
-        #[token("signextend", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SIGNEXTEND))]
-        #[token("keccak256", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::KECCAK256))]
-        #[token("pop", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::POP))]
-        #[token("mload", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MLOAD))]
-        #[token("mstore", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MSTORE))]
-        #[token("mstore8", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MSTORE8))]
-        #[token("sload", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SLOAD))]
-        #[token("sstore", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SSTORE))]
-        #[token("tload", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::TLOAD))]
-        #[token("tstore", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::TSTORE))]
-        #[token("msize", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MSIZE))]
-        #[token("gas", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::GAS))]
-        #[token("address", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::ADDRESS))]
-        #[token("balance", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::BALANCE))]
-        #[token("selfbalance", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SELFBALANCE))]
-        #[token("caller", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALLER))]
-        #[token("callvalue", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALLVALUE))]
-        #[token("calldataload", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALLDATALOAD))]
-        #[token("calldatasize", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALLDATASIZE))]
-        #[token("calldatacopy", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALLDATACOPY))]
-        #[token("extcodesize", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::EXTCODESIZE))]
-        #[token("extcodecopy", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::EXTCODECOPY))]
-        #[token("returndatasize", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::RETURNDATASIZE))]
-        #[token("returndatacopy", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::RETURNDATACOPY))]
-        #[token("mcopy", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::MCOPY))]
-        #[token("extcodehash", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::EXTCODEHASH))]
-        #[token("create", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CREATE))]
-        #[token("create2", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CREATE2))]
-        #[token("call", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALL))]
-        #[token("callcode", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CALLCODE))]
-        #[token("delegatecall", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::DELEGATECALL))]
-        #[token("staticcall", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::STATICCALL))]
-        #[token("return", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::RETURN))]
-        #[token("revert", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::REVERT))]
-        #[token("selfdestruct", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::SELFDESTRUCT))]
-        #[token("invalid", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::INVALID))]
-        #[token("log0", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::LOG0))]
-        #[token("log1", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::LOG1))]
-        #[token("log2", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::LOG2))]
-        #[token("log3", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::LOG3))]
-        #[token("log4", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::LOG4))]
-        #[token("chainid", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::CHAINID))]
-        #[token("origin", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::ORIGIN))]
-        #[token("gasprice", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::GASPRICE))]
-        #[token("blockhash", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::BLOCKHASH))]
-        #[token("blobhash", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::BLOBHASH))]
-        #[token("coinbase", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::COINBASE))]
-        #[token("timestamp", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::TIMESTAMP))]
-        #[token("number", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::NUMBER))]
-        #[token("difficulty", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::DIFFICULTY))]
-        #[token("prevrandao", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::PREVRANDAO))]
-        #[token("gaslimit", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::GASLIMIT))]
-        #[token("basefee", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::BASEFEE))]
-        #[token("blobbasefee", |lexer| increase_token_and_check_on_token_with_output(lexer, EvmBuiltinFunction::BLOBBASEFEE))]
+        #[token("stop", |lexer| increase_token_then(lexer, EvmBuiltinFunction::STOP))]
+        #[token("add", |lexer| increase_token_then(lexer, EvmBuiltinFunction::ADD))]
+        #[token("sub", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SUB))]
+        #[token("mul", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MUL))]
+        #[token("div", |lexer| increase_token_then(lexer, EvmBuiltinFunction::DIV))]
+        #[token("sdiv", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SDIV))]
+        #[token("mod", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MOD))]
+        #[token("smod", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SMOD))]
+        #[token("exp", |lexer| increase_token_then(lexer, EvmBuiltinFunction::EXP))]
+        #[token("not", |lexer| increase_token_then(lexer, EvmBuiltinFunction::NOT))]
+        #[token("lt", |lexer| increase_token_then(lexer, EvmBuiltinFunction::LT))]
+        #[token("gt", |lexer| increase_token_then(lexer, EvmBuiltinFunction::GT))]
+        #[token("slt", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SLT))]
+        #[token("sgt", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SGT))]
+        #[token("eq", |lexer| increase_token_then(lexer, EvmBuiltinFunction::EQ))]
+        #[token("iszero", |lexer| increase_token_then(lexer, EvmBuiltinFunction::ISZERO))]
+        #[token("and", |lexer| increase_token_then(lexer, EvmBuiltinFunction::AND))]
+        #[token("or", |lexer| increase_token_then(lexer, EvmBuiltinFunction::OR))]
+        #[token("xor", |lexer| increase_token_then(lexer, EvmBuiltinFunction::XOR))]
+        #[token("byte", |lexer| increase_token_then(lexer, EvmBuiltinFunction::BYTE))]
+        #[token("shl", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SHL))]
+        #[token("shr", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SHR))]
+        #[token("sar", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SAR))]
+        #[token("clz", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CLZ))]
+        #[token("addmod", |lexer| increase_token_then(lexer, EvmBuiltinFunction::ADDMOD))]
+        #[token("mulmod", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MULMOD))]
+        #[token("signextend", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SIGNEXTEND))]
+        #[token("keccak256", |lexer| increase_token_then(lexer, EvmBuiltinFunction::KECCAK256))]
+        #[token("pop", |lexer| increase_token_then(lexer, EvmBuiltinFunction::POP))]
+        #[token("mload", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MLOAD))]
+        #[token("mstore", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MSTORE))]
+        #[token("mstore8", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MSTORE8))]
+        #[token("sload", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SLOAD))]
+        #[token("sstore", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SSTORE))]
+        #[token("tload", |lexer| increase_token_then(lexer, EvmBuiltinFunction::TLOAD))]
+        #[token("tstore", |lexer| increase_token_then(lexer, EvmBuiltinFunction::TSTORE))]
+        #[token("msize", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MSIZE))]
+        #[token("gas", |lexer| increase_token_then(lexer, EvmBuiltinFunction::GAS))]
+        #[token("address", |lexer| increase_token_then(lexer, EvmBuiltinFunction::ADDRESS))]
+        #[token("balance", |lexer| increase_token_then(lexer, EvmBuiltinFunction::BALANCE))]
+        #[token("selfbalance", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SELFBALANCE))]
+        #[token("caller", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALLER))]
+        #[token("callvalue", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALLVALUE))]
+        #[token("calldataload", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALLDATALOAD))]
+        #[token("calldatasize", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALLDATASIZE))]
+        #[token("calldatacopy", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALLDATACOPY))]
+        #[token("extcodesize", |lexer| increase_token_then(lexer, EvmBuiltinFunction::EXTCODESIZE))]
+        #[token("extcodecopy", |lexer| increase_token_then(lexer, EvmBuiltinFunction::EXTCODECOPY))]
+        #[token("returndatasize", |lexer| increase_token_then(lexer, EvmBuiltinFunction::RETURNDATASIZE))]
+        #[token("returndatacopy", |lexer| increase_token_then(lexer, EvmBuiltinFunction::RETURNDATACOPY))]
+        #[token("mcopy", |lexer| increase_token_then(lexer, EvmBuiltinFunction::MCOPY))]
+        #[token("extcodehash", |lexer| increase_token_then(lexer, EvmBuiltinFunction::EXTCODEHASH))]
+        #[token("create", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CREATE))]
+        #[token("create2", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CREATE2))]
+        #[token("call", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALL))]
+        #[token("callcode", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CALLCODE))]
+        #[token("delegatecall", |lexer| increase_token_then(lexer, EvmBuiltinFunction::DELEGATECALL))]
+        #[token("staticcall", |lexer| increase_token_then(lexer, EvmBuiltinFunction::STATICCALL))]
+        #[token("return", |lexer| increase_token_then(lexer, EvmBuiltinFunction::RETURN))]
+        #[token("revert", |lexer| increase_token_then(lexer, EvmBuiltinFunction::REVERT))]
+        #[token("selfdestruct", |lexer| increase_token_then(lexer, EvmBuiltinFunction::SELFDESTRUCT))]
+        #[token("invalid", |lexer| increase_token_then(lexer, EvmBuiltinFunction::INVALID))]
+        #[token("log0", |lexer| increase_token_then(lexer, EvmBuiltinFunction::LOG0))]
+        #[token("log1", |lexer| increase_token_then(lexer, EvmBuiltinFunction::LOG1))]
+        #[token("log2", |lexer| increase_token_then(lexer, EvmBuiltinFunction::LOG2))]
+        #[token("log3", |lexer| increase_token_then(lexer, EvmBuiltinFunction::LOG3))]
+        #[token("log4", |lexer| increase_token_then(lexer, EvmBuiltinFunction::LOG4))]
+        #[token("chainid", |lexer| increase_token_then(lexer, EvmBuiltinFunction::CHAINID))]
+        #[token("origin", |lexer| increase_token_then(lexer, EvmBuiltinFunction::ORIGIN))]
+        #[token("gasprice", |lexer| increase_token_then(lexer, EvmBuiltinFunction::GASPRICE))]
+        #[token("blockhash", |lexer| increase_token_then(lexer, EvmBuiltinFunction::BLOCKHASH))]
+        #[token("blobhash", |lexer| increase_token_then(lexer, EvmBuiltinFunction::BLOBHASH))]
+        #[token("coinbase", |lexer| increase_token_then(lexer, EvmBuiltinFunction::COINBASE))]
+        #[token("timestamp", |lexer| increase_token_then(lexer, EvmBuiltinFunction::TIMESTAMP))]
+        #[token("number", |lexer| increase_token_then(lexer, EvmBuiltinFunction::NUMBER))]
+        #[token("difficulty", |lexer| increase_token_then(lexer, EvmBuiltinFunction::DIFFICULTY))]
+        #[token("prevrandao", |lexer| increase_token_then(lexer, EvmBuiltinFunction::PREVRANDAO))]
+        #[token("gaslimit", |lexer| increase_token_then(lexer, EvmBuiltinFunction::GASLIMIT))]
+        #[token("basefee", |lexer| increase_token_then(lexer, EvmBuiltinFunction::BASEFEE))]
+        #[token("blobbasefee", |lexer| increase_token_then(lexer, EvmBuiltinFunction::BLOBBASEFEE))]
         EvmBuiltin(EvmBuiltinFunction),
       }
 
@@ -459,96 +483,78 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn empty_single_quoted_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::empty_single_quote(l.span().into())
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn empty_double_quoted_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           Error::empty_double_quote(l.span().into())
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_double_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors>{
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           crate::error::StringError::unclosed_double_quote(l.span().into()).into()
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_single_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           crate::error::StringError::unclosed_single_quote(l.span().into()).into()
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_double_quoted_hex_string_error <'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           crate::error::HexStringError::unclosed_double_quote(l.span().into()).into()
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_single_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           crate::error::HexStringError::unclosed_single_quote(l.span().into()).into()
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
-        increase_token_and_check_on_error_token(lexer, |l| {
+        Err(increase_token_on_err(lexer, |l| {
           crate::error::yul::HexadecimalError::malformed(l.span().into()).into()
-        })
+        }))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_error_token<'b $(: $lt)?, $($lt: 'b,)? O>(
+      fn increase_token_on_err<'b $(: $lt)?, $($lt: 'b,)?>(
         lexer: &mut Lexer<'b, Token $(<$lt>)? >,
         f: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)? >) -> Error,
-      ) -> Result<O, Errors> {
-        match lexer.increase_token_and_check() {
-          Ok(_) => Err(f(lexer).into()),
-          Err(e) => {
-            let mut errs = Errors::with_capacity(2);
-            errs.push(Error::State(e));
-            errs.push(f(lexer));
-            Err(errs)
-          }
-        }
+      ) -> Errors {
+        lexer.increase_token();
+        f(lexer).into()
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_token<'b $(: $lt)?, $($lt: 'b,)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)? >,
-      ) -> Result<(), Errors> {
-        lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))
-      }
-
-      #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_token_with_output<'b $(: $lt)?, $($lt: 'b,)? O>(
+      fn increase_token_then<'b $(: $lt)?, $($lt: 'b,)? O>(
         lexer: &mut Lexer<'b, Token $(<$lt>)? >,
         output: O,
-      ) -> Result<O, Errors> {
-        match lexer.increase_token_and_check() {
-          Ok(_) => Ok(output),
-          Err(e) => Err(Errors::from(Error::State(e))),
-        }
+      ) -> O {
+        lexer.increase_token();
+        output
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn increase_token_and_check_on_token_with<'b $(: $lt)?, $($lt: 'b,)? O>(
+      fn increase_token_then_with<'b $(: $lt)?, $($lt: 'b,)? O>(
         lexer: &mut Lexer<'b, Token $(<$lt>)? >,
         output: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)? >) -> O,
-      ) -> Result<O, Errors> {
-        match lexer.increase_token_and_check() {
-          Ok(_) => Ok(output(lexer)),
-          Err(e) => Err(Errors::from(Error::State(e))),
-        }
+      ) -> O {
+        lexer.increase_token();
+        output(lexer)
       }
     }
   }

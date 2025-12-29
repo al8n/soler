@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
 use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   KeywordToken, Lexed, LogoStream, Logos, Source, Token,
   chumsky::{
     Parseable, Parser, container::Container as ChumskyContainer, extra::ParserExtra, prelude::*,

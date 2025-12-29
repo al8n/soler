@@ -1,7 +1,9 @@
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
-use logosky::{
-  IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken, Require,
-  Token as TokenT, TriviaToken,
+use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
+
+#[cfg(feature = "evm")]
+use tokit::Require;
+use tokit::{
+  lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
   utils::{cmp::Equivalent, recursion_tracker::RecursionLimitExceeded},
 };
 
@@ -19,14 +21,15 @@ mod str;
 mod token;
 
 /// The syntactic lexer for Yul.
-pub type Lexer<'a, S = &'a str> = logosky::Tokenizer<'a, Token<S>>;
+pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
 
 /// The char type used for the syntactic token.
-pub type TokenChar<'a, S> = <Token<S> as TokenT<'a>>::Char;
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<'a> as tokit::lexer::source::Slice<'a>>::Char;
 /// The error type for lexing based on syntactic [`Token`].
-pub type Error<'a, S> = error::Error<<Token<S> as TokenT<'a>>::Char, RecursionLimitExceeded>;
+pub type Error<'a, S> = error::Error<Char<'a, S>, RecursionLimitExceeded>;
 /// A collection of errors for syntactic [`Token`].
-pub type Errors<'a, S> = error::Errors<<Token<S> as TokenT<'a>>::Char, RecursionLimitExceeded>;
+pub type Errors<'a, S> = error::Errors<Char<'a, S>, RecursionLimitExceeded>;
+
 
 /// The syntactic token of Yul
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant, TryUnwrap, Unwrap)]
@@ -125,7 +128,7 @@ pub enum Token<S> {
 }
 
 /// The kind of Yul syntactic token.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 #[non_exhaustive]
 pub enum TokenKind {
   /// ":="
@@ -287,37 +290,27 @@ impl<S> Token<S> {
   }
 }
 
-impl<'a, S: 'a> TriviaToken<'a> for Token<S>
-where
-  Token<S>: logosky::Token<'a>,
-{
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_trivia(&self) -> bool {
-    false
-  }
-}
-
 impl<'a, S: 'a> PunctuatorToken<'a> for Token<S>
 where
-  Token<S>: logosky::Token<'a>,
+  Token<S>: tokit::Token<'a>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_brace_open(&self) -> bool {
+  fn is_open_brace(&self) -> bool {
     matches!(self, Self::LBrace)
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_brace_close(&self) -> bool {
+  fn is_close_brace(&self) -> bool {
     matches!(self, Self::RBrace)
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_paren_open(&self) -> bool {
+  fn is_open_paren(&self) -> bool {
     matches!(self, Self::LParen)
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn is_paren_close(&self) -> bool {
+  fn is_close_paren(&self) -> bool {
     matches!(self, Self::RParen)
   }
 
@@ -334,7 +327,7 @@ where
 
 impl<'a, S: 'a> OperatorToken<'a> for Token<S>
 where
-  Token<S>: logosky::Token<'a>,
+  Token<S>: tokit::Token<'a>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_colon_eq_assign(&self) -> bool {
@@ -349,7 +342,7 @@ where
 
 impl<'a, S: 'a> LitToken<'a> for Token<S>
 where
-  Token<S>: logosky::Token<'a>,
+  Token<S>: tokit::Token<'a>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_literal(&self) -> bool {
@@ -392,11 +385,9 @@ where
   }
 }
 
-impl<'a, S: 'a> IdentifierToken<'a> for Token<S>
+impl<'a, S: 'a> IdentifierToken<'a, S> for Token<S>
 where
-  Token<S>: logosky::Token<'a>,
-  <<Token<S> as logosky::Token<'a>>::Logos as logosky::Logos<'a>>::Source:
-    logosky::Source<Slice<'a> = S>,
+  Token<S>: tokit::Token<'a>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_identifier(&self) -> bool {
@@ -404,9 +395,7 @@ where
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn identifier(
-    &self,
-  ) -> Option<&<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>> {
+  fn identifier(&self) -> Option<&S> {
     match self {
       Self::Identifier(s) => Some(s),
       _ => None,
@@ -416,7 +405,7 @@ where
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn try_into_identifier(
     self,
-  ) -> Result<<<Self::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>, Self>
+  ) -> Result<S, Self>
   where
     Self: Sized,
   {
@@ -426,7 +415,7 @@ where
 
 impl<'a, S: 'a> KeywordToken<'a> for Token<S>
 where
-  Token<S>: logosky::Token<'a>,
+  Token<S>: tokit::Token<'a>,
   str: Equivalent<S>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]

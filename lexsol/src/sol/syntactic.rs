@@ -1,6 +1,6 @@
 use super::{Denomination, FixedBytes, Int, Lit, Uint};
 
-use derive_more::{IsVariant, TryUnwrap, Unwrap};
+use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 
 use token::token;
 
@@ -485,7 +485,7 @@ pub enum Token<S> {
 /// - diagnostics where the exact lexeme is tracked separately.
 ///
 /// See [`Token`] for the full syntactic token with payloads.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, Eq, Hash, IsVariant)]
 #[non_exhaustive]
 pub enum TokenKind {
   // ----- Keywords -----

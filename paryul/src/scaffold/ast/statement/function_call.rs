@@ -3,13 +3,13 @@ use core::marker::PhantomData;
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 #[cfg(feature = "evm")]
-use logosky::{
+use tokit::{
   Require,
   error::{UnexpectedEot, UnexpectedToken},
   utils::Spanned,
 };
 
-use logosky::{
+use tokit::{
   IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
   chumsky::{
     Parseable, Parser,
@@ -107,7 +107,7 @@ where
     Error: 'a,
     E: ParserExtra<'a, I, Error = Error> + 'a,
   {
-    logosky::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
+    tokit::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
       |ident: Spanned<S>| {
         let (span, ident) = ident.into_components();
         FunctionName::new(Ident::new(span, ident))

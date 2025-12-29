@@ -2,11 +2,11 @@ macro_rules! token {
   ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
-      use logosky::{
-        Lexable,
+      use tokit::{
+        lexer::Lexable,
         logos::Logos,
         utils::{
-          Span,
+          SimpleSpan,
           recursion_tracker::{RecursionLimitExceeded, RecursionLimiter, RecursionTracker},
         },
       };
@@ -32,21 +32,25 @@ macro_rules! token {
       type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 
       #[allow(warnings)]
-      impl<'b $(: $lt)?, $($lt: 'b)?> logosky::Token<'b> for syntactic::Token<$slice> {
+      impl<'b $(: $lt)?, $($lt: 'b)?> tokit::Token<'b> for syntactic::Token<$slice> {
         type Kind = syntactic::TokenKind;
-        type Char = $char;
-        type Logos = Token $(<$lt>)?;
+        type Error = Errors;
 
         #[cfg_attr(not(tarpaulin), inline(always))]
         fn kind(&self) -> Self::Kind {
           self.kind()
+        }
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn is_trivia(&self) -> bool {
+          false
         }
       }
 
       /// Token
       #[derive(Logos, Clone, Debug, PartialEq, Eq, Hash)]
       #[logos(
-        crate = logosky::logos,
+        crate = tokit::logos,
         source = $source,
         extras = RecursionLimiter,
         error(Errors, |l| Errors::from(handlers::$handlers::default_error(l)))
@@ -187,15 +191,15 @@ macro_rules! token {
         #[token("while")]
         While,
 
-        #[token("(", |lexer| lexer.increase_and_check().map_err(|e| Errors::from(Error::State(e))) )]
+        #[token("(", |lexer| lexer.increase())]
         LParen,
         #[token(")", |lexer| lexer.decrease())]
         RParen,
-        #[token("[", |lexer| lexer.increase_and_check().map_err(|e| Errors::from(Error::State(e))) )]
+        #[token("[", |lexer| lexer.increase())]
         LBracket,
         #[token("]", |lexer| lexer.decrease())]
         RBracket,
-        #[token("{", |lexer| lexer.increase_and_check().map_err(|e| Errors::from(Error::State(e))))]
+        #[token("{", |lexer| lexer.increase())]
         LBrace,
         #[token("}", |lexer| lexer.decrease())]
         RBrace,
@@ -421,7 +425,7 @@ macro_rules! token {
         // Error handling branches for double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)"#, |lexer| unclosed_double_quoted_regular_string_error(lexer.span().into()))]
         #[token("\"", |lexer| {
-          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<logosky::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -430,7 +434,7 @@ macro_rules! token {
         // Error handling branches for single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)", |lexer| unclosed_single_quoted_regular_string_error(lexer.span().into()))]
         #[token("\'", |lexer| {
-          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<logosky::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -440,7 +444,7 @@ macro_rules! token {
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex\"", |lexer| {
-          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -449,7 +453,7 @@ macro_rules! token {
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex'", |lexer| {
-          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<logosky::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
@@ -458,7 +462,7 @@ macro_rules! token {
         #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice()))]
         // Error handling branches for double quoted unicode string literal lexing
         #[token("unicode\"", |lexer| {
-            <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
+            <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
               .map(Into::into)
               .map_err(Errors::from_underlying)
         })]
@@ -466,7 +470,7 @@ macro_rules! token {
         #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice()))]
         // Error handling branches for single quoted unicode string literal lexing
         #[token("unicode\'", |lexer| {
-            <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedUnicodeStrLexer::<logosky::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
+            <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
               .map(Into::into)
               .map_err(Errors::from_underlying)
         })]
@@ -615,35 +619,35 @@ macro_rules! token {
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_regular_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
+      fn unclosed_double_quoted_regular_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
         Err(Errors::from(Error::String(
           crate::error::StringError::unclosed_double_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_regular_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
+      fn unclosed_single_quoted_regular_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
         Err(Errors::from(Error::String(
           crate::error::StringError::unclosed_single_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_hex_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
+      fn unclosed_double_quoted_hex_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_double_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_hex_string_error<S>(span: Span) -> Result<Lit<S>, Errors> {
+      fn unclosed_single_quoted_hex_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_single_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut logosky::logos::Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut tokit::logos::Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
         Err(Error::from(crate::error::sol::HexadecimalError::malformed(lexer.span().into())).into())
       }
     }

@@ -1,6 +1,6 @@
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
-use logosky::{
+use tokit::{
   chumsky::{
     delimited::DelimitedByBrace,
     token::recovery::{emit_error_until_token, emit_until_token},
@@ -388,7 +388,7 @@ impl<S> Statement<S> {
 //                   return Err(todo!());
 //                 }
 //                 Some(t) => {
-//                   use logosky::chumsky::delimited::DelimitedByParen;
+//                   use tokit::chumsky::delimited::DelimitedByParen;
 //                   // this may be a function call, let's the FunctionCall parser handle it.
 //                   todo!("delegate to function call parser")
 //                 }

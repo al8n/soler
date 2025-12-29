@@ -1,4 +1,4 @@
-use logosky::{error::ErrorNode, types::Keyword, utils::Span};
+use tokit::{error::ErrorNode, types::Keyword, utils::Span};
 
 use crate::{
   error::{AstLexerErrors, SemiIdentifierKnowledge},

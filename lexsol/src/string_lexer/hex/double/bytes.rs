@@ -1,7 +1,6 @@
-use logosky::{
-  Lexable, Logos, Source,
+use tokit::{
+  lexer::Lexable, logos::{Logos, Lexer, Source},
   error::UnexpectedLexeme,
-  logos::Lexer,
   utils::{Lexeme, PositionedChar, knowledge::LineTerminator},
 };
 
@@ -14,7 +13,7 @@ type HexStringError = crate::error::HexStringError<u8>;
 
 #[derive(Logos, Copy, Clone)]
 #[logos(
-  crate = logosky::logos,
+  crate = tokit::logos,
   extras = Option<StringToken>,
   source = [u8],
 )]

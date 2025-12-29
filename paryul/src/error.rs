@@ -14,7 +14,7 @@ use lexsol::{
   },
   yul::{lossless, syntactic},
 };
-use logosky::{
+use tokit::{
   Token,
   error::{
     IncompleteSyntax, Invalid, Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace,

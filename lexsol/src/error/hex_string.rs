@@ -1,9 +1,9 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use logosky::{
+use tokit::{
   error::{Unclosed, UnexpectedLexeme},
   utils::{
-    Lexeme, Message, PositionedChar, Span, human_display::DisplayHuman, knowledge::LineTerminator,
+    Lexeme, Message, PositionedChar, SimpleSpan, human_display::DisplayHuman, knowledge::LineTerminator,
   },
 };
 
@@ -35,7 +35,7 @@ pub enum HexStringError<Char = char> {
   ///
   /// e.g. `hex"fe__fe"` or `hex'fe__fe'`, which is invalid.
   #[from(skip)]
-  ConsecutiveUnderscores(Span),
+  ConsecutiveUnderscores(SimpleSpan),
 
   /// Unpaired hex found in hexadecimal string literal.
   ///
@@ -56,19 +56,19 @@ pub enum HexStringError<Char = char> {
 impl<Char> HexStringError<Char> {
   /// Create a new unclosed hex string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unclosed(span: Span, kind: LitStrDelimiterKind) -> Self {
+  pub const fn unclosed(span: SimpleSpan, kind: LitStrDelimiterKind) -> Self {
     Self::Unclosed(Unclosed::new(span, kind))
   }
 
   /// Create a new unclosed single quoted hex string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unclosed_single_quote(span: Span) -> Self {
+  pub const fn unclosed_single_quote(span: SimpleSpan) -> Self {
     Self::unclosed(span, LitStrDelimiterKind::Single)
   }
 
   /// Create a new unclosed double quoted hex string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unclosed_double_quote(span: Span) -> Self {
+  pub const fn unclosed_double_quote(span: SimpleSpan) -> Self {
     Self::unclosed(span, LitStrDelimiterKind::Double)
   }
 
@@ -86,13 +86,13 @@ impl<Char> HexStringError<Char> {
 
   /// Create a unsupported characters error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unsupported_characters(span: Span) -> Self {
+  pub const fn unsupported_characters(span: SimpleSpan) -> Self {
     Self::Unsupported(Lexeme::Range(span))
   }
 
   /// Create a leading underscores error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn leading_underscores(span: Span) -> Self {
+  pub const fn leading_underscores(span: SimpleSpan) -> Self {
     Self::LeadingUnderscore(Lexeme::Range(span))
   }
 
@@ -104,13 +104,13 @@ impl<Char> HexStringError<Char> {
 
   /// Create a consecutive underscores error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn consecutive_underscores(span: Span) -> Self {
+  pub const fn consecutive_underscores(span: SimpleSpan) -> Self {
     Self::ConsecutiveUnderscores(span)
   }
 
   /// Create a trailing underscores error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn trailing_underscores(span: Span) -> Self {
+  pub const fn trailing_underscores(span: SimpleSpan) -> Self {
     Self::TrailingUnderscore(Lexeme::Range(span))
   }
 

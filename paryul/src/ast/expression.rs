@@ -1,4 +1,4 @@
-use logosky::{
+use tokit::{
   chumsky::token::recovery::emit_error_until_token,
   error::{ErrorNode, Malformed},
   utils::{AsSpan, Span},

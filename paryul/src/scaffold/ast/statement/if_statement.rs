@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-use logosky::{
+use tokit::{
   KeywordToken, LogoStream, Logos, Source, Token,
   chumsky::{Parseable, Parser, extra::ParserExtra, token::expected_keyword},
   error::UnexpectedToken,

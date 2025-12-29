@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use logosky::{
+use tokit::{
   types::Ident,
   utils::{AsSpan, Span},
 };

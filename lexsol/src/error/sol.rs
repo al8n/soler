@@ -1,11 +1,11 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
-use logosky::{
+use tokit::{
   error::{
     DefaultContainer, FixedUnicodeEscapeError, HexEscapeError, IncompleteFixedUnicodeEscape,
     IncompleteHexEscape, Unclosed, UnexpectedEot, UnexpectedLexeme, UnknownLexeme,
   },
   utils::{
-    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, Span, Spanned,
+    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, SimpleSpan, Spanned,
     human_display::DisplayHuman, knowledge::LineTerminator,
   },
 };
@@ -86,19 +86,19 @@ where
 impl<Char> UnicodeStringError<Char> {
   /// Create a new unclosed string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unclosed(span: Span, delimiter: LitStrDelimiterKind) -> Self {
+  pub const fn unclosed(span: SimpleSpan, delimiter: LitStrDelimiterKind) -> Self {
     Self::Unclosed(Unclosed::new(span, delimiter))
   }
 
   /// Create a new unclosed single-quoted non-empty string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unclosed_single_quote(span: Span) -> Self {
+  pub const fn unclosed_single_quote(span: SimpleSpan) -> Self {
     Self::unclosed(span, LitStrDelimiterKind::Single)
   }
 
   /// Create a new unclosed double-quoted non-empty string literal error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unclosed_double_quote(span: Span) -> Self {
+  pub const fn unclosed_double_quote(span: SimpleSpan) -> Self {
     Self::unclosed(span, LitStrDelimiterKind::Double)
   }
 
@@ -110,7 +110,7 @@ impl<Char> UnicodeStringError<Char> {
 
   /// Create a unsupported escape character error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unsupported_escape_character(span: Span, char: PositionedChar<Char>) -> Self {
+  pub const fn unsupported_escape_character(span: SimpleSpan, char: PositionedChar<Char>) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::unsupported(
       EscapedLexeme::from_positioned_char(span, char),
     ))
@@ -118,7 +118,7 @@ impl<Char> UnicodeStringError<Char> {
 
   /// Create a incomplete hexadecimal escape sequence error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn incomplete_hex_escape_sequence(span: Span) -> Self {
+  pub const fn incomplete_hex_escape_sequence(span: SimpleSpan) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::Hexadecimal(
       HexEscapeError::Incomplete(IncompleteHexEscape::new(span)),
     ))
@@ -126,7 +126,7 @@ impl<Char> UnicodeStringError<Char> {
 
   /// Create a incomplete unicode escape sequence error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn incomplete_unicode_escape_sequence(span: Span) -> Self {
+  pub const fn incomplete_unicode_escape_sequence(span: SimpleSpan) -> Self {
     Self::EscapeSequenceError(EscapeSequenceError::Unicode(
       FixedUnicodeEscapeError::Incomplete(IncompleteFixedUnicodeEscape::new(span)),
     ))
@@ -134,7 +134,7 @@ impl<Char> UnicodeStringError<Char> {
 
   /// Create a other string literal error with the given message.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn other(span: Span, message: impl Into<Message>) -> Self {
+  pub fn other(span: SimpleSpan, message: impl Into<Message>) -> Self {
     Self::Other(Spanned::new(span, message.into()))
   }
 }
@@ -262,14 +262,14 @@ impl<Char, StateError> Error<Char, StateError> {
 
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unknown_lexeme(span: Span) -> Self {
+  pub const fn unknown_lexeme(span: SimpleSpan) -> Self {
     Self::Unknown(UnknownLexeme::new(Lexeme::Range(span), SOLIDITY(())))
   }
 
   /// Creates an unexpected end of input error.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unexpected_eoi(span: Span) -> Self {
-    Self::UnexpectedEndOfInput(UnexpectedEot::eot(span))
+  pub const fn unexpected_eoi(offset: usize) -> Self {
+    Self::UnexpectedEndOfInput(UnexpectedEot::eot(offset))
   }
 }
 

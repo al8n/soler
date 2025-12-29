@@ -1,4 +1,4 @@
-use logosky::{chumsky::delimited::DelimitedByBrace, error::ErrorNode};
+use tokit::{chumsky::delimited::DelimitedByBrace, error::ErrorNode};
 
 use crate::error::AstLexerErrors;
 

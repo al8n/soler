@@ -1,5 +1,5 @@
 use lexsol::types::punct::Comma;
-use logosky::{chumsky::separated::separated_by, error::ErrorNode, utils::Span};
+use tokit::{chumsky::separated::separated_by, error::ErrorNode, utils::Span};
 
 use crate::{
   error::{AstLexerErrors, SemiIdentifierKnowledge, TrailingComma},

@@ -2,7 +2,7 @@ macro_rules! punctuator {
   ($(($name:ident::$trait:ident::$fn:ident, $syntax_tree_display: literal, $punct:literal)),+$(,)?) => {
     paste::paste! {
       $(
-        logosky::punctuator! {
+        tokit::punctuator! {
           ($name, $syntax_tree_display, $punct)
         }
 
@@ -11,33 +11,33 @@ macro_rules! punctuator {
         //     const KIND: Self;
         //   }
 
-        //   impl<'a, I, T, Error> logosky::chumsky::Parseable<'a, I, T, Error> for $name
+        //   impl<'a, I, T, Error> tokit::chumsky::Parseable<'a, I, T, Error> for $name
         //   where
-        //     T: logosky::$trait<'a>,
+        //     T: tokit::$trait<'a>,
         //     T::Kind: [<$name TokenKind>],
-        //     Error: ::core::convert::From<logosky::error::UnexpectedToken<'a, T, T::Kind>> + ::core::convert::From<<T::Logos as logosky::Logos<'a>>::Error>,
+        //     Error: ::core::convert::From<tokit::error::UnexpectedToken<'a, T, T::Kind>> + ::core::convert::From<<T::Logos as tokit::Logos<'a>>::Error>,
         //   {
-        //     fn parser<E>() -> impl logosky::chumsky::Parser<'a, I, Self, E> + ::core::clone::Clone
+        //     fn parser<E>() -> impl tokit::chumsky::Parser<'a, I, Self, E> + ::core::clone::Clone
         //     where
         //       Self: ::core::marker::Sized + 'a,
-        //       I: logosky::chumsky::LogoStream<'a, T, Slice = <<T::Logos as logosky::Logos<'a>>::Source as logosky::Source>::Slice<'a>>,
-        //       T: logosky::Token<'a>,
+        //       I: tokit::chumsky::LogoStream<'a, T, Slice = <<T::Logos as tokit::Logos<'a>>::Source as tokit::Source>::Slice<'a>>,
+        //       T: tokit::Token<'a>,
         //       Error: 'a,
-        //       E: logosky::chumsky::extra::ParserExtra<'a, I, Error = Error> + 'a,
+        //       E: tokit::chumsky::extra::ParserExtra<'a, I, Error = Error> + 'a,
         //     {
-        //       use logosky::chumsky::prelude::*;
+        //       use tokit::chumsky::prelude::*;
 
-        //       any().try_map(|t: logosky::Lexed<'_, T>, span| {
+        //       any().try_map(|t: tokit::Lexed<'_, T>, span| {
         //         match t {
-        //           logosky::Lexed::Token(t) => {
-        //             if <T as logosky::$trait>::$fn(&t.data) {
+        //           tokit::Lexed::Token(t) => {
+        //             if <T as tokit::$trait>::$fn(&t.data) {
         //               ::core::result::Result::Ok(<$name>::new(span))
         //             } else {
-        //               let e = logosky::error::UnexpectedToken::expected_one_with_found(span, t.data, <T::Kind as [<$name TokenKind>]>::KIND);
+        //               let e = tokit::error::UnexpectedToken::expected_one_with_found(span, t.data, <T::Kind as [<$name TokenKind>]>::KIND);
         //               ::core::result::Result::Err(<Error as ::core::convert::From<_>>::from(e))
         //             }
         //           },
-        //           logosky::Lexed::Error(e) => {
+        //           tokit::Lexed::Error(e) => {
         //             ::core::result::Result::Err(<Error as ::core::convert::From<_>>::from(e))
         //           },
         //         }
