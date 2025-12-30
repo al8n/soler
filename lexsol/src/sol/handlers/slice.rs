@@ -5,26 +5,31 @@ use tokit::{
 };
 
 use crate::{
+  Lxr,
   error::sol::{DecimalError, Error, Errors, HexadecimalError},
-  sol::Lit,
+  sol::{Lit, Solidity},
 };
 
 #[cfg_attr(not(tarpaulin), inline(always))]
-pub(crate) fn default_error<'a, S, T, Extras>(lexer: &mut Lexer<'a, T>) -> Error<u8, Extras>
+pub(crate) fn default_error<'a, Kind, S, T, Extras>(
+  lexer: &mut Lexer<'a, T>,
+) -> Error<Kind, u8, Extras>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
+  Solidity<Kind>: Lxr,
 {
   crate::handlers::slice::default_error(lexer)
 }
 
 #[inline]
-fn leading_zero_error<'a, S, T, Extras>(lexer: &mut Lexer<'a, T>) -> Error<u8, Extras>
+fn leading_zero_error<'a, Kind, S, T, Extras>(lexer: &mut Lexer<'a, T>) -> Error<Kind, u8, Extras>
 where
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
   T: Logos<'a, Source = S>,
+  Solidity<Kind>: Lxr,
 {
   let slice = lexer.slice();
   let mut zeros = 0;
@@ -58,16 +63,16 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-fn handle_suffix<'a, S, T, Extras, E>(
+fn handle_suffix<'a, Kind, S, T, Extras, E>(
   lexer: &mut Lexer<'a, T>,
   from_slice: impl FnOnce(()) -> Lit,
   unexpected_suffix: impl FnOnce(Lexeme<u8>) -> E,
-) -> Result<Lit, Error<u8, Extras>>
+) -> Result<Lit, Error<Kind, u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
-  Error<u8, Extras>: From<E>,
+  Error<Kind, u8, Extras>: From<E>,
 {
   crate::handlers::slice::handle_number_suffix::<_, _, E>(lexer, unexpected_suffix)
     .map(|_| from_slice(()))
@@ -76,20 +81,21 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-pub(crate) fn handle_leading_zero_and_suffix<'a, S, T, Extras>(
+pub(crate) fn handle_leading_zero_and_suffix<'a, Kind, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit, Errors<u8, Extras>>
+) -> Result<Lit, Errors<Kind, u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
+  Solidity<Kind>: Lxr,
 {
   let span = lexer.span();
   let err = leading_zero_error(lexer);
-  let mut errs: Errors<u8, Extras> = Errors::default();
+  let mut errs: Errors<Kind, u8, Extras> = Errors::default();
   errs.push(err);
 
-  match crate::handlers::slice::handle_number_suffix::<_, _, DecimalError<u8>>(lexer, |l| {
+  match crate::handlers::slice::handle_number_suffix::<_, _, DecimalError<_, u8>>(lexer, |l| {
     DecimalError::unexpected_suffix(span.into(), l)
   }) {
     Ok(_) => Err(errs),
@@ -102,16 +108,17 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-pub(crate) fn handle_decimal_suffix<'a, S, T, Extras>(
+pub(crate) fn handle_decimal_suffix<'a, Kind, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit, Errors<u8, Extras>>
+) -> Result<Lit, Errors<Kind, u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
+  Solidity<Kind>: Lxr,
 {
   let span = lexer.span();
-  handle_suffix::<_, _, Extras, DecimalError<u8>>(lexer, Lit::lit_decimal, |l| {
+  handle_suffix::<Kind, _, _, Extras, DecimalError<_, u8>>(lexer, Lit::lit_decimal, |l| {
     DecimalError::unexpected_suffix(span.into(), l)
   })
   .map_err(Into::into)
@@ -119,17 +126,18 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-pub(crate) fn handle_malformed_decimal_suffix<'a, S, T, Extras>(
+pub(crate) fn handle_malformed_decimal_suffix<'a, Kind, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit, Errors<u8, Extras>>
+) -> Result<Lit, Errors<Kind, u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
+  Solidity<Kind>: Lxr,
 {
   let span: SimpleSpan = lexer.span().into();
   let malformed = Error::from(DecimalError::malformed(span));
-  match handle_suffix::<_, _, Extras, DecimalError<u8>>(lexer, Lit::lit_decimal, |l| {
+  match handle_suffix::<Kind, _, _, Extras, DecimalError<_, u8>>(lexer, Lit::lit_decimal, |l| {
     DecimalError::unexpected_suffix(span, l)
   }) {
     Ok(_) => Err(malformed.into()),
@@ -139,16 +147,17 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-pub(crate) fn handle_hexadecimal_suffix<'a, S, T, Extras>(
+pub(crate) fn handle_hexadecimal_suffix<'a, Kind, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit, Errors<u8, Extras>>
+) -> Result<Lit, Errors<Kind, u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
+  Solidity<Kind>: Lxr,
 {
   let span = lexer.span();
-  handle_suffix::<_, _, Extras, HexadecimalError<u8>>(lexer, Lit::lit_hexadecimal, |l| {
+  handle_suffix::<Kind, _, _, Extras, HexadecimalError<_, u8>>(lexer, Lit::lit_hexadecimal, |l| {
     HexadecimalError::unexpected_suffix(span.into(), l)
   })
   .map_err(Into::into)
@@ -156,18 +165,19 @@ where
 
 #[allow(clippy::result_large_err)]
 #[cfg_attr(not(tarpaulin), inline(always))]
-pub(crate) fn handle_hexadecimal_prefix_with_invalid_following<'a, S, T, Extras>(
+pub(crate) fn handle_hexadecimal_prefix_with_invalid_following<'a, Kind, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit, Errors<u8, Extras>>
+) -> Result<Lit, Errors<Kind, u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
   S::Slice<'a>: AsRef<[u8]>,
+  Solidity<Kind>: Lxr,
 {
   let remainder = lexer.remainder();
   let remainder_slice = remainder.as_ref();
   if remainder_slice.is_empty() {
-    let err = HexadecimalError::<u8>::incomplete(lexer.span().into());
+    let err = HexadecimalError::<_, u8>::incomplete(lexer.span().into());
     return Err(Error::from(err).into());
   }
 

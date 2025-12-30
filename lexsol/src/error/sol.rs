@@ -11,20 +11,23 @@ use tokit::{
 };
 
 use crate::{
+  Lxr,
   error::{EscapeSequenceError, HexStringError, StringError},
-  sol::sealed::SOLIDITY,
+  sol::Solidity,
   types::LitStrDelimiterKind,
 };
 
 /// The hexadecimal literal of solidity
-pub type HexadecimalLiteral = super::hex_number::HexadecimalLiteral<SOLIDITY>;
+pub type HexadecimalLiteral<Kind> = super::hex_number::HexadecimalLiteral<Solidity<Kind>>;
 /// The lexing error type for solidity hexadecimal literal
-pub type HexadecimalError<Char = char> = super::hex_number::HexadecimalError<SOLIDITY, Char>;
+pub type HexadecimalError<Kind, Char = char> =
+  super::hex_number::HexadecimalError<Solidity<Kind>, Char>;
 
 /// The decimal literal of solidity
-pub type DecimalLiteral = super::decimal_number::DecimalLiteral<SOLIDITY>;
+pub type DecimalLiteral<Kind> = super::decimal_number::DecimalLiteral<Solidity<Kind>>;
 /// The lexing error type for solidity decimal literal
-pub type DecimalError<Char = char> = super::decimal_number::DecimalError<SOLIDITY, Char>;
+pub type DecimalError<Kind, Char = char> =
+  super::decimal_number::DecimalError<Solidity<Kind>, Char>;
 
 /// The error type for unicode string literal lexing errors
 #[derive(Debug, PartialEq, Eq, Clone, From, IsVariant, Unwrap, TryUnwrap)]
@@ -144,11 +147,11 @@ impl<Char> UnicodeStringError<Char> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Error<Char = char, StateError = ()> {
+pub enum Error<Kind, Char = char, StateError = ()> {
   /// Hexadecimal literal error
-  Hexadecimal(HexadecimalError<Char>),
+  Hexadecimal(HexadecimalError<Kind, Char>),
   /// Decimal literal error
-  Decimal(DecimalError<Char>),
+  Decimal(DecimalError<Kind, Char>),
   /// Unicode string literal error
   UnicodeString(UnicodeStringError<Char>),
   /// String literal error
@@ -156,7 +159,7 @@ pub enum Error<Char = char, StateError = ()> {
   /// Hex string literal error
   HexString(HexStringError<Char>),
   /// Unknown lexeme encountered during lexing
-  Unknown(UnknownLexeme<Char, SOLIDITY>),
+  Unknown(UnknownLexeme<Char, Solidity<Kind>>),
   /// Unexpected end of input.
   UnexpectedEndOfInput(UnexpectedEot),
   /// Lexer state error
@@ -166,7 +169,7 @@ pub enum Error<Char = char, StateError = ()> {
   Other(Message),
 }
 
-impl<Char, StateError> Default for Error<Char, StateError> {
+impl<Kind, Char, StateError> Default for Error<Kind, Char, StateError> {
   #[inline]
   fn default() -> Self {
     #[allow(warnings)]
@@ -175,7 +178,7 @@ impl<Char, StateError> Default for Error<Char, StateError> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<Char, StateError> From<&'static str> for Error<Char, StateError> {
+impl<Kind, Char, StateError> From<&'static str> for Error<Kind, Char, StateError> {
   #[inline]
   fn from(s: &'static str) -> Self {
     Self::Other(Message::from_static(s))
@@ -183,17 +186,19 @@ impl<Char, StateError> From<&'static str> for Error<Char, StateError> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<Char, StateError> From<std::string::String> for Error<Char, StateError> {
+impl<Kind, Char, StateError> From<std::string::String> for Error<Kind, Char, StateError> {
   #[inline]
   fn from(s: String) -> Self {
     Self::Other(Message::from(s))
   }
 }
 
-impl<Char, StateError> core::fmt::Display for Error<Char, StateError>
+impl<Kind, Char, StateError> core::fmt::Display for Error<Kind, Char, StateError>
 where
   Char: DisplayHuman + CharLen,
   StateError: core::fmt::Display,
+  Kind: core::fmt::Debug,
+  Solidity<Kind>: Lxr,
 {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     match self {
@@ -224,11 +229,14 @@ where
   }
 }
 
-impl<Char, StateError> core::error::Error for Error<Char, StateError>
+impl<Kind, Char, StateError> core::error::Error for Error<Kind, Char, StateError>
 where
   Char: DisplayHuman + CharLen + core::fmt::Debug + 'static,
   StateError: core::error::Error + 'static,
+  Kind: core::fmt::Debug + 'static,
+  Solidity<Kind>: Lxr,
 {
+  #[inline]
   fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
     match self {
       Self::Hexadecimal(err) => Some(err),
@@ -244,7 +252,7 @@ where
   }
 }
 
-impl<Char, StateError> Error<Char, StateError> {
+impl<Kind, Char, StateError> Error<Kind, Char, StateError> {
   /// Creates an `Other` error with the given message.
   #[inline]
   pub fn other<M>(msg: M) -> Self
@@ -257,13 +265,13 @@ impl<Char, StateError> Error<Char, StateError> {
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_char(ch: Char, pos: usize) -> Self {
-    Self::Unknown(UnknownLexeme::from_char(pos, ch, SOLIDITY(())))
+    Self::Unknown(UnknownLexeme::from_char(pos, ch, Solidity::new()))
   }
 
   /// Creates an unknown lexeme error.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unknown_lexeme(span: SimpleSpan) -> Self {
-    Self::Unknown(UnknownLexeme::new(Lexeme::Range(span), SOLIDITY(())))
+    Self::Unknown(UnknownLexeme::new(Lexeme::Range(span), Solidity::new()))
   }
 
   /// Creates an unexpected end of input error.
@@ -276,15 +284,16 @@ impl<Char, StateError> Error<Char, StateError> {
 /// A collection of errors
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Errors<
+  Kind,
   Char = char,
   StateError = (),
-  Container = DefaultContainer<Error<Char, StateError>>,
+  Container = DefaultContainer<Error<Kind, Char, StateError>>,
 > {
   errors: Container,
-  _m: core::marker::PhantomData<Error<Char, StateError>>,
+  _m: core::marker::PhantomData<Error<Kind, Char, StateError>>,
 }
 
-impl<Char, StateError, Container> Default for Errors<Char, StateError, Container>
+impl<Kind, Char, StateError, Container> Default for Errors<Kind, Char, StateError, Container>
 where
   Container: Default,
 {
@@ -297,13 +306,13 @@ where
   }
 }
 
-impl<Char, StateError, Container> From<Error<Char, StateError>>
-  for Errors<Char, StateError, Container>
+impl<Kind, Char, StateError, Container> From<Error<Kind, Char, StateError>>
+  for Errors<Kind, Char, StateError, Container>
 where
-  Container: FromIterator<Error<Char, StateError>>,
+  Container: FromIterator<Error<Kind, Char, StateError>>,
 {
   #[inline]
-  fn from(error: Error<Char, StateError>) -> Self {
+  fn from(error: Error<Kind, Char, StateError>) -> Self {
     Self {
       errors: Container::from_iter([error]),
       _m: core::marker::PhantomData,
@@ -311,11 +320,11 @@ where
   }
 }
 
-impl<Char, StateError, Container> IntoIterator for Errors<Char, StateError, Container>
+impl<Kind, Char, StateError, Container> IntoIterator for Errors<Kind, Char, StateError, Container>
 where
-  Container: IntoIterator<Item = Error<Char, StateError>>,
+  Container: IntoIterator<Item = Error<Kind, Char, StateError>>,
 {
-  type Item = Error<Char, StateError>;
+  type Item = Error<Kind, Char, StateError>;
   type IntoIter = Container::IntoIter;
 
   #[inline]
@@ -324,7 +333,9 @@ where
   }
 }
 
-impl<Char, StateError, Container> core::ops::Deref for Errors<Char, StateError, Container> {
+impl<Kind, Char, StateError, Container> core::ops::Deref
+  for Errors<Kind, Char, StateError, Container>
+{
   type Target = Container;
 
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -333,47 +344,49 @@ impl<Char, StateError, Container> core::ops::Deref for Errors<Char, StateError, 
   }
 }
 
-impl<Char, StateError, Container> core::ops::DerefMut for Errors<Char, StateError, Container> {
+impl<Kind, Char, StateError, Container> core::ops::DerefMut
+  for Errors<Kind, Char, StateError, Container>
+{
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.errors
   }
 }
 
-impl<Char, StateError, Container> AsRef<[Error<Char, StateError>]>
-  for Errors<Char, StateError, Container>
+impl<Kind, Char, StateError, Container> AsRef<[Error<Kind, Char, StateError>]>
+  for Errors<Kind, Char, StateError, Container>
 where
-  Container: AsRef<[Error<Char, StateError>]>,
+  Container: AsRef<[Error<Kind, Char, StateError>]>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn as_ref(&self) -> &[Error<Char, StateError>] {
+  fn as_ref(&self) -> &[Error<Kind, Char, StateError>] {
     self.as_slice()
   }
 }
 
-impl<Char, StateError, Container> AsMut<[Error<Char, StateError>]>
-  for Errors<Char, StateError, Container>
+impl<Kind, Char, StateError, Container> AsMut<[Error<Kind, Char, StateError>]>
+  for Errors<Kind, Char, StateError, Container>
 where
-  Container: AsMut<[Error<Char, StateError>]>,
+  Container: AsMut<[Error<Kind, Char, StateError>]>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn as_mut(&mut self) -> &mut [Error<Char, StateError>] {
+  fn as_mut(&mut self) -> &mut [Error<Kind, Char, StateError>] {
     self.as_mut_slice()
   }
 }
 
-impl<Char, StateError, Container> FromIterator<Error<Char, StateError>>
-  for Errors<Char, StateError, Container>
+impl<Kind, Char, StateError, Container> FromIterator<Error<Kind, Char, StateError>>
+  for Errors<Kind, Char, StateError, Container>
 where
-  Container: FromIterator<Error<Char, StateError>>,
+  Container: FromIterator<Error<Kind, Char, StateError>>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn from_iter<I: IntoIterator<Item = Error<Char, StateError>>>(iter: I) -> Self {
+  fn from_iter<I: IntoIterator<Item = Error<Kind, Char, StateError>>>(iter: I) -> Self {
     Self::new(Container::from_iter(iter))
   }
 }
 
-impl<Char, StateError, Container> Errors<Char, StateError, Container> {
+impl<Kind, Char, StateError, Container> Errors<Kind, Char, StateError, Container> {
   /// Create a new error collection with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(errors: Container) -> Self {
@@ -387,7 +400,7 @@ impl<Char, StateError, Container> Errors<Char, StateError, Container> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn with_capacity(capacity: usize) -> Self
   where
-    Container: crate::utils::Container<Error<Char, StateError>>,
+    Container: crate::utils::Container<Error<Kind, Char, StateError>>,
   {
     Self::new(Container::with_capacity(capacity))
   }
@@ -412,24 +425,26 @@ impl<Char, StateError, Container> Errors<Char, StateError, Container> {
 
   /// Returns a slice of all errors in the collection.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn as_slice(&self) -> &[Error<Char, StateError>]
+  pub fn as_slice(&self) -> &[Error<Kind, Char, StateError>]
   where
-    Container: AsRef<[Error<Char, StateError>]>,
+    Container: AsRef<[Error<Kind, Char, StateError>]>,
   {
     self.errors().as_ref()
   }
 
   /// Returns a mutable slice of all errors in the collection.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn as_mut_slice(&mut self) -> &mut [Error<Char, StateError>]
+  pub fn as_mut_slice(&mut self) -> &mut [Error<Kind, Char, StateError>]
   where
-    Container: AsMut<[Error<Char, StateError>]>,
+    Container: AsMut<[Error<Kind, Char, StateError>]>,
   {
     self.errors_mut().as_mut()
   }
 }
 
-impl<Char, StateError, Container> crate::utils::Wrapper for Errors<Char, StateError, Container> {
+impl<Kind, Char, StateError, Container> crate::utils::Wrapper
+  for Errors<Kind, Char, StateError, Container>
+{
   type Underlying = Container;
 
   #[cfg_attr(not(tarpaulin), inline(always))]

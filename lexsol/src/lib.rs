@@ -26,9 +26,6 @@ pub mod utils;
 /// The types used in the lexer.
 pub mod types;
 
-/// The language definitions
-pub mod lang;
-
 mod string_lexer;
 
 mod handlers;
@@ -109,13 +106,6 @@ mod sealed {
     const NAME: &'static str;
     const HEX_NUMBER_PATTERN: &'static str;
     const DECIMAL_NUMBER_PATTERN: &'static str;
-  }
-
-  impl Sealed for super::sol::sealed::SOLIDITY {
-    const INIT: Self = super::sol::sealed::SOLIDITY(());
-    const NAME: &'static str = "solidity";
-    const DECIMAL_NUMBER_PATTERN: &'static str = r"0|[1-9](_?[0-9_])*";
-    const HEX_NUMBER_PATTERN: &'static str = r"0x[0-9a-fA-F_]+";
   }
 
   impl<T: Sealed> super::Lxr for T {}

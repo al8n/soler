@@ -1,7 +1,11 @@
-use super::{Denomination, FixedBytes, Int, Lit, Uint};
+use super::{Denomination, FixedBytes, Int, Lexsol, Lit, Uint};
+
+use crate::sol::Solidity;
+use crate::{SourceBridge, TokenBridge};
 
 use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 use tokit::utils::tracker::LimitExceeded;
+use tokit::{State, Token as TokenT, logos::Logos, utils::SimpleSpan};
 
 use token::token;
 
@@ -902,3 +906,250 @@ impl<S> Token<S> {
     }
   }
 }
+
+super::syntax_kind!(
+  /// The syntax kind for Solidity.
+  enum SyntaxKind {}
+);
+
+impl<'inp, S> tokit::Lexer<'inp> for Lexsol<'inp, S, Token<S::Slice<'inp>>>
+where
+  Token<S::Slice<'inp>>: TokenBridge<'inp, Kind = TokenKind>,
+  <Token<S::Slice<'inp>> as TokenT<'inp>>::Error: From<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Error>
+    + From<<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras as State>::Error>,
+  <Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos: Logos<'inp, Source = <S as SourceBridge<'inp>>::Logos>,
+  <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras: State,
+  S: SourceBridge<'inp>,
+{
+  type State = <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras;
+  type Source = S;
+  type Token = Token<S::Slice<'inp>>;
+  type Span = SimpleSpan;
+  type Offset = usize;
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn new(input: &'inp Self::Source) -> Self
+  where
+    Self::State: Default
+  {
+    let inner = tokit::logos::Lexer::new(input.to_logos_source());
+    Self { input, inner }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn with_state(input: &'inp Self::Source, state: Self::State) -> Self {
+    let inner = tokit::logos::Lexer::with_extras(input.to_logos_source(), state);
+    Self { input, inner }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn check(&self) -> Result<(), <Self::Token as tokit::Token<'inp>>::Error> {
+    self.inner.extras.check().map_err(Into::into)
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn state(&self) -> &Self::State {
+    &self.inner.extras
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn state_mut(&mut self) -> &mut Self::State {
+    &mut self.inner.extras
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn into_state(self) -> Self::State {
+    self.inner.extras
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn source(&self) -> &'inp Self::Source {
+    self.input
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn span(&self) -> Self::Span {
+    self.inner.span().into()
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn slice(&self) -> <Self::Source as tokit::Source<Self::Offset>>::Slice<'inp> {
+    let span = self.inner.span();
+    self
+      .input
+      .slice(&span.start..&span.end)
+      .expect("slice of the current lexer span should not be None")
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn lex(&mut self) -> Option<Result<Self::Token, <Self::Token as tokit::Token<'inp>>::Error>> {
+    match self.inner.next() {
+      Some(Ok(tok)) => match self.check() {
+        Ok(_) => Some(Ok(
+          match <Token<S::Slice<'inp>> as TokenBridge<'inp>>::kind(&tok) {
+            TokenKind::Abstract => Token::Abstract,
+            TokenKind::Address => Token::Address,
+            TokenKind::Anonymous => Token::Anonymous,
+            TokenKind::As => Token::As,
+            TokenKind::Assembly => Token::Assembly,
+            TokenKind::Bool => Token::Bool,
+            TokenKind::Break => Token::Break,
+            TokenKind::Bytes => Token::Bytes,
+            TokenKind::Calldata => Token::Calldata,
+            TokenKind::Catch => Token::Catch,
+            TokenKind::Constant => Token::Constant,
+            TokenKind::Constructor => Token::Constructor,
+            TokenKind::Continue => Token::Continue,
+            TokenKind::Contract => Token::Contract,
+            TokenKind::Delete => Token::Delete,
+            TokenKind::Do => Token::Do,
+            TokenKind::Else => Token::Else,
+            TokenKind::Emit => Token::Emit,
+            TokenKind::Enum => Token::Enum,
+            TokenKind::Event => Token::Event,
+            TokenKind::External => Token::External,
+            TokenKind::Fallback => Token::Fallback,
+            TokenKind::For => Token::For,
+            TokenKind::Function => Token::Function,
+            TokenKind::If => Token::If,
+            TokenKind::Immutable => Token::Immutable,
+            TokenKind::Import => Token::Import,
+            TokenKind::Indexed => Token::Indexed,
+            TokenKind::Interface => Token::Interface,
+            TokenKind::Internal => Token::Internal,
+            TokenKind::Is => Token::Is,
+            TokenKind::Library => Token::Library,
+            TokenKind::Mapping => Token::Mapping,
+            TokenKind::Memory => Token::Memory,
+            TokenKind::Modifier => Token::Modifier,
+            TokenKind::New => Token::New,
+            TokenKind::Override => Token::Override,
+            TokenKind::Payable => Token::Payable,
+            TokenKind::Private => Token::Private,
+            TokenKind::Public => Token::Public,
+            TokenKind::Pure => Token::Pure,
+            TokenKind::Pragma => Token::Pragma,
+            TokenKind::Receive => Token::Receive,
+            TokenKind::Return => Token::Return,
+            TokenKind::Returns => Token::Returns,
+            TokenKind::Storage => Token::Storage,
+            TokenKind::String => Token::String,
+            TokenKind::Struct => Token::Struct,
+            TokenKind::Try => Token::Try,
+            TokenKind::Type => Token::Type,
+            TokenKind::Unchecked => Token::Unchecked,
+            TokenKind::Using => Token::Using,
+            TokenKind::View => Token::View,
+            TokenKind::Virtual => Token::Virtual,
+            TokenKind::While => Token::While,
+            TokenKind::LParen => Token::LParen,
+            TokenKind::RParen => Token::RParen,
+            TokenKind::LBracket => Token::LBracket,
+            TokenKind::RBracket => Token::RBracket,
+            TokenKind::LBrace => Token::LBrace,
+            TokenKind::RBrace => Token::RBrace,
+            TokenKind::Colon => Token::Colon,
+            TokenKind::Semicolon => Token::Semicolon,
+            TokenKind::Dot => Token::Dot,
+            TokenKind::Question => Token::Question,
+            TokenKind::FatArrow => Token::FatArrow,
+            TokenKind::ThinArrow => Token::ThinArrow,
+            TokenKind::Assign => Token::Assign,
+            TokenKind::BitOrAssign => Token::BitOrAssign,
+            TokenKind::BitAndAssign => Token::BitAndAssign,
+            TokenKind::BitXorAssign => Token::BitXorAssign,
+            TokenKind::ShlAssign => Token::ShlAssign,
+            TokenKind::SarAssign => Token::SarAssign,
+            TokenKind::ShrAssign => Token::ShrAssign,
+            TokenKind::AddAssign => Token::AddAssign,
+            TokenKind::SubAssign => Token::SubAssign,
+            TokenKind::MulAssign => Token::MulAssign,
+            TokenKind::DivAssign => Token::DivAssign,
+            TokenKind::ModAssign => Token::ModAssign,
+            TokenKind::Comma => Token::Comma,
+            TokenKind::Or => Token::Or,
+            TokenKind::And => Token::And,
+            TokenKind::BitOr => Token::BitOr,
+            TokenKind::BitAnd => Token::BitAnd,
+            TokenKind::BitXor => Token::BitXor,
+            TokenKind::Shl => Token::Shl,
+            TokenKind::Sar => Token::Sar,
+            TokenKind::Shr => Token::Shr,
+            TokenKind::Add => Token::Add,
+            TokenKind::Sub => Token::Sub,
+            TokenKind::Mul => Token::Mul,
+            TokenKind::Div => Token::Div,
+            TokenKind::Mod => Token::Mod,
+            TokenKind::Exp => Token::Exp,
+            TokenKind::Eq => Token::Eq,
+            TokenKind::Ne => Token::Ne,
+            TokenKind::Lt => Token::Lt,
+            TokenKind::Le => Token::Le,
+            TokenKind::Gt => Token::Gt,
+            TokenKind::Ge => Token::Ge,
+            TokenKind::Not => Token::Not,
+            TokenKind::BitNot => Token::BitNot,
+            TokenKind::Inc => Token::Inc,
+            TokenKind::Dec => Token::Dec,
+            TokenKind::FixedBytes(fixed_bytes) => Token::FixedBytes(fixed_bytes),
+            TokenKind::Denomination(denomination) => Token::Denomination(denomination),
+            TokenKind::Int(int) => Token::Int(int),
+            TokenKind::Uint(uint) => Token::Uint(uint),
+            TokenKind::Fixed => Token::Fixed(self.slice()),
+            TokenKind::UFixed => Token::UFixed(self.slice()),
+            TokenKind::Lit(lit) => Token::Lit(lit.map(|_| self.slice())),
+            TokenKind::Identifier => Token::Identifier(self.slice()),
+            TokenKind::CarriageReturn => Token::CarriageReturn,
+            TokenKind::CarriageReturnNewLine => Token::CarriageReturnNewLine,
+            TokenKind::FormFeed => Token::FormFeed,
+            TokenKind::NewLine => Token::NewLine,
+            TokenKind::Space => Token::Space,
+            TokenKind::Tab => Token::Tab,
+            TokenKind::LineComment => Token::LineComment(self.slice()),
+            TokenKind::MultiLineComment => Token::MultiLineComment(self.slice()),
+          }
+        )),
+        Err(e) => Some(Err(e)),
+      },
+      Some(Err(err)) => Some(Err(err.into())),
+      None => None,
+    }
+  }
+
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn bump(&mut self, n: &Self::Offset) {
+    self.inner.bump(*n);
+  }
+}
+
+impl super::super::sealed::Sealed for Solidity<SyntaxKind> {
+  const INIT: Self = Solidity::new();
+  const NAME: &'static str = "solidity";
+  const DECIMAL_NUMBER_PATTERN: &'static str = r"0|[1-9](_?[0-9_])*";
+  const HEX_NUMBER_PATTERN: &'static str = r"0x[0-9a-fA-F_]+";
+}
+
+#[cfg(not(feature = "rowan"))]
+impl tokit::syntax::Language for Solidity<SyntaxKind> {
+  type SyntaxKind = SyntaxKind;
+}
+
+#[cfg(feature = "rowan")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rowan")))]
+const _: () = {
+  use rowan::{Language, SyntaxKind as RowanSyntaxKind};
+
+  impl Language for Solidity<SyntaxKind> {
+    type Kind = SyntaxKind;
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn kind_from_raw(raw: RowanSyntaxKind) -> Self::Kind {
+      unsafe { core::mem::transmute::<u16, Self::Kind>(raw.0) }
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn kind_to_raw(kind: Self::Kind) -> RowanSyntaxKind {
+      RowanSyntaxKind(kind as u16)
+    }
+  }
+};

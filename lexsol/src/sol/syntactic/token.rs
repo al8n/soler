@@ -27,8 +27,8 @@ macro_rules! token {
       type UnicodeStringError = error::UnicodeStringError<$char>;
       type StringError = crate::error::StringError<$char>;
       type HexStringError = crate::error::HexStringError<$char>;
-      type Error = error::Error<$char, RecursionLimitExceeded>;
-      type Errors = error::Errors<$char, RecursionLimitExceeded>;
+      type Error = error::Error<syntactic::SyntaxKind, $char, RecursionLimitExceeded>;
+      type Errors = error::Errors<syntactic::SyntaxKind, $char, RecursionLimitExceeded>;
       type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 
       #[allow(warnings)]
