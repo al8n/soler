@@ -1,5 +1,5 @@
 macro_rules! token {
-  ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
+  ($mod:ident $(<$lt:lifetime>)?($($utf8:literal,)? $slice: ty, $char: ty, $handlers:ident $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
       use tokit::{
@@ -23,8 +23,8 @@ macro_rules! token {
 
       type StringError = crate::error::StringError<$char>;
       type HexStringError = crate::error::HexStringError<$char>;
-      type Error = error::Error<$char, LimitExceeded>;
-      type Errors = error::Errors<$char, LimitExceeded>;
+      type Error = error::Error<lossless::SyntaxKind, $char, LimitExceeded>;
+      type Errors = error::Errors<lossless::SyntaxKind, $char, LimitExceeded>;
       type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 
       #[allow(warnings)]
@@ -98,7 +98,7 @@ macro_rules! token {
       #[derive(Logos, Clone, Debug)]
       #[logos(
         crate = tokit::logos,
-        source = $source,
+        $(utf8 = $utf8,)?
         extras = Limiter,
         error(Errors, |l| {
           let mut errs = Errors::from(handlers::$handlers::default_error(l));
@@ -176,7 +176,7 @@ macro_rules! token {
         #[token("for", |l| l.increase_token())]
         For,
 
-        #[regex(r"//[^\r\n]*", |lexer| increase_token_then_with(lexer, |_| ()))]
+        #[regex("//[^\r\n]*", |lexer| increase_token_then_with(lexer, |_| ()), allow_greedy = true)]
         LineComment,
 
         #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_then_with(lexer, |_| ()))]
@@ -188,76 +188,21 @@ macro_rules! token {
         #[token("true", |lexer| increase_token_then_with(lexer, |_| Lit::lit_true(())))]
         #[token("false", |lexer| increase_token_then_with(lexer, |_| Lit::lit_false(())))]
         #[regex("(?&decimal)", |lexer| {
-          match handlers::$handlers::handle_decimal_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(e) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(Errors::from(e)),
-                Err(state_err) => {
-                  let mut errs = Errors::from(e);
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_decimal_suffix(lexer)
         })]
         #[regex("[1-9][0-9_]+", |lexer| {
-          match handlers::$handlers::handle_malformed_decimal_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(e) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(Errors::from(e)),
-                Err(state_err) => {
-                  let mut errs = Errors::from(e);
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_malformed_decimal_suffix(lexer)
         })]
         #[regex("0(?&digit)+", |lexer| {
-          match handlers::$handlers::handle_leading_zero_and_suffix(lexer) {
-            Ok(_) => {
-              unreachable!("regex guarantees no valid literal can be formed with leading zeros")
-            },
-            Err(e) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(Errors::from(e)),
-                Err(state_err) => {
-                  let mut errs = Errors::from(e);
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_leading_zero_and_suffix(lexer)
         })]
 
         #[regex("(?&hexadecimal)", |lexer| {
-          match handlers::$handlers::handle_hexadecimal_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(e) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(Errors::from(e)),
-                Err(state_err) => {
-                  let mut errs = Errors::from(e);
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_hexadecimal_suffix(lexer)
         }, priority = 7)]
         #[token("0x", |lexer| {
           match handlers::$handlers::handle_hexadecimal_prefix_with_invalid_following(lexer) {
@@ -287,24 +232,10 @@ macro_rules! token {
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", unclosed_double_quoted_hex_string_error)]
         #[token("hex\"", |lexer| {
-          match <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          lexer.increase_token();
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
-          {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
         })]
 
         // Single quoted hex string literal lexing
@@ -314,24 +245,10 @@ macro_rules! token {
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", unclosed_single_quoted_hex_string_error)]
         #[token("hex'", |lexer| {
-          match <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          lexer.increase_token();
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
-          {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
         })]
 
         // Double quoted non-empty string literal lexing
@@ -342,24 +259,10 @@ macro_rules! token {
         #[token(r#""""#, empty_double_quoted_string_error)]
         #[regex(r#""(?&double_quoted_chars)"#, unclosed_double_quoted_regular_string_error)]
         #[token("\"", |lexer| {
-          match <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          lexer.increase_token();
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
-          {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
         })]
         // Single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)'", |lexer| {
@@ -369,24 +272,10 @@ macro_rules! token {
         #[token("''", empty_single_quoted_string_error)]
         #[regex(r"'(?&single_quoted_chars)", unclosed_single_quoted_regular_string_error)]
         #[token("\'", |lexer| {
-          match <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
+          lexer.increase_token();
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer))
             .map(Into::into)
             .map_err(Errors::from_underlying)
-          {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
         })]
         Lit(Lit),
 

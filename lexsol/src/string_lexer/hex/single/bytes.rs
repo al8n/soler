@@ -16,7 +16,7 @@ type HexStringError = crate::error::HexStringError<u8>;
 #[logos(
   crate = tokit::logos,
   extras = Option<StringToken>,
-  source = [u8],
+  utf8 = false
 )]
 #[logos(subpattern hex_digit = "[0-9a-fA-F]")]
 #[logos(subpattern hex_digit_pair = "(?&hex_digit){2}")]

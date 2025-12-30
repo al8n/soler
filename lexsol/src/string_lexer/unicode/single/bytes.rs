@@ -14,7 +14,7 @@ use crate::{
 #[logos(
   crate = tokit::logos,
   extras = Option<StringToken>,
-  source = [u8],
+  utf8 = false,
 )]
 #[logos(subpattern character = r"[^'\r\n\\]")]
 enum StringToken {
@@ -48,7 +48,7 @@ enum StringToken {
   #[regex(r#"\\u([0-9a-fA-F]{0,3})"#)]
   IncompleteUnicodeEscapeSequence,
 
-  #[regex("(?&character)*")]
+  #[regex("(?&character)+")]
   Continue,
 }
 

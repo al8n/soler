@@ -7,8 +7,17 @@ use tokit::{
 use crate::Lxr;
 
 /// The decimal literal of Yul
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash)]
 pub struct DecimalLiteral<L>(L);
+
+impl<L> core::fmt::Debug for DecimalLiteral<L>
+where
+  L: core::fmt::Debug,
+{
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    f.debug_tuple("DecimalLiteral").field(&self.0).finish()
+  }
+}
 
 impl<L: Lxr> DecimalLiteral<L> {
   /// The init constant for decimal literal

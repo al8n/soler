@@ -47,7 +47,7 @@ enum StringToken {
   #[regex(r#"\\u([0-9a-fA-F]{0,3})"#)]
   IncompleteUnicodeEscapeSequence,
 
-  #[regex("(?&character)*")]
+  #[regex("(?&character)+")]
   Continue,
 }
 

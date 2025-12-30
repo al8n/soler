@@ -1,5 +1,5 @@
 macro_rules! token {
-  ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
+  ($mod:ident $(<$lt:lifetime>)?($($utf8:literal,)?$slice: ty, $char: ty, $handlers:ident $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
       use tokit::{
@@ -47,11 +47,139 @@ macro_rules! token {
         }
       }
 
+      #[allow(warnings)]
+      impl<'b $(: $lt)?, $($lt: 'b)?> crate::TokenBridge<'b> for syntactic::Token<$slice> {
+        type Logos = Token;
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn kind(value: &Self::Logos) -> syntactic::TokenKind {
+          match value {
+            Token::Abstract => syntactic::TokenKind::Abstract,
+            Token::Address => syntactic::TokenKind::Address,
+            Token::Anonymous => syntactic::TokenKind::Anonymous,
+            Token::As => syntactic::TokenKind::As,
+            Token::Assembly => syntactic::TokenKind::Assembly,
+            Token::Bool => syntactic::TokenKind::Bool,
+            Token::Break => syntactic::TokenKind::Break,
+            Token::Bytes => syntactic::TokenKind::Bytes,
+            Token::Calldata => syntactic::TokenKind::Calldata,
+            Token::Catch => syntactic::TokenKind::Catch,
+            Token::Constant => syntactic::TokenKind::Constant,
+            Token::Constructor => syntactic::TokenKind::Constructor,
+            Token::Continue => syntactic::TokenKind::Continue,
+            Token::Contract => syntactic::TokenKind::Contract,
+            Token::Delete => syntactic::TokenKind::Delete,
+            Token::Do => syntactic::TokenKind::Do,
+            Token::Else => syntactic::TokenKind::Else,
+            Token::Emit => syntactic::TokenKind::Emit,
+            Token::Enum => syntactic::TokenKind::Enum,
+            Token::Event => syntactic::TokenKind::Event,
+            Token::External => syntactic::TokenKind::External,
+            Token::Fallback => syntactic::TokenKind::Fallback,
+            Token::For => syntactic::TokenKind::For,
+            Token::Function => syntactic::TokenKind::Function,
+            Token::If => syntactic::TokenKind::If,
+            Token::Immutable => syntactic::TokenKind::Immutable,
+            Token::Import => syntactic::TokenKind::Import,
+            Token::Indexed => syntactic::TokenKind::Indexed,
+            Token::Interface => syntactic::TokenKind::Interface,
+            Token::Internal => syntactic::TokenKind::Internal,
+            Token::Is => syntactic::TokenKind::Is,
+            Token::Library => syntactic::TokenKind::Library,
+            Token::Mapping => syntactic::TokenKind::Mapping,
+            Token::Memory => syntactic::TokenKind::Memory,
+            Token::Modifier => syntactic::TokenKind::Modifier,
+            Token::New => syntactic::TokenKind::New,
+            Token::Override => syntactic::TokenKind::Override,
+            Token::Payable => syntactic::TokenKind::Payable,
+            Token::Private => syntactic::TokenKind::Private,
+            Token::Public => syntactic::TokenKind::Public,
+            Token::Pure => syntactic::TokenKind::Pure,
+            Token::Pragma => syntactic::TokenKind::Pragma,
+            Token::Receive => syntactic::TokenKind::Receive,
+            Token::Return => syntactic::TokenKind::Return,
+            Token::Returns => syntactic::TokenKind::Returns,
+            Token::Storage => syntactic::TokenKind::Storage,
+            Token::String => syntactic::TokenKind::String,
+            Token::Struct => syntactic::TokenKind::Struct,
+            Token::Try => syntactic::TokenKind::Try,
+            Token::Type => syntactic::TokenKind::Type,
+            Token::Unchecked => syntactic::TokenKind::Unchecked,
+            Token::Using => syntactic::TokenKind::Using,
+            Token::View => syntactic::TokenKind::View,
+            Token::Virtual => syntactic::TokenKind::Virtual,
+            Token::While => syntactic::TokenKind::While,
+            Token::LParen => syntactic::TokenKind::LParen,
+            Token::RParen => syntactic::TokenKind::RParen,
+            Token::LBracket => syntactic::TokenKind::LBracket,
+            Token::RBracket => syntactic::TokenKind::RBracket,
+            Token::LBrace => syntactic::TokenKind::LBrace,
+            Token::RBrace => syntactic::TokenKind::RBrace,
+            Token::Colon => syntactic::TokenKind::Colon,
+            Token::Semicolon => syntactic::TokenKind::Semicolon,
+            Token::Dot => syntactic::TokenKind::Dot,
+            Token::Question => syntactic::TokenKind::Question,
+            Token::FatArrow => syntactic::TokenKind::FatArrow,
+            Token::ThinArrow => syntactic::TokenKind::ThinArrow,
+            Token::Assign => syntactic::TokenKind::Assign,
+
+            Token::BitOrAssign => syntactic::TokenKind::BitOrAssign,
+            Token::BitAndAssign => syntactic::TokenKind::BitAndAssign,
+            Token::BitXorAssign => syntactic::TokenKind::BitXorAssign,
+            Token::ShlAssign => syntactic::TokenKind::ShlAssign,
+            Token::SarAssign => syntactic::TokenKind::SarAssign,
+            Token::ShrAssign => syntactic::TokenKind::ShrAssign,
+            Token::AddAssign => syntactic::TokenKind::AddAssign,
+            Token::SubAssign => syntactic::TokenKind::SubAssign,
+            Token::MulAssign => syntactic::TokenKind::MulAssign,
+            Token::DivAssign => syntactic::TokenKind::DivAssign,
+            Token::ModAssign => syntactic::TokenKind::ModAssign,
+            Token::Comma => syntactic::TokenKind::Comma,
+
+            Token::Or => syntactic::TokenKind::Or,
+            Token::And => syntactic::TokenKind::And,
+            Token::BitOr => syntactic::TokenKind::BitOr,
+            Token::BitAnd => syntactic::TokenKind::BitAnd,
+            Token::BitXor => syntactic::TokenKind::BitXor,
+            Token::Shl => syntactic::TokenKind::Shl,
+            Token::Sar => syntactic::TokenKind::Sar,
+            Token::Shr => syntactic::TokenKind::Shr,
+            Token::Add => syntactic::TokenKind::Add,
+            Token::Sub => syntactic::TokenKind::Sub,
+            Token::Mul => syntactic::TokenKind::Mul,
+            Token::Div => syntactic::TokenKind::Div,
+            Token::Mod => syntactic::TokenKind::Mod,
+            Token::Exp => syntactic::TokenKind::Exp,
+
+            Token::Eq => syntactic::TokenKind::Eq,
+            Token::Ne => syntactic::TokenKind::Ne,
+            Token::Lt => syntactic::TokenKind::Lt,
+            Token::Le => syntactic::TokenKind::Le,
+            Token::Gt => syntactic::TokenKind::Gt,
+            Token::Ge => syntactic::TokenKind::Ge,
+
+            Token::Not => syntactic::TokenKind::Not,
+            Token::BitNot => syntactic::TokenKind::BitNot,
+            Token::Inc => syntactic::TokenKind::Inc,
+            Token::Dec => syntactic::TokenKind::Dec,
+
+            Token::FixedBytes(val) => syntactic::TokenKind::FixedBytes(*val),
+            Token::Denomination(val) => syntactic::TokenKind::Denomination(*val),
+            Token::Int(val) => syntactic::TokenKind::Int(*val),
+            Token::Uint(val) => syntactic::TokenKind::Uint(*val),
+            Token::Fixed => syntactic::TokenKind::Fixed,
+            Token::UFixed => syntactic::TokenKind::UFixed,
+            Token::Lit(val) => syntactic::TokenKind::Lit(*val),
+            Token::Identifier => syntactic::TokenKind::Identifier,
+          }
+        }
+      }
+
       /// Token
       #[derive(Logos, Clone, Debug, PartialEq, Eq, Hash)]
       #[logos(
         crate = tokit::logos,
-        source = $source,
+        $(utf8 = $utf8,)?
         extras = RecursionLimiter,
         error(Errors, |l| Errors::from(handlers::$handlers::default_error(l)))
       )]
@@ -79,7 +207,7 @@ macro_rules! token {
       #[logos(subpattern dec_int   = r"(?&dec_digit)(?:_?(?&dec_digit))*")]
       // exponent: e or E, optional +/-, then digits-with-underscores
       #[logos(subpattern dec_exp   = r"[eE][+-]?(?&dec_int)")]
-      pub enum Token $(<$lt>)? {
+      pub enum Token {
         #[token("abstract")]
         Abstract,
         #[token("address")]
@@ -414,14 +542,14 @@ macro_rules! token {
         UFixed,
 
         // ==================================== Boolean literals ====================================
-        #[token("true", |lexer| Lit::lit_true(lexer.slice()))]
-        #[token("false", |lexer| Lit::lit_false(lexer.slice()))]
+        #[token("true", |_| Lit::lit_true(()))]
+        #[token("false", |_| Lit::lit_false(()))]
         // ==================================== Empty quoted string literals ====================================
-        #[token("\"\"", |lexer| Lit::lit_empty_double_quoted_string(lexer.slice()))]
-        #[token("''", |lexer| Lit::lit_empty_single_quoted_string(lexer.slice()))]
+        #[token("\"\"", |_| Lit::lit_empty_double_quoted_string(()))]
+        #[token("''", |_| Lit::lit_empty_single_quoted_string(()))]
         // ==================================== Regular string literals ====================================
         // Double quoted non-empty string literal lexing
-        #[regex(r#""(?&double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice()))]
+        #[regex(r#""(?&double_quoted_chars)""#, |_| Lit::lit_double_quoted_regular_string(()))]
         // Error handling branches for double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)"#, |lexer| unclosed_double_quoted_regular_string_error(lexer.span().into()))]
         #[token("\"", |lexer| {
@@ -430,7 +558,7 @@ macro_rules! token {
             .map_err(Errors::from_underlying)
         })]
         // Single quoted non-empty string literal lexing
-        #[regex(r"'(?&single_quoted_chars)'", |lexer| Lit::lit_single_quoted_regular_string(lexer.slice()))]
+        #[regex(r"'(?&single_quoted_chars)'", |_| Lit::lit_single_quoted_regular_string(()))]
         // Error handling branches for single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)", |lexer| unclosed_single_quoted_regular_string_error(lexer.span().into()))]
         #[token("\'", |lexer| {
@@ -440,15 +568,16 @@ macro_rules! token {
         })]
         // ==================================== Hex string literals ====================================
         // Double quoted hex string literal lexing
-        #[regex("hex\"(?&hex_string_content)\"", |lexer| Lit::lit_double_quoted_hex_string(lexer.slice()))]
+        #[regex("hex\"(?&hex_string_content)\"", |_| Lit::lit_double_quoted_hex_string(()))]
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", |lexer| unclosed_double_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex\"", |lexer| {
-          <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer))
+            .map(Into::into)
             .map_err(Errors::from_underlying)
         })]
         // Single quoted hex string literal lexing
-        #[regex("hex'(?&hex_string_content)'", |lexer| Lit::lit_single_quoted_hex_string(lexer.slice()))]
+        #[regex("hex'(?&hex_string_content)'", |_| Lit::lit_single_quoted_hex_string(()))]
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", |lexer| unclosed_single_quoted_hex_string_error(lexer.span().into()))]
         #[token("hex'", |lexer| {
@@ -458,7 +587,7 @@ macro_rules! token {
         })]
         // ==================================== Unicode string literals ====================================
         // Double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice()))]
+        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |_| Lit::lit_double_quoted_unicode_string(()))]
         // Error handling branches for double quoted unicode string literal lexing
         #[token("unicode\"", |lexer| {
             <LitUnicodeStr as Lexable<_, UnderlyingErrorContainer>>::lex(DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
@@ -466,7 +595,7 @@ macro_rules! token {
               .map_err(Errors::from_underlying)
         })]
         // Single quoted unicode string literal lexing
-        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice()))]
+        #[regex("unicode'(?&unicode_single_quoted_chars)'", |_| Lit::lit_single_quoted_unicode_string(()))]
         // Error handling branches for single quoted unicode string literal lexing
         #[token("unicode\'", |lexer| {
             <LitUnicodeStr as Lexable<_, UnderlyingErrorContainer>>::lex(SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer))
@@ -489,164 +618,36 @@ macro_rules! token {
         Identifier,
       }
 
-      impl$(<$lt>)? From<Token $(<$lt>)?> for syntactic::Token<$slice> {
-        #[cfg_attr(not(tarpaulin), inline(always))]
-        fn from(value: Token $(<$lt>)?) -> Self {
-          match value {
-            Token::Abstract => Self::Abstract,
-            Token::Address => Self::Address,
-            Token::Anonymous => Self::Anonymous,
-            Token::As => Self::As,
-            Token::Assembly => Self::Assembly,
-            Token::Bool => Self::Bool,
-            Token::Break => Self::Break,
-            Token::Bytes => Self::Bytes,
-            Token::Calldata => Self::Calldata,
-            Token::Catch => Self::Catch,
-            Token::Constant => Self::Constant,
-            Token::Constructor => Self::Constructor,
-            Token::Continue => Self::Continue,
-            Token::Contract => Self::Contract,
-            Token::Delete => Self::Delete,
-            Token::Do => Self::Do,
-            Token::Else => Self::Else,
-            Token::Emit => Self::Emit,
-            Token::Enum => Self::Enum,
-            Token::Event => Self::Event,
-            Token::External => Self::External,
-            Token::Fallback => Self::Fallback,
-            Token::For => Self::For,
-            Token::Function => Self::Function,
-            Token::If => Self::If,
-            Token::Immutable => Self::Immutable,
-            Token::Import => Self::Import,
-            Token::Indexed => Self::Indexed,
-            Token::Interface => Self::Interface,
-            Token::Internal => Self::Internal,
-            Token::Is => Self::Is,
-            Token::Library => Self::Library,
-            Token::Mapping => Self::Mapping,
-            Token::Memory => Self::Memory,
-            Token::Modifier => Self::Modifier,
-            Token::New => Self::New,
-            Token::Override => Self::Override,
-            Token::Payable => Self::Payable,
-            Token::Private => Self::Private,
-            Token::Public => Self::Public,
-            Token::Pure => Self::Pure,
-            Token::Pragma => Self::Pragma,
-            Token::Receive => Self::Receive,
-            Token::Return => Self::Return,
-            Token::Returns => Self::Returns,
-            Token::Storage => Self::Storage,
-            Token::String => Self::String,
-            Token::Struct => Self::Struct,
-            Token::Try => Self::Try,
-            Token::Type => Self::Type,
-            Token::Unchecked => Self::Unchecked,
-            Token::Using => Self::Using,
-            Token::View => Self::View,
-            Token::Virtual => Self::Virtual,
-            Token::While => Self::While,
-
-            Token::LParen => Self::LParen,
-            Token::RParen => Self::RParen,
-            Token::LBracket => Self::LBracket,
-            Token::RBracket => Self::RBracket,
-            Token::LBrace => Self::LBrace,
-            Token::RBrace => Self::RBrace,
-            Token::Colon => Self::Colon,
-            Token::Semicolon => Self::Semicolon,
-            Token::Dot => Self::Dot,
-            Token::Question => Self::Question,
-            Token::FatArrow => Self::FatArrow,
-            Token::ThinArrow => Self::ThinArrow,
-            Token::Assign => Self::Assign,
-
-            Token::BitOrAssign => Self::BitOrAssign,
-            Token::BitAndAssign => Self::BitAndAssign,
-            Token::BitXorAssign => Self::BitXorAssign,
-            Token::ShlAssign => Self::ShlAssign,
-            Token::SarAssign => Self::SarAssign,
-            Token::ShrAssign => Self::ShrAssign,
-            Token::AddAssign => Self::AddAssign,
-            Token::SubAssign => Self::SubAssign,
-            Token::MulAssign => Self::MulAssign,
-            Token::DivAssign => Self::DivAssign,
-            Token::ModAssign => Self::ModAssign,
-
-            Token::Comma => Self::Comma,
-
-            Token::Or => Self::Or,
-            Token::And => Self::And,
-            Token::BitOr => Self::BitOr,
-            Token::BitAnd => Self::BitAnd,
-            Token::BitXor => Self::BitXor,
-            Token::Shl => Self::Shl,
-            Token::Sar => Self::Sar,
-            Token::Shr => Self::Shr,
-
-            Token::Add => Self::Add,
-            Token::Sub => Self::Sub,
-            Token::Mul => Self::Mul,
-            Token::Div => Self::Div,
-            Token::Mod => Self::Mod,
-            Token::Exp => Self::Exp,
-
-            Token::Eq => Self::Eq,
-            Token::Ne => Self::Ne,
-            Token::Lt => Self::Lt,
-            Token::Le => Self::Le,
-            Token::Gt => Self::Gt,
-            Token::Ge => Self::Ge,
-
-            Token::Not => Self::Not,
-            Token::BitNot => Self::BitNot,
-            Token::Inc => Self::Inc,
-            Token::Dec => Self::Dec,
-
-            Token::FixedBytes(val) => Self::FixedBytes(val),
-            Token::Denomination(val) => Self::Denomination(val),
-            Token::Int(val) => Self::Int(val),
-            Token::Uint(val) => Self::Uint(val),
-            Token::Fixed(val) => Self::Fixed(val),
-            Token::UFixed(val) => Self::UFixed(val),
-            Token::Lit(val) => Self::Lit(val),
-            Token::Identifier(val) => Self::Identifier(val),
-          }
-        }
-      }
-
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_regular_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_double_quoted_regular_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::String(
           crate::error::StringError::unclosed_double_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_regular_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_single_quoted_regular_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::String(
           crate::error::StringError::unclosed_single_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_double_quoted_hex_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_double_quoted_hex_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_double_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn unclosed_single_quoted_hex_string_error<S>(span: SimpleSpan) -> Result<Lit<S>, Errors> {
+      fn unclosed_single_quoted_hex_string_error(span: SimpleSpan) -> Result<Lit, Errors> {
         Err(Errors::from(Error::HexString(
           crate::error::HexStringError::unclosed_single_quote(span),
         )))
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
-      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut tokit::logos::Lexer<'b, Token $(<$lt>)? >) -> Result<Lit<$slice>, Errors> {
+      fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?> (lexer: &mut tokit::logos::Lexer<'b,  Token>) -> Result<Lit, Errors> {
         Err(Error::from(crate::error::sol::HexadecimalError::malformed(lexer.span().into())).into())
       }
     }

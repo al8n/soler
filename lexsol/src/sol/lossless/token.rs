@@ -1,5 +1,5 @@
 macro_rules! token {
-  ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
+  ($mod:ident $(<$lt:lifetime>)?($($utf8:literal,)? $slice: ty, $char: ty, $handlers:ident $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
       use tokit::{
@@ -55,11 +55,148 @@ macro_rules! token {
         }
       }
 
+      #[allow(warnings)]
+      impl<'b $(: $lt)?, $($lt: 'b)?> crate::TokenBridge<'b> for lossless::Token<$slice> {
+        type Logos = Token;
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn kind(value: &Self::Logos) -> lossless::TokenKind {
+          match value {
+            Token::Abstract => lossless::TokenKind::Abstract,
+            Token::Address => lossless::TokenKind::Address,
+            Token::Anonymous => lossless::TokenKind::Anonymous,
+            Token::As => lossless::TokenKind::As,
+            Token::Assembly => lossless::TokenKind::Assembly,
+            Token::Bool => lossless::TokenKind::Bool,
+            Token::Break => lossless::TokenKind::Break,
+            Token::Bytes => lossless::TokenKind::Bytes,
+            Token::Calldata => lossless::TokenKind::Calldata,
+            Token::Catch => lossless::TokenKind::Catch,
+            Token::Constant => lossless::TokenKind::Constant,
+            Token::Constructor => lossless::TokenKind::Constructor,
+            Token::Continue => lossless::TokenKind::Continue,
+            Token::Contract => lossless::TokenKind::Contract,
+            Token::Delete => lossless::TokenKind::Delete,
+            Token::Do => lossless::TokenKind::Do,
+            Token::Else => lossless::TokenKind::Else,
+            Token::Emit => lossless::TokenKind::Emit,
+            Token::Enum => lossless::TokenKind::Enum,
+            Token::Event => lossless::TokenKind::Event,
+            Token::External => lossless::TokenKind::External,
+            Token::Fallback => lossless::TokenKind::Fallback,
+            Token::For => lossless::TokenKind::For,
+            Token::Function => lossless::TokenKind::Function,
+            Token::If => lossless::TokenKind::If,
+            Token::Immutable => lossless::TokenKind::Immutable,
+            Token::Import => lossless::TokenKind::Import,
+            Token::Indexed => lossless::TokenKind::Indexed,
+            Token::Interface => lossless::TokenKind::Interface,
+            Token::Internal => lossless::TokenKind::Internal,
+            Token::Is => lossless::TokenKind::Is,
+            Token::Library => lossless::TokenKind::Library,
+            Token::Mapping => lossless::TokenKind::Mapping,
+            Token::Memory => lossless::TokenKind::Memory,
+            Token::Modifier => lossless::TokenKind::Modifier,
+            Token::New => lossless::TokenKind::New,
+            Token::Override => lossless::TokenKind::Override,
+            Token::Payable => lossless::TokenKind::Payable,
+            Token::Private => lossless::TokenKind::Private,
+            Token::Public => lossless::TokenKind::Public,
+            Token::Pure => lossless::TokenKind::Pure,
+            Token::Pragma => lossless::TokenKind::Pragma,
+            Token::Receive => lossless::TokenKind::Receive,
+            Token::Return => lossless::TokenKind::Return,
+            Token::Returns => lossless::TokenKind::Returns,
+            Token::Storage => lossless::TokenKind::Storage,
+            Token::String => lossless::TokenKind::String,
+            Token::Struct => lossless::TokenKind::Struct,
+            Token::Try => lossless::TokenKind::Try,
+            Token::Type => lossless::TokenKind::Type,
+            Token::Unchecked => lossless::TokenKind::Unchecked,
+            Token::Using => lossless::TokenKind::Using,
+            Token::View => lossless::TokenKind::View,
+            Token::Virtual => lossless::TokenKind::Virtual,
+            Token::While => lossless::TokenKind::While,
+            Token::LParen => lossless::TokenKind::LParen,
+            Token::RParen => lossless::TokenKind::RParen,
+            Token::LBracket => lossless::TokenKind::LBracket,
+            Token::RBracket => lossless::TokenKind::RBracket,
+            Token::LBrace => lossless::TokenKind::LBrace,
+            Token::RBrace => lossless::TokenKind::RBrace,
+            Token::Colon => lossless::TokenKind::Colon,
+            Token::Semicolon => lossless::TokenKind::Semicolon,
+            Token::Dot => lossless::TokenKind::Dot,
+            Token::Question => lossless::TokenKind::Question,
+            Token::FatArrow => lossless::TokenKind::FatArrow,
+            Token::ThinArrow => lossless::TokenKind::ThinArrow,
+            Token::Assign => lossless::TokenKind::Assign,
+
+            Token::BitOrAssign => lossless::TokenKind::BitOrAssign,
+            Token::BitAndAssign => lossless::TokenKind::BitAndAssign,
+            Token::BitXorAssign => lossless::TokenKind::BitXorAssign,
+            Token::ShlAssign => lossless::TokenKind::ShlAssign,
+            Token::SarAssign => lossless::TokenKind::SarAssign,
+            Token::ShrAssign => lossless::TokenKind::ShrAssign,
+            Token::AddAssign => lossless::TokenKind::AddAssign,
+            Token::SubAssign => lossless::TokenKind::SubAssign,
+            Token::MulAssign => lossless::TokenKind::MulAssign,
+            Token::DivAssign => lossless::TokenKind::DivAssign,
+            Token::ModAssign => lossless::TokenKind::ModAssign,
+            Token::Comma => lossless::TokenKind::Comma,
+
+            Token::Or => lossless::TokenKind::Or,
+            Token::And => lossless::TokenKind::And,
+            Token::BitOr => lossless::TokenKind::BitOr,
+            Token::BitAnd => lossless::TokenKind::BitAnd,
+            Token::BitXor => lossless::TokenKind::BitXor,
+            Token::Shl => lossless::TokenKind::Shl,
+            Token::Sar => lossless::TokenKind::Sar,
+            Token::Shr => lossless::TokenKind::Shr,
+            Token::Add => lossless::TokenKind::Add,
+            Token::Sub => lossless::TokenKind::Sub,
+            Token::Mul => lossless::TokenKind::Mul,
+            Token::Div => lossless::TokenKind::Div,
+            Token::Mod => lossless::TokenKind::Mod,
+            Token::Exp => lossless::TokenKind::Exp,
+
+            Token::Eq => lossless::TokenKind::Eq,
+            Token::Ne => lossless::TokenKind::Ne,
+            Token::Lt => lossless::TokenKind::Lt,
+            Token::Le => lossless::TokenKind::Le,
+            Token::Gt => lossless::TokenKind::Gt,
+            Token::Ge => lossless::TokenKind::Ge,
+
+            Token::Not => lossless::TokenKind::Not,
+            Token::BitNot => lossless::TokenKind::BitNot,
+            Token::Inc => lossless::TokenKind::Inc,
+            Token::Dec => lossless::TokenKind::Dec,
+
+            Token::FixedBytes(val) => lossless::TokenKind::FixedBytes(*val),
+            Token::Denomination(val) => lossless::TokenKind::Denomination(*val),
+            Token::Int(val) => lossless::TokenKind::Int(*val),
+            Token::Uint(val) => lossless::TokenKind::Uint(*val),
+            Token::Fixed => lossless::TokenKind::Fixed,
+            Token::UFixed => lossless::TokenKind::UFixed,
+            Token::Lit(val) => lossless::TokenKind::Lit(*val),
+            Token::Identifier => lossless::TokenKind::Identifier,
+
+            Token::Space => lossless::TokenKind::Space,
+            Token::Tab => lossless::TokenKind::Tab,
+            Token::NewLine => lossless::TokenKind::NewLine,
+            Token::CarriageReturn => lossless::TokenKind::CarriageReturn,
+            Token::CarriageReturnNewLine => lossless::TokenKind::CarriageReturnNewLine,
+            Token::FormFeed => lossless::TokenKind::FormFeed,
+            Token::LineComment => lossless::TokenKind::LineComment,
+            Token::MultiLineComment => lossless::TokenKind::MultiLineComment,
+          }
+        }
+      }
+
       /// Token
       #[derive(Logos, Clone, Debug, PartialEq, Eq, Hash)]
       #[logos(
         crate = tokit::logos,
-        source = $source,
+        $(utf8 = $utf8,)?
         extras = Limiter,
         error(Errors, |l| {
           let mut errs = Errors::from(handlers::$handlers::default_error(l));
@@ -95,7 +232,7 @@ macro_rules! token {
       #[logos(subpattern dec_int   = r"(?&dec_digit)(?:_?(?&dec_digit))*")]
       // exponent: e or E, optional +/-, then digits-with-underscores
       #[logos(subpattern dec_exp   = r"[eE][+-]?(?&dec_int)")]
-      pub enum Token $(<$lt>)? {
+      pub enum Token {
         #[token(" ", |lexer| lexer.increase_token())]
         Space,
         #[token("\t", |lexer| lexer.increase_token())]
@@ -434,409 +571,134 @@ macro_rules! token {
         #[token("uint", |lexer| increase_token_then(lexer, Uint::U256))]
         Uint(Uint),
 
-        #[token("fixed", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        #[regex("fixed[1-9][0-9]*x[1-9][0-9]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        Fixed($slice),
+        #[token("fixed", |lexer| lexer.increase_token())]
+        #[regex("fixed[1-9][0-9]*x[1-9][0-9]*", |lexer| lexer.increase_token())]
+        Fixed,
 
-        #[token("ufixed", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        #[regex("ufixed[1-9][0-9]*x[1-9][0-9]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        UFixed($slice),
+        #[token("ufixed", |lexer| lexer.increase_token())]
+        #[regex("ufixed[1-9][0-9]*x[1-9][0-9]*", |lexer| lexer.increase_token())]
+        UFixed,
 
-        #[regex(r"//[^\r\n]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        LineComment($slice),
+        #[regex("//[^\r\n]*", |lexer| lexer.increase_token(), allow_greedy = true)]
+        LineComment,
 
-        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        MultiLineComment($slice),
+        #[regex(r"/\*([^*]|\*+[^*/])*\*+/", |lexer| lexer.increase_token())]
+        MultiLineComment,
 
         // ==================================== Boolean literals ====================================
-        #[token("true", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_true(lexer.slice())))]
-        #[token("false", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_false(lexer.slice())))]
+        #[token("true", |lexer| increase_token_then_with(lexer, |_| Lit::lit_true(())))]
+        #[token("false", |lexer| increase_token_then_with(lexer, |_| Lit::lit_false(())))]
         // ==================================== Empty quoted string literals ====================================
-        #[token("\"\"", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_empty_double_quoted_string(lexer.slice())))]
-        #[token("''", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_empty_single_quoted_string(lexer.slice())))]
+        #[token("\"\"", |lexer| increase_token_then_with(lexer, |_| Lit::lit_empty_double_quoted_string(())))]
+        #[token("''", |lexer| increase_token_then_with(lexer, |_| Lit::lit_empty_single_quoted_string(())))]
         // ==================================== Regular string literals ====================================
         // Double quoted non-empty string literal lexing
-        #[regex(r#""(?&double_quoted_chars)""#, |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_double_quoted_regular_string(lexer.slice())))]
+        #[regex(r#""(?&double_quoted_chars)""#, |lexer| increase_token_then_with(lexer, |_| Lit::lit_double_quoted_regular_string(())))]
         // Error handling branches for double quoted non-empty string literal lexing
         #[regex(r#""(?&double_quoted_chars)"#, unclosed_double_quoted_regular_string_error)]
         #[token("\"", |lexer| {
-          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
+          lexer.increase_token();
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(
             DoubleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
           )
-          .map_err(Errors::from_underlying) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
+          .map(Into::into)
+          .map_err(Errors::from_underlying)
         })]
         // Single quoted non-empty string literal lexing
-        #[regex(r"'(?&single_quoted_chars)'", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_single_quoted_regular_string(lexer.slice())))]
+        #[regex(r"'(?&single_quoted_chars)'", |lexer| increase_token_then_with(lexer, |_| Lit::lit_single_quoted_regular_string(())))]
         // Error handling branches for single quoted non-empty string literal lexing
         #[regex(r"'(?&single_quoted_chars)", unclosed_single_quoted_regular_string_error)]
         #[token("\'", |lexer| {
-          match <LitRegularStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
+          lexer.increase_token();
+          <LitRegularStr as Lexable<_, UnderlyingErrorContainer>>::lex(
             SingleQuotedRegularStrLexer::<tokit::logos::Lexer<'_, _>, $char, StringError, Error>::from_mut(lexer),
           )
-          .map_err(Errors::from_underlying) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
+            .map(Into::into)
+            .map_err(Errors::from_underlying)
         })]
         // ==================================== Hex string literals ====================================
         // Double quoted hex string literal lexing
-        #[regex("hex\"(?&hex_string_content)\"", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_double_quoted_hex_string(lexer.slice())))]
+        #[regex("hex\"(?&hex_string_content)\"", |lexer| increase_token_then_with(lexer, |_| Lit::lit_double_quoted_hex_string(())))]
         // Error handling branches for double quoted hex string literal lexing
         #[regex("hex\"(?&hex_string_content)", unclosed_double_quoted_hex_string_error)]
         #[token("hex\"", |lexer| {
-          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
+          lexer.increase_token();
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(
             DoubleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
           )
-          .map_err(Errors::from_underlying) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
+          .map(Into::into)
+          .map_err(Errors::from_underlying)
         })]
         // Single quoted hex string literal lexing
-        #[regex("hex'(?&hex_string_content)'", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_single_quoted_hex_string(lexer.slice())))]
+        #[regex("hex'(?&hex_string_content)'", |lexer| increase_token_then_with(lexer, |_| Lit::lit_single_quoted_hex_string(())))]
         // Error handling branches for single quoted hex string literal lexing
         #[regex("hex'(?&hex_string_content)", unclosed_single_quoted_hex_string_error)]
         #[token("hex'", |lexer| {
-          match <LitHexStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
+          lexer.increase_token();
+          <LitHexStr as Lexable<_, UnderlyingErrorContainer>>::lex(
             SingleQuotedHexStrLexer::<tokit::logos::Lexer<'_, _>, $char, HexStringError, Error>::from_mut(lexer),
           )
-          .map_err(Errors::from_underlying) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
+          .map(Into::into)
+          .map_err(Errors::from_underlying)
         })]
         // ==================================== Unicode string literals ====================================
         // Double quoted unicode string literal lexing
-        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_double_quoted_unicode_string(lexer.slice())))]
+        #[regex(r#"unicode"(?&unicode_double_quoted_chars)""#, |lexer| increase_token_then_with(lexer, |_| Lit::lit_double_quoted_unicode_string(())))]
         // Error handling branches for double quoted unicode string literal lexing
         #[token("unicode\"", |lexer| {
-            match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-              DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
-            )
-            .map_err(Errors::from_underlying) {
-              Ok(lit) => {
-                lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-                Ok(lit)
-              },
-              Err(mut errs) => {
-                match lexer.increase_token_and_check() {
-                  Ok(_) => Err(errs),
-                  Err(state_err) => {
-                    errs.push(Error::State(state_err));
-                    Err(errs)
-                  }
-                }
-              }
-            }
+          lexer.increase_token();
+          <LitUnicodeStr as Lexable<_, UnderlyingErrorContainer>>::lex(
+            DoubleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
+          )
+          .map(Into::into)
+          .map_err(Errors::from_underlying)
         })]
         // Single quoted unicode string literal lexing
-        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| increase_token_then_with(lexer, |lexer| Lit::lit_single_quoted_unicode_string(lexer.slice())))]
+        #[regex("unicode'(?&unicode_single_quoted_chars)'", |lexer| increase_token_then_with(lexer, |_| Lit::lit_single_quoted_unicode_string(())))]
         // Error handling branches for single quoted unicode string literal lexing
         #[token("unicode\'", |lexer| {
-            match <LitUnicodeStr<_> as Lexable<_, UnderlyingErrorContainer>>::lex(
-              SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
-            )
-            .map_err(Errors::from_underlying) {
-              Ok(lit) => {
-                lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-                Ok(lit)
-              },
-              Err(mut errs) => {
-                match lexer.increase_token_and_check() {
-                  Ok(_) => Err(errs),
-                  Err(state_err) => {
-                    errs.push(Error::State(state_err));
-                    Err(errs)
-                  }
-                }
-              }
-            }
+          lexer.increase_token();
+          <LitUnicodeStr as Lexable<_, UnderlyingErrorContainer>>::lex(
+            SingleQuotedUnicodeStrLexer::<tokit::logos::Lexer<'_, _>, $char, UnicodeStringError, Error>::from_mut(lexer),
+          )
+          .map(Into::into)
+          .map_err(Errors::from_underlying)
         })]
         // ==================================== Number literals ====================================
         #[regex("0x(?&hex_digits)", |lexer| {
-          match handlers::$handlers::handle_hexadecimal_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_hexadecimal_suffix(lexer)
         }, priority = 7)]
         #[regex("0x[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
         #[regex("0X[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
         #[regex("0[xX]{2,}[0-9a-fA-F_]+[g-zG-Z$]?[0-9a-zA-Z_$]*", malformed_hex_literal_error)]
         #[token("0x", |lexer| {
-          match handlers::$handlers::handle_hexadecimal_prefix_with_invalid_following(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            }
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_hexadecimal_prefix_with_invalid_following(lexer)
         })]
 
         #[regex(r"(?&dec_int)(?:\.(?&dec_int))?(?&dec_exp)?", |lexer| {
-          match handlers::$handlers::handle_decimal_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(mut errs) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(errs),
-                Err(state_err) => {
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_decimal_suffix(lexer)
         })]
         #[regex(r"0(?&dec_int)(?:\.(?&dec_int))?(?&dec_exp)?", |lexer| {
-          match handlers::$handlers::handle_leading_zero_and_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(e) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(e),
-                Err(state_err) => {
-                  let mut errs = e;
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_leading_zero_and_suffix(lexer)
         })]
         #[regex("[1-9][0-9_]+", |lexer| {
-          match handlers::$handlers::handle_malformed_decimal_suffix(lexer) {
-            Ok(lit) => {
-              lexer.increase_token_and_check().map_err(|e| Errors::from(Error::State(e)))?;
-              Ok(lit)
-            },
-            Err(e) => {
-              match lexer.increase_token_and_check() {
-                Ok(_) => Err(e),
-                Err(state_err) => {
-                  let mut errs = e;
-                  errs.push(Error::State(state_err));
-                  Err(errs)
-                }
-              }
-            },
-          }
+          lexer.increase_token();
+          handlers::$handlers::handle_malformed_decimal_suffix(lexer)
         })]
-        Lit(Lit<$slice>),
+        Lit(Lit),
 
-        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| increase_token_then_with(lexer, |lexer| lexer.slice()))]
-        Identifier($slice),
-      }
-
-      impl$(<$lt>)? From<Token $(<$lt>)?> for lossless::Token<$slice> {
-        #[cfg_attr(not(tarpaulin), inline(always))]
-        fn from(value: Token $(<$lt>)?) -> Self {
-          match value {
-            Token::Space => Self::Space,
-            Token::Tab => Self::Tab,
-            Token::NewLine => Self::NewLine,
-            Token::CarriageReturn => Self::CarriageReturn,
-            Token::CarriageReturnNewLine => Self::CarriageReturnNewLine,
-            Token::FormFeed => Self::FormFeed,
-            Token::Abstract => Self::Abstract,
-            Token::Address => Self::Address,
-            Token::Anonymous => Self::Anonymous,
-            Token::As => Self::As,
-            Token::Assembly => Self::Assembly,
-            Token::Bool => Self::Bool,
-            Token::Break => Self::Break,
-            Token::Bytes => Self::Bytes,
-            Token::Calldata => Self::Calldata,
-            Token::Catch => Self::Catch,
-            Token::Constant => Self::Constant,
-            Token::Constructor => Self::Constructor,
-            Token::Continue => Self::Continue,
-            Token::Contract => Self::Contract,
-            Token::Delete => Self::Delete,
-            Token::Do => Self::Do,
-            Token::Else => Self::Else,
-            Token::Emit => Self::Emit,
-            Token::Enum => Self::Enum,
-            Token::Event => Self::Event,
-            Token::External => Self::External,
-            Token::Fallback => Self::Fallback,
-            Token::For => Self::For,
-            Token::Function => Self::Function,
-            Token::If => Self::If,
-            Token::Immutable => Self::Immutable,
-            Token::Import => Self::Import,
-            Token::Indexed => Self::Indexed,
-            Token::Interface => Self::Interface,
-            Token::Internal => Self::Internal,
-            Token::Is => Self::Is,
-            Token::Library => Self::Library,
-            Token::Mapping => Self::Mapping,
-            Token::Memory => Self::Memory,
-            Token::Modifier => Self::Modifier,
-            Token::New => Self::New,
-            Token::Override => Self::Override,
-            Token::Payable => Self::Payable,
-            Token::Private => Self::Private,
-            Token::Public => Self::Public,
-            Token::Pure => Self::Pure,
-            Token::Pragma => Self::Pragma,
-            Token::Receive => Self::Receive,
-            Token::Return => Self::Return,
-            Token::Returns => Self::Returns,
-            Token::Storage => Self::Storage,
-            Token::String => Self::String,
-            Token::Struct => Self::Struct,
-            Token::Try => Self::Try,
-            Token::Type => Self::Type,
-            Token::Unchecked => Self::Unchecked,
-            Token::Using => Self::Using,
-            Token::View => Self::View,
-            Token::Virtual => Self::Virtual,
-            Token::While => Self::While,
-
-            Token::LParen => Self::LParen,
-            Token::RParen => Self::RParen,
-            Token::LBracket => Self::LBracket,
-            Token::RBracket => Self::RBracket,
-            Token::LBrace => Self::LBrace,
-            Token::RBrace => Self::RBrace,
-            Token::Colon => Self::Colon,
-            Token::Semicolon => Self::Semicolon,
-            Token::Dot => Self::Dot,
-            Token::Question => Self::Question,
-            Token::FatArrow => Self::FatArrow,
-            Token::ThinArrow => Self::ThinArrow,
-            Token::Assign => Self::Assign,
-
-            Token::BitOrAssign => Self::BitOrAssign,
-            Token::BitAndAssign => Self::BitAndAssign,
-            Token::BitXorAssign => Self::BitXorAssign,
-            Token::ShlAssign => Self::ShlAssign,
-            Token::SarAssign => Self::SarAssign,
-            Token::ShrAssign => Self::ShrAssign,
-            Token::AddAssign => Self::AddAssign,
-            Token::SubAssign => Self::SubAssign,
-            Token::MulAssign => Self::MulAssign,
-            Token::DivAssign => Self::DivAssign,
-            Token::ModAssign => Self::ModAssign,
-
-            Token::Comma => Self::Comma,
-
-            Token::Or => Self::Or,
-            Token::And => Self::And,
-            Token::BitOr => Self::BitOr,
-            Token::BitAnd => Self::BitAnd,
-            Token::BitXor => Self::BitXor,
-            Token::Shl => Self::Shl,
-            Token::Sar => Self::Sar,
-            Token::Shr => Self::Shr,
-
-            Token::Add => Self::Add,
-            Token::Sub => Self::Sub,
-            Token::Mul => Self::Mul,
-            Token::Div => Self::Div,
-            Token::Mod => Self::Mod,
-            Token::Exp => Self::Exp,
-
-            Token::Eq => Self::Eq,
-            Token::Ne => Self::Ne,
-            Token::Lt => Self::Lt,
-            Token::Le => Self::Le,
-            Token::Gt => Self::Gt,
-            Token::Ge => Self::Ge,
-
-            Token::Not => Self::Not,
-            Token::BitNot => Self::BitNot,
-            Token::Inc => Self::Inc,
-            Token::Dec => Self::Dec,
-
-            Token::FixedBytes(val) => Self::FixedBytes(val),
-            Token::Denomination(val) => Self::Denomination(val),
-            Token::Int(val) => Self::Int(val),
-            Token::Uint(val) => Self::Uint(val),
-            Token::Fixed(val) => Self::Fixed(val),
-            Token::UFixed(val) => Self::UFixed(val),
-            Token::LineComment(val) => Self::LineComment(val),
-            Token::MultiLineComment(val) => Self::MultiLineComment(val),
-            Token::Lit(val) => Self::Lit(val),
-            Token::Identifier(val) => Self::Identifier(val),
-          }
-        }
+        #[regex("[a-zA-Z$_][a-zA-Z0-9$_]*", |lexer| lexer.increase_token())]
+        Identifier,
       }
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_double_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
+        lexer: &mut Lexer<'b, Token>,
+      ) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::String(crate::error::StringError::unclosed_double_quote(l.span().into()))
         }))
@@ -844,8 +706,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_single_quoted_regular_string_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
+        lexer: &mut Lexer<'b, Token>,
+      ) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::String(crate::error::StringError::unclosed_single_quote(l.span().into()))
         }))
@@ -853,8 +715,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_double_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
+        lexer: &mut Lexer<'b, Token>,
+      ) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::HexString(crate::error::HexStringError::unclosed_double_quote(l.span().into()))
         }))
@@ -862,8 +724,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn unclosed_single_quoted_hex_string_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
+        lexer: &mut Lexer<'b, Token>,
+      ) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::HexString(crate::error::HexStringError::unclosed_single_quote(l.span().into()))
         }))
@@ -871,8 +733,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn malformed_hex_literal_error<'b $(: $lt)?, $($lt: 'b)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-      ) -> Result<Lit<$slice>, Errors> {
+        lexer: &mut Lexer<'b, Token>,
+      ) -> Result<Lit, Errors> {
         Err(increase_token_on_err(lexer, |l| {
           Error::from(crate::error::sol::HexadecimalError::malformed(l.span().into()))
         }))
@@ -880,8 +742,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn increase_token_on_err<'b $(: $lt)?, $($lt: 'b,)?>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-        f: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)?>) -> Error,
+        lexer: &mut Lexer<'b, Token>,
+        f: impl FnOnce(&mut Lexer<'b, Token>) -> Error,
       ) -> Errors {
         lexer.increase_token();
         f(lexer).into()
@@ -889,7 +751,7 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn increase_token_then<'b $(: $lt)?, $($lt: 'b,)? O>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
+        lexer: &mut Lexer<'b, Token>,
         output: O,
       ) -> O {
         lexer.increase_token();
@@ -898,8 +760,8 @@ macro_rules! token {
 
       #[cfg_attr(not(tarpaulin), inline(always))]
       fn increase_token_then_with<'b $(: $lt)?, $($lt: 'b,)? O>(
-        lexer: &mut Lexer<'b, Token $(<$lt>)?>,
-        output: impl FnOnce(&mut Lexer<'b, Token $(<$lt>)?>) -> O,
+        lexer: &mut Lexer<'b, Token>,
+        output: impl FnOnce(&mut Lexer<'b, Token>) -> O,
       ) -> O {
         lexer.increase_token();
         output(lexer)

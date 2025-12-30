@@ -160,6 +160,38 @@ pub enum LitStr<S = ()> {
   Unicode(LitUnicodeStr<S>),
 }
 
+impl core::fmt::Display for LitStr {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    match (self.delimiter_kind(), self.kind()) {
+      (LitStrDelimiterKind::Single, LitStrKind::Empty) => {
+        write!(f, "empty single-quoted string literal")
+      }
+      (LitStrDelimiterKind::Single, LitStrKind::Regular) => {
+        write!(f, "non-empty single-quoted string literal")
+      }
+      (LitStrDelimiterKind::Single, LitStrKind::Hex) => {
+        write!(f, "hexadecimal single-quoted string literal")
+      }
+      (LitStrDelimiterKind::Single, LitStrKind::Unicode) => {
+        write!(f, "unicode single-quoted string literal")
+      }
+      (LitStrDelimiterKind::Double, LitStrKind::Empty) => {
+        write!(f, "empty double-quoted string literal")
+      }
+      (LitStrDelimiterKind::Double, LitStrKind::Regular) => {
+        write!(f, "non-empty double-quoted string literal")
+      }
+      (LitStrDelimiterKind::Double, LitStrKind::Hex) => {
+        write!(f, "hexadecimal double-quoted string literal")
+      }
+      (LitStrDelimiterKind::Double, LitStrKind::Unicode) => {
+        write!(f, "unicode double-quoted string literal")
+      }
+    }
+  }
+}
+
 impl<S> From<LitStr<S>> for LitStrKind {
   #[inline]
   fn from(str: LitStr<S>) -> Self {

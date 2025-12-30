@@ -755,13 +755,13 @@ pub enum TokenKind {
 
   // ----- Type-like & literal-ish kinds -----
   /// A fixed-size `bytesN` type keyword (e.g. `bytes32`).
-  FixedBytes,
+  FixedBytes(FixedBytes),
   /// A denomination suffix (e.g. `wei`, `gwei`, `ether`, time units).
-  Denomination,
+  Denomination(Denomination),
   /// A signed integer type keyword (e.g. `int8`, `int256`).
-  Int,
+  Int(Int),
   /// An unsigned integer type keyword (e.g. `uint8`, `uint256`).
-  Uint,
+  Uint(Uint),
   /// A signed fixed-point type keyword (e.g. `fixed128x18`).
   Fixed,
   /// An unsigned fixed-point type keyword (e.g. `ufixed128x18`).
@@ -769,7 +769,7 @@ pub enum TokenKind {
 
   // ----- Literals & identifiers -----
   /// A literal value (numeric, string, hex string, boolean, etc.).
-  Lit,
+  Lit(Lit),
   /// An identifier (user-defined name).
   Identifier,
 }
@@ -889,15 +889,15 @@ impl<S> Token<S> {
       Self::BitNot => TokenKind::BitNot,
       Self::Inc => TokenKind::Inc,
       Self::Dec => TokenKind::Dec,
-      Self::FixedBytes(_) => TokenKind::FixedBytes,
-      Self::Denomination(_) => TokenKind::Denomination,
-      Self::Int(_) => TokenKind::Int,
-      Self::Uint(_) => TokenKind::Uint,
+      Self::FixedBytes(v) => TokenKind::FixedBytes(*v),
+      Self::Denomination(v) => TokenKind::Denomination(*v),
+      Self::Int(v) => TokenKind::Int(*v),
+      Self::Uint(v) => TokenKind::Uint(*v),
       Self::Fixed(_) => TokenKind::Fixed,
       Self::UFixed(_) => TokenKind::UFixed,
       Self::LineComment(_) => TokenKind::LineComment,
       Self::MultiLineComment(_) => TokenKind::MultiLineComment,
-      Self::Lit(_) => TokenKind::Lit,
+      Self::Lit(v) => TokenKind::Lit(v.unit()),
       Self::Identifier(_) => TokenKind::Identifier,
     }
   }

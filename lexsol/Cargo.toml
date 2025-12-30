@@ -20,6 +20,7 @@ evm = []
 
 bytes = ["dep:bytes", "tokit/bytes"]
 hipstr = ["dep:hipstr", "tokit/hipstr"]
+rowan = ["dep:rowan", "tokit/rowan"]
 
 [dependencies]
 tokit.workspace = true
@@ -29,6 +30,7 @@ derive_more.workspace = true
 
 bytes = { workspace = true, optional = true }
 hipstr = { workspace = true, optional = true }
+rowan = { workspace = true, optional = true }
 
 [lints]
 workspace = true

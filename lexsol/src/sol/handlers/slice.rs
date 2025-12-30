@@ -60,9 +60,9 @@ where
 #[cfg_attr(not(tarpaulin), inline(always))]
 fn handle_suffix<'a, S, T, Extras, E>(
   lexer: &mut Lexer<'a, T>,
-  from_slice: impl FnOnce(S::Slice<'a>) -> Lit<S::Slice<'a>>,
+  from_slice: impl FnOnce(()) -> Lit,
   unexpected_suffix: impl FnOnce(Lexeme<u8>) -> E,
-) -> Result<Lit<S::Slice<'a>>, Error<u8, Extras>>
+) -> Result<Lit, Error<u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
@@ -70,7 +70,7 @@ where
   Error<u8, Extras>: From<E>,
 {
   crate::handlers::slice::handle_number_suffix::<_, _, E>(lexer, unexpected_suffix)
-    .map(|_| from_slice(lexer.slice()))
+    .map(|_| from_slice(()))
     .map_err(Into::into)
 }
 
@@ -78,7 +78,7 @@ where
 #[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn handle_leading_zero_and_suffix<'a, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+) -> Result<Lit, Errors<u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
@@ -104,7 +104,7 @@ where
 #[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn handle_decimal_suffix<'a, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+) -> Result<Lit, Errors<u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
@@ -121,7 +121,7 @@ where
 #[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn handle_malformed_decimal_suffix<'a, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+) -> Result<Lit, Errors<u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
@@ -141,7 +141,7 @@ where
 #[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn handle_hexadecimal_suffix<'a, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+) -> Result<Lit, Errors<u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,
@@ -158,7 +158,7 @@ where
 #[cfg_attr(not(tarpaulin), inline(always))]
 pub(crate) fn handle_hexadecimal_prefix_with_invalid_following<'a, S, T, Extras>(
   lexer: &mut Lexer<'a, T>,
-) -> Result<Lit<S::Slice<'a>>, Errors<u8, Extras>>
+) -> Result<Lit, Errors<u8, Extras>>
 where
   T: Logos<'a, Source = S>,
   S: ?Sized + Source,

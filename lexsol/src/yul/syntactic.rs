@@ -14,7 +14,9 @@ use token::token;
 use super::{Lexyul, Lit};
 
 use crate::{
-  SourceBridge, TokenBridge, error::yul as error, types::{LitBool, LitNumber}
+  SourceBridge, TokenBridge,
+  error::yul as error,
+  types::{LitBool, LitNumber},
 };
 
 mod bytes;
@@ -545,6 +547,8 @@ where
       Self::Let => Some("let"),
       Self::If => Some("if"),
       Self::For => Some("for"),
+      #[cfg(feature = "evm")]
+      Self::EvmBuiltin(f) => Some(f.as_str()),
       _ => None,
     }
   }
@@ -595,3 +599,120 @@ impl<S> Require<super::EvmBuiltinFunction<S>> for Token<S> {
     self.try_unwrap_evm_builtin().map_err(|e| e.input)
   }
 }
+
+super::syntax_kind!(
+  /// The syntax kinds for Yul
+  enum SyntaxKind { @evm: [
+    "stop",
+    "add",
+    "sub",
+    "mul",
+    "div",
+    "sdiv",
+    "mod",
+    "smod",
+    "exp",
+    "not",
+    "lt",
+    "gt",
+    "slt",
+    "sgt",
+    "eq",
+    "iszero",
+    "and",
+    "or",
+    "xor",
+    "byte",
+    "shl",
+    "shr",
+    "sar",
+    "clz",
+    "addmod",
+    "mulmod",
+    "signextend",
+    "keccak256",
+    "pop",
+    "mload",
+    "mstore",
+    "mstore8",
+    "sload",
+    "sstore",
+    "tload",
+    "tstore",
+    "msize",
+    "gas",
+    "address",
+    "balance",
+    "selfbalance",
+    "caller",
+    "callvalue",
+    "calldataload",
+    "calldatasize",
+    "calldatacopy",
+    "extcodesize",
+    "extcodecopy",
+    "returndatasize",
+    "returndatacopy",
+    "mcopy",
+    "extcodehash",
+    "create",
+    "create2",
+    "call",
+    "callcode",
+    "delegatecall",
+    "staticcall",
+    "return",
+    "revert",
+    "selfdestruct",
+    "invalid",
+    "log0",
+    "log1",
+    "log2",
+    "log3",
+    "log4",
+    "chainid",
+    "origin",
+    "gasprice",
+    "blockhash",
+    "blobhash",
+    "coinbase",
+    "timestamp",
+    "number",
+    "difficulty",
+    "prevrandao",
+    "gaslimit",
+    "basefee",
+    "blobbasefee",
+]});
+
+impl super::super::sealed::Sealed for super::Yul<SyntaxKind> {
+  const INIT: Self = super::Yul(core::marker::PhantomData);
+  const NAME: &'static str = "yul";
+  const DECIMAL_NUMBER_PATTERN: &'static str = r"0|[1-9][0-9]*";
+  const HEX_NUMBER_PATTERN: &'static str = r"0x[0-9a-fA-F]+";
+}
+
+#[cfg(not(feature = "rowan"))]
+impl tokit::syntax::Language for super::Yul<SyntaxKind> {
+  type SyntaxKind = SyntaxKind;
+}
+
+#[cfg(feature = "rowan")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rowan")))]
+const _: () = {
+  use rowan::{Language, SyntaxKind as RowanSyntaxKind};
+
+  impl Language for super::Yul<SyntaxKind> {
+    type Kind = SyntaxKind;
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn kind_from_raw(raw: RowanSyntaxKind) -> Self::Kind {
+      unsafe { core::mem::transmute::<u16, Self::Kind>(raw.0) }
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn kind_to_raw(kind: Self::Kind) -> RowanSyntaxKind {
+      RowanSyntaxKind(kind as u16)
+    }
+  }
+};

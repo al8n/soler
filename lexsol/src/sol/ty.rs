@@ -25,13 +25,23 @@ mod uint;
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Lit<S = ()>  {
+pub enum Lit<S = ()> {
   /// The boolean literal
   Boolean(LitBool<S>),
   /// The string literal
   String(LitStr<S>),
   /// The number literal
   Number(LitNumber<S>),
+}
+
+impl core::fmt::Display for Lit<()> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    match self {
+      Self::Boolean(b) => core::fmt::Display::fmt(b, f),
+      Self::String(s) => core::fmt::Display::fmt(s, f),
+      Self::Number(n) => core::fmt::Display::fmt(n, f),
+    }
+  }
 }
 
 impl<S> core::convert::From<LitRegularStr<S>> for Lit<S> {

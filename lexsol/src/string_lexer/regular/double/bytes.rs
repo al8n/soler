@@ -15,7 +15,7 @@ type StringError = crate::error::StringError<u8>;
 #[derive(Logos)]
 #[logos(
   crate = tokit::logos,
-  source = [u8],
+  utf8 = false,
 )]
 #[logos(subpattern double_quoted_printable = "[\u{0020}-\u{0021}\u{0023}-\u{005B}\u{005D}-\u{007E}]")]
 #[logos(subpattern double_quoted_char = "(?&double_quoted_printable)")]

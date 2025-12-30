@@ -80,7 +80,14 @@ pub enum LitNumberKind {
 /// - [Yul decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulDecimalNumber)
 /// - [Solidity decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.DecimalNumber)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitDecimal<S>(S);
+pub struct LitDecimal<S = ()>(S);
+
+impl core::fmt::Display for LitDecimal<()> {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    write!(f, "decimal number literal")
+  }
+}
 
 impl<S> LitDecimal<S> {
   /// Creates a new decimal literal
@@ -129,7 +136,14 @@ impl<S> LitDecimal<S> {
 ///   - [Yul hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulHexNumber)
 ///   - [Solidity Hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexNumber)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitHexadecimal<S>(S);
+pub struct LitHexadecimal<S = ()>(S);
+
+impl core::fmt::Display for LitHexadecimal {
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    write!(f, "hexadecimal number literal")
+  }
+}
 
 impl<S> LitHexadecimal<S> {
   /// Creates a new decimal literal
@@ -185,11 +199,20 @@ impl<S> LitHexadecimal<S> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitNumber<S> {
+pub enum LitNumber<S = ()> {
   /// Decimal number literal
   Decimal(LitDecimal<S>),
   /// Hexadecimal number literal
   Hexadecimal(LitHexadecimal<S>),
+}
+
+impl core::fmt::Display for LitNumber<()> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    match self {
+      Self::Decimal(d) => core::fmt::Display::fmt(d, f),
+      Self::Hexadecimal(h) => core::fmt::Display::fmt(h, f),
+    }
+  }
 }
 
 impl<S> From<LitNumber<S>> for LitNumberKind {

@@ -1,5 +1,5 @@
 macro_rules! token {
-  ($mod:ident $(<$lt:lifetime>)?($slice: ty, $char: ty, $handlers:ident, $source:ty $(,)?)) => {
+  ($mod:ident $(<$lt:lifetime>)?($($utf8:literal,)? $slice: ty, $char: ty, $handlers:ident $(,)?)) => {
     #[allow(single_use_lifetimes)]
     mod $mod {
       use tokit::{
@@ -23,8 +23,8 @@ macro_rules! token {
 
       type StringError = crate::error::StringError<$char>;
       type HexStringError = crate::error::HexStringError<$char>;
-      type Error = error::Error<$char, RecursionLimitExceeded>;
-      type Errors = error::Errors<$char, RecursionLimitExceeded>;
+      type Error = error::Error<syntactic::SyntaxKind, $char, RecursionLimitExceeded>;
+      type Errors = error::Errors<syntactic::SyntaxKind, $char, RecursionLimitExceeded>;
       type UnderlyingErrorContainer = <Errors as Wrapper>::Underlying;
 
       #[allow(warnings)]
@@ -80,7 +80,7 @@ macro_rules! token {
       #[derive(Logos, Clone, Debug)]
       #[logos(
         crate = tokit::logos,
-        source = $source,
+        $(utf8 = $utf8,)?
         extras = RecursionLimiter,
         error(Errors, |l| Errors::from(handlers::$handlers::default_error(l)))
       )]
