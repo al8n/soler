@@ -193,7 +193,7 @@ macro_rules! syntax_kind {
         /// Multiple targets assignment
         ///
         /// Spec: [Yul Multiple Target Assignment](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulAssignment)
-        MultipleTargetAssignment,
+        MultipleTargetsAssignment,
 
         /// Assignment
         ///

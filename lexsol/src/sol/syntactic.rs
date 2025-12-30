@@ -1,14 +1,30 @@
 use super::{Denomination, FixedBytes, Int, Lexsol, Lit, Solidity, Uint};
 
-use crate::{SourceBridge, TokenBridge};
+use crate::{SourceBridge, TokenBridge, error::sol as error};
 
 use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 use token::token;
-use tokit::{State, Token as TokenT, logos::Logos, utils::SimpleSpan};
+use tokit::{
+  Source, State, Token as TokenT,
+  logos::Logos,
+  utils::{SimpleSpan, tracker::LimitExceeded},
+};
 
 mod bytes;
 mod str;
 mod token;
+
+/// The syntactic lexer for Solidity.
+pub type Lexer<'a, S = &'a str> = Lexsol<'a, S, Token<<S as Source<usize>>::Slice<'a>>>;
+
+/// The char type used for the syntactic token.
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as Source<usize>>::Slice<
+  'a,
+> as tokit::lexer::source::Slice<'a>>::Char;
+/// The error type for lexing based on syntactic [`Token`].
+pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
+/// A collection of errors for syntactic [`Token`].
+pub type Errors<'a, S> = error::Errors<Char<'a, S>, LimitExceeded>;
 
 /// The syntactic token for Solidity.
 ///

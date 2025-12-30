@@ -1,31 +1,31 @@
 use super::{Denomination, FixedBytes, Int, Lexsol, Lit, Uint};
 
-use crate::sol::Solidity;
-use crate::{SourceBridge, TokenBridge};
+use crate::{SourceBridge, TokenBridge, error::sol as error, sol::Solidity};
 
 use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
-use tokit::utils::tracker::LimitExceeded;
-use tokit::{State, Token as TokenT, logos::Logos, utils::SimpleSpan};
+use tokit::{
+  Source, State, Token as TokenT,
+  logos::Logos,
+  utils::{SimpleSpan, tracker::LimitExceeded},
+};
 
 use token::token;
-
-use crate::error::sol as error;
 
 mod bytes;
 mod str;
 mod token;
 
-/// The lossless lexer for Solidity.
-pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
+/// The syntactic lexer for Solidity.
+pub type Lexer<'a, S = &'a str> = Lexsol<'a, S, Token<<S as Source<usize>>::Slice<'a>>>;
 
 /// The char type used for the syntactic token.
-pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<
+pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as Source<usize>>::Slice<
   'a,
 > as tokit::lexer::source::Slice<'a>>::Char;
-/// The error type for lexing based on lossless [`Token`].
-pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
-/// A collection of errors for lossless [`Token`].
-pub type Errors<'a, S> = error::Errors<Char<'a, S>, LimitExceeded>;
+/// The error type for lexing based on syntactic [`Token`].
+pub type Error<'a, S> = error::Error<SyntaxKind, Char<'a, S>, LimitExceeded>;
+/// A collection of errors for syntactic [`Token`].
+pub type Errors<'a, S> = error::Errors<SyntaxKind, Char<'a, S>, LimitExceeded>;
 
 /// The lossless token of Solidity.
 ///

@@ -1,6 +1,10 @@
 use core::marker::PhantomData;
 
 use derive_more::Display;
+use lexsol::yul::{
+  self, Yul, lossless::SyntaxKind as LosslessSyntaxKind,
+  syntactic::SyntaxKind as SyntacticSyntaxKind,
+};
 use tokit::{
   syntax::Syntax,
   utils::{
@@ -9,12 +13,11 @@ use tokit::{
   },
 };
 
-use crate::{SyntaxKind, YUL};
+type DefaultLang = Yul<yul::syntactic::SyntaxKind>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("statement")]
-pub struct Statement<Lang = YUL>(PhantomData<Lang>);
-
+pub struct Statement<Lang = DefaultLang>(PhantomData<Lang>);
 impl<Lang> Default for Statement<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn default() -> Self {
@@ -24,7 +27,7 @@ impl<Lang> Default for Statement<Lang> {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("expression")]
-pub struct Expression<Lang = YUL>(PhantomData<Lang>);
+pub struct Expression<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for Expression<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -53,7 +56,7 @@ pub enum SingleVariableDeclarationComponent {
 /// A syntax representation of a Yul single variable declaration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("single variable declaration")]
-pub struct SingleVariableDeclaration<Lang = YUL>(PhantomData<Lang>);
+pub struct SingleVariableDeclaration<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for SingleVariableDeclaration<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -62,20 +65,56 @@ impl<Lang> Default for SingleVariableDeclaration<Lang> {
   }
 }
 
-impl Syntax for SingleVariableDeclaration {
-  type Lang = YUL;
+macro_rules! impl_syntax {
+  (impl $name:ident<$($kind:ty),+$(,)?> {
+    type Component = $component:ident;
+    type COMPONENTS = $components:ty;
+    type REQUIRED = $required:ty;
 
-  const KIND: SyntaxKind = SyntaxKind::SingleVariableDeclaration;
+    fn possible_components() => $possible_components:expr;
+    fn required_components() => $required_components:expr;
+  }) => {
+    $(
+      impl Syntax for $name<Yul<$kind>> {
+        type Lang = Yul<$kind>;
 
-  type Component = SingleVariableDeclarationComponent;
+        const KIND: $kind = <$kind>::$name;
 
-  type COMPONENTS = U4;
+        type Component = $component;
 
-  type REQUIRED = U2;
+        type COMPONENTS = $components;
 
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
-    const COMPONENTS: &GenericArrayDeque<SingleVariableDeclarationComponent, U4> = &{
+        type REQUIRED = $required;
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
+          const COMPONENTS: &GenericArrayDeque<$component, $components> = &{
+            $possible_components
+          };
+
+          COMPONENTS
+        }
+
+        #[cfg_attr(not(tarpaulin), inline(always))]
+        fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
+          const REQUIRED: &GenericArrayDeque<$component, $required> = &{
+            $required_components
+          };
+
+          REQUIRED
+        }
+      }
+    )*
+  };
+}
+
+impl_syntax!(
+  impl SingleVariableDeclaration<SyntacticSyntaxKind, LosslessSyntaxKind> {
+    type Component = SingleVariableDeclarationComponent;
+    type COMPONENTS = U4;
+    type REQUIRED = U2;
+
+    fn possible_components() => {
       GenericArrayDeque::from_array([
         SingleVariableDeclarationComponent::LetKeyword,
         SingleVariableDeclarationComponent::Name,
@@ -83,22 +122,14 @@ impl Syntax for SingleVariableDeclaration {
         SingleVariableDeclarationComponent::Expression,
       ])
     };
-
-    COMPONENTS
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
-    const REQUIRED: &GenericArrayDeque<SingleVariableDeclarationComponent, U2> = &{
+    fn required_components() => {
       GenericArrayDeque::from_array([
         SingleVariableDeclarationComponent::LetKeyword,
         SingleVariableDeclarationComponent::Name,
       ])
     };
-
-    REQUIRED
   }
-}
+);
 
 /// The multiple variables declaration component.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
@@ -120,7 +151,7 @@ pub enum MultipleVariablesDeclarationComponent {
 /// A syntax representation of a Yul multiple variables declaration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("multiple variables declaration")]
-pub struct MultipleVariablesDeclaration<Lang = YUL>(PhantomData<Lang>);
+pub struct MultipleVariablesDeclaration<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for MultipleVariablesDeclaration<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -129,20 +160,13 @@ impl<Lang> Default for MultipleVariablesDeclaration<Lang> {
   }
 }
 
-impl Syntax for MultipleVariablesDeclaration {
-  type Lang = YUL;
+impl_syntax!(
+  impl MultipleVariablesDeclaration<SyntacticSyntaxKind, LosslessSyntaxKind> {
+    type Component = MultipleVariablesDeclarationComponent;
+    type COMPONENTS = U4;
+    type REQUIRED = U2;
 
-  const KIND: SyntaxKind = SyntaxKind::MultipleVariablesDeclaration;
-
-  type Component = MultipleVariablesDeclarationComponent;
-
-  type COMPONENTS = U4;
-
-  type REQUIRED = U2;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
-    const COMPONENTS: &GenericArrayDeque<MultipleVariablesDeclarationComponent, U4> = &{
+    fn possible_components() => {
       GenericArrayDeque::from_array([
         MultipleVariablesDeclarationComponent::LetKeyword,
         MultipleVariablesDeclarationComponent::Names,
@@ -150,22 +174,14 @@ impl Syntax for MultipleVariablesDeclaration {
         MultipleVariablesDeclarationComponent::FunctionCall,
       ])
     };
-
-    COMPONENTS
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
-    const REQUIRED: &GenericArrayDeque<MultipleVariablesDeclarationComponent, U2> = &{
+    fn required_components() => {
       GenericArrayDeque::from_array([
         MultipleVariablesDeclarationComponent::LetKeyword,
         MultipleVariablesDeclarationComponent::Names,
       ])
     };
-
-    REQUIRED
   }
-}
+);
 
 /// The component of a variable declaration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
@@ -187,7 +203,7 @@ pub enum VariableDeclarationComponent {
 /// A syntax representation of a Yul variable declaration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("variable declaration")]
-pub struct VariableDeclaration<Lang = YUL>(PhantomData<Lang>);
+pub struct VariableDeclaration<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for VariableDeclaration<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -196,20 +212,13 @@ impl<Lang> Default for VariableDeclaration<Lang> {
   }
 }
 
-impl Syntax for VariableDeclaration {
-  type Lang = YUL;
+impl_syntax!(
+  impl VariableDeclaration<SyntacticSyntaxKind, LosslessSyntaxKind> {
+    type Component = VariableDeclarationComponent;
+    type COMPONENTS = U4;
+    type REQUIRED = U2;
 
-  const KIND: SyntaxKind = SyntaxKind::VariableDeclaration;
-
-  type Component = VariableDeclarationComponent;
-
-  type COMPONENTS = U4;
-
-  type REQUIRED = U2;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
-    const COMPONENTS: &GenericArrayDeque<VariableDeclarationComponent, U4> = &{
+    fn possible_components() => {
       GenericArrayDeque::from_array([
         VariableDeclarationComponent::LetKeyword,
         VariableDeclarationComponent::Lhs,
@@ -217,22 +226,14 @@ impl Syntax for VariableDeclaration {
         VariableDeclarationComponent::Rhs,
       ])
     };
-
-    COMPONENTS
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
-    const REQUIRED: &GenericArrayDeque<VariableDeclarationComponent, U2> = &{
+    fn required_components() => {
       GenericArrayDeque::from_array([
         VariableDeclarationComponent::LetKeyword,
         VariableDeclarationComponent::Lhs,
       ])
     };
-
-    REQUIRED
   }
-}
+);
 
 /// The single target assignment component.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
@@ -251,7 +252,7 @@ pub enum SingleTargetAssignmentComponent {
 /// A syntax representation of a Yul single target assignment.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("single target assignment")]
-pub struct SingleTargetAssignment<Lang = YUL>(PhantomData<Lang>);
+pub struct SingleTargetAssignment<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for SingleTargetAssignment<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -260,35 +261,28 @@ impl<Lang> Default for SingleTargetAssignment<Lang> {
   }
 }
 
-impl Syntax for SingleTargetAssignment {
-  type Lang = YUL;
+impl_syntax!(
+  impl SingleTargetAssignment<SyntacticSyntaxKind, LosslessSyntaxKind> {
+    type Component = SingleTargetAssignmentComponent;
+    type COMPONENTS = U3;
+    type REQUIRED = U3;
 
-  const KIND: SyntaxKind = SyntaxKind::SingleTargetAssignment;
-
-  type Component = SingleTargetAssignmentComponent;
-
-  type COMPONENTS = U3;
-
-  type REQUIRED = U3;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
-    Self::required_components()
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
-    const REQUIRED: &GenericArrayDeque<SingleTargetAssignmentComponent, U3> = &{
+    fn possible_components() => {
       GenericArrayDeque::from_array([
         SingleTargetAssignmentComponent::Name,
         SingleTargetAssignmentComponent::ColonAssign,
         SingleTargetAssignmentComponent::Expression,
       ])
     };
-
-    REQUIRED
+    fn required_components() => {
+      GenericArrayDeque::from_array([
+        SingleTargetAssignmentComponent::Name,
+        SingleTargetAssignmentComponent::ColonAssign,
+        SingleTargetAssignmentComponent::Expression,
+      ])
+    };
   }
-}
+);
 
 /// The multiple targets assignment component.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
@@ -307,7 +301,7 @@ pub enum MultipleTargetsAssignmentComponent {
 /// A syntax representation of a Yul multiple targets assignment.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("multiple targets assignment")]
-pub struct MultipleTargetsAssignment<Lang = YUL>(PhantomData<Lang>);
+pub struct MultipleTargetsAssignment<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for MultipleTargetsAssignment<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -316,35 +310,28 @@ impl<Lang> Default for MultipleTargetsAssignment<Lang> {
   }
 }
 
-impl Syntax for MultipleTargetsAssignment {
-  type Lang = YUL;
+impl_syntax!(
+  impl MultipleTargetsAssignment<SyntacticSyntaxKind, LosslessSyntaxKind> {
+    type Component = MultipleTargetsAssignmentComponent;
+    type COMPONENTS = U3;
+    type REQUIRED = U3;
 
-  const KIND: SyntaxKind = SyntaxKind::MultipleTargetAssignment;
-
-  type Component = MultipleTargetsAssignmentComponent;
-
-  type COMPONENTS = U3;
-
-  type REQUIRED = U3;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
-    Self::required_components()
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
-    const REQUIRED: &GenericArrayDeque<MultipleTargetsAssignmentComponent, U3> = &{
+    fn possible_components() => {
       GenericArrayDeque::from_array([
         MultipleTargetsAssignmentComponent::Names,
         MultipleTargetsAssignmentComponent::ColonAssign,
         MultipleTargetsAssignmentComponent::FunctionCall,
       ])
     };
-
-    REQUIRED
+    fn required_components() => {
+      GenericArrayDeque::from_array([
+        MultipleTargetsAssignmentComponent::Names,
+        MultipleTargetsAssignmentComponent::ColonAssign,
+        MultipleTargetsAssignmentComponent::FunctionCall,
+      ])
+    };
   }
-}
+);
 
 /// The component of an assignment.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
@@ -363,7 +350,7 @@ pub enum AssignmentComponent {
 /// A syntax representation of a Yul variable declaration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display)]
 #[display("assignment")]
-pub struct Assignment<Lang = YUL>(PhantomData<Lang>);
+pub struct Assignment<Lang = DefaultLang>(PhantomData<Lang>);
 
 impl<Lang> Default for Assignment<Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -372,32 +359,25 @@ impl<Lang> Default for Assignment<Lang> {
   }
 }
 
-impl Syntax for Assignment {
-  type Lang = YUL;
+impl_syntax!(
+  impl Assignment<SyntacticSyntaxKind, LosslessSyntaxKind> {
+    type Component = AssignmentComponent;
+    type COMPONENTS = U3;
+    type REQUIRED = U3;
 
-  const KIND: SyntaxKind = SyntaxKind::Assignment;
-
-  type Component = AssignmentComponent;
-
-  type COMPONENTS = U3;
-
-  type REQUIRED = U3;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn possible_components() -> &'static GenericArrayDeque<Self::Component, Self::COMPONENTS> {
-    Self::required_components()
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn required_components() -> &'static GenericArrayDeque<Self::Component, Self::REQUIRED> {
-    const REQUIRED: &GenericArrayDeque<AssignmentComponent, U3> = &{
+    fn possible_components() => {
       GenericArrayDeque::from_array([
         AssignmentComponent::Lhs,
         AssignmentComponent::ColonAssign,
         AssignmentComponent::Rhs,
       ])
     };
-
-    REQUIRED
+    fn required_components() => {
+      GenericArrayDeque::from_array([
+        AssignmentComponent::Lhs,
+        AssignmentComponent::ColonAssign,
+        AssignmentComponent::Rhs,
+      ])
+    };
   }
-}
+);

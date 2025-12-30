@@ -12,41 +12,44 @@ use lexsol::{
     LitBool, LitDecimal, LitHexadecimal,
     punct::{Comma, Dot},
   },
-  yul::{lossless, syntactic},
+  yul::{lossless, syntactic, Yul},
 };
 use tokit::{
   Token,
   error::{
     IncompleteSyntax, Invalid, Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace,
-    UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnexpectedToken, UnknownLexeme,
+    UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnknownLexeme,
     UnopenedBrace, UnopenedParen,
+    token::UnexpectedToken,
   },
   types::{Ident, Keyword},
   utils::{
-    Message, Span, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded,
+    Message, SimpleSpan, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded,
   },
 };
 
-use crate::{SyntaxKind, YUL, syntax::*};
+use crate::syntax::*;
+
+type DefaultLang = Yul<syntactic::SyntaxKind>;
 
 /// The parser error type for Yul syntactic tokens.
 pub type AstParserError<'a, S> = Error<
   S,
   syntactic::Token<S>,
-  SyntaxKind,
-  <syntactic::Token<S> as Token<'a>>::Char,
+  syntactic::SyntaxKind,
+  syntactic::Char<'a, S>,
   RecursionLimitExceeded,
 >;
 
 /// The parser error type for Yul lossless tokens.
 pub type LosslessParserError<'a, S> =
-  Error<S, lossless::Token<S>, SyntaxKind, <lossless::Token<S> as Token<'a>>::Char, LimitExceeded>;
+  Error<S, lossless::Token<S>, lossless::SyntaxKind, lossless::Char<'a, S>, LimitExceeded>;
 
 /// An unknown statement error.
-pub type UnknownStatement<Char, Lang = YUL> = UnknownLexeme<Char, Statement<Lang>>;
+pub type UnknownStatement<Char, Lang = DefaultLang> = UnknownLexeme<Char, Statement<Lang>>;
 
 /// An unknown expression error.
-pub type UnknownExpression<Char, Lang = YUL> = UnknownLexeme<Char, Expression<Lang>>;
+pub type UnknownExpression<Char, Lang = DefaultLang> = UnknownLexeme<Char, Expression<Lang>>;
 
 /// A trailing comma error.
 pub type TrailingComma<Char> = UnexpectedSuffix<Char, Comma>;
@@ -55,60 +58,60 @@ pub type TrailingComma<Char> = UnexpectedSuffix<Char, Comma>;
 pub type TrailingDot<Char> = UnexpectedSuffix<Char, Dot>;
 
 /// A missing comma error.
-pub type MissingComma<Lang = YUL> = Missing<Comma, Lang>;
+pub type MissingComma<Lang = DefaultLang> = Missing<Comma, Lang>;
 
 /// A missing dot error.
-pub type MissingDot<Lang = YUL> = Missing<Dot, Lang>;
+pub type MissingDot<Lang = DefaultLang> = Missing<Dot, Lang>;
 
 /// The invalid path segment error.
-pub type InvalidPathSegment<S, Lang = YUL> = Invalid<InvalidPathSegmentKnowledge<S, Lang>>;
+pub type InvalidPathSegment<S, Lang = DefaultLang> = Invalid<InvalidPathSegmentKnowledge<S, Lang>>;
 
 /// The invalid function name error.
-pub type InvalidFunctionName<S, Lang = YUL> = Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
+pub type InvalidFunctionName<S, Lang = DefaultLang> = Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
 
 /// The invalid variable name error.
-pub type InvalidVariableName<S, Lang = YUL> = Invalid<InvalidVariableNameKnowledge<S, Lang>>;
+pub type InvalidVariableName<S, Lang = DefaultLang> = Invalid<InvalidVariableNameKnowledge<S, Lang>>;
 
 /// An incomplete single variable declaration error.
-pub type IncompleteSingleVariableDeclaration<Lang = YUL> =
+pub type IncompleteSingleVariableDeclaration<Lang = DefaultLang> =
   IncompleteSyntax<SingleVariableDeclaration<Lang>>;
 
 /// An incomplete multiple variables declaration error.
-pub type IncompleteMultipleVariablesDeclaration<Lang = YUL> =
+pub type IncompleteMultipleVariablesDeclaration<Lang = DefaultLang> =
   IncompleteSyntax<MultipleVariablesDeclaration<Lang>>;
 
 /// An incomplete variable declaration error.
-pub type IncompleteVariableDeclaration<Lang = YUL> = IncompleteSyntax<VariableDeclaration<Lang>>;
+pub type IncompleteVariableDeclaration<Lang = DefaultLang> = IncompleteSyntax<VariableDeclaration<Lang>>;
 
 /// An incomplete single target assignment error.
-pub type IncompleteSingleTargetAssignment<Lang = YUL> =
+pub type IncompleteSingleTargetAssignment<Lang = DefaultLang> =
   IncompleteSyntax<SingleTargetAssignment<Lang>>;
 
 /// An incomplete multiple targets assignment error.
-pub type IncompleteMultipleTargetsAssignment<Lang = YUL> =
+pub type IncompleteMultipleTargetsAssignment<Lang = DefaultLang> =
   IncompleteSyntax<MultipleTargetsAssignment<Lang>>;
 
 /// A knowledge of invalid function name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidFunctionNameKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
+pub struct InvalidFunctionNameKnowledge<S, Lang = DefaultLang>(pub SemiIdentifierKnowledge<S, Lang>);
 
 /// A knowledge of invalid variable name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidVariableNameKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
+pub struct InvalidVariableNameKnowledge<S, Lang = DefaultLang>(pub SemiIdentifierKnowledge<S, Lang>);
 
 /// A knowledge of invalid path segment.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidPathSegmentKnowledge<S, Lang = YUL>(pub SemiIdentifierKnowledge<S, Lang>);
+pub struct InvalidPathSegmentKnowledge<S, Lang = DefaultLang>(pub SemiIdentifierKnowledge<S, Lang>);
 
 /// A knowledge of semi-identifier, which means it seems like an identifier but is not.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum SemiIdentifierKnowledge<S, Lang = YUL> {
+pub enum SemiIdentifierKnowledge<S, Lang = DefaultLang> {
   /// EVM builtin function
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
@@ -125,14 +128,11 @@ pub enum SemiIdentifierKnowledge<S, Lang = YUL> {
   LitHexadecimal(Spanned<LitHexadecimal<S>>),
 }
 
-// /// The parser error type for Yul.
-// pub type ParserError<'a, T> = Error<<T as Token<'a>>::Char, <<<T as Token<'a>>::Logos as Logos<'a>>::Extras as State>::Error>;
-
 #[derive(Debug, Clone, From, IsVariant, TryUnwrap, Unwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
+pub enum Error<S, T, TK: 'static = syntactic::SyntaxKind, Char = char, StateError = ()> {
   /// Lexer error
   Lexer(LexerErrors<Char, StateError>),
   /// Undelimited brace
@@ -189,13 +189,13 @@ pub enum Error<S, T, TK: 'static = SyntaxKind, Char = char, StateError = ()> {
 impl<S, T, TK, Char, StateError> Error<S, T, TK, Char, StateError> {
   /// Creates an end-of-token-stream error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn eot(span: Span) -> Self {
-    Self::Eot(UnexpectedEot::eot(span))
+  pub const fn eot(offset: usize) -> Self {
+    Self::Eot(UnexpectedEot::eot(offset))
   }
 
   /// Creates an unexpected token error with the given span and token.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unexpected_token(span: Span, found: T, expected: TK) -> Self {
+  pub const fn unexpected_token(span: SimpleSpan, found: T, expected: TK) -> Self {
     Self::UnexpectedToken(UnexpectedToken::expected_one_with_found(
       span, found, expected,
     ))
@@ -203,13 +203,13 @@ impl<S, T, TK, Char, StateError> Error<S, T, TK, Char, StateError> {
 
   /// Creates a missing comma error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn missing_comma(err: Missing<Comma, YUL>) -> Self {
+  pub const fn missing_comma(err: Missing<Comma, DefaultLang>) -> Self {
     Self::MissingComma(err)
   }
 
   /// Creates an other error with the given message.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn other(span: Span, msg: impl Into<Message>) -> Self {
+  pub fn other(span: SimpleSpan, msg: impl Into<Message>) -> Self {
     Self::Other(Spanned::new(span, msg.into()))
   }
 }
