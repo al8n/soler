@@ -918,7 +918,7 @@ where
   <Token<S::Slice<'inp>> as TokenT<'inp>>::Error: From<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Error>
     + From<<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras as State>::Error>,
   <Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos: Logos<'inp, Source = <S as SourceBridge<'inp>>::Logos>,
-  <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras: State,
+  <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras: State + Default,
   S: SourceBridge<'inp>,
 {
   type State = <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras;
@@ -928,10 +928,7 @@ where
   type Offset = usize;
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn new(input: &'inp Self::Source) -> Self
-  where
-    Self::State: Default
-  {
+  fn new(input: &'inp Self::Source) -> Self {
     let inner = tokit::logos::Lexer::new(input.to_logos_source());
     Self { input, inner }
   }

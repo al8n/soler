@@ -234,14 +234,10 @@ mod evm {
           )+
         }
 
-        impl core::fmt::Display for EvmBuiltinFunction<()> {
+        impl<S> core::fmt::Display for EvmBuiltinFunction<S> {
           #[cfg_attr(not(tarpaulin), inline(always))]
           fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            match self {
-              $(
-                Self::[<$name:camel>](_) => stringify!($name).fmt(f),
-              )+
-            }
+            self.as_str().fmt(f)
           }
         }
 
@@ -291,6 +287,36 @@ mod evm {
             match self {
               $(
                 Self::[<$name:camel>](_) => EvmBuiltinFunction::[<$name:camel>](()),
+              )+
+            }
+          }
+
+          /// Consumes the built-in function and returns the inner.
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          pub fn into_inner(self) -> S {
+            match self {
+              $(
+                Self::[<$name:camel>](s) => s,
+              )+
+            }
+          }
+
+          /// Returns a reference to the inner.
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          pub const fn as_inner(&self) -> &S {
+            match self {
+              $(
+                Self::[<$name:camel>](s) => s,
+              )+
+            }
+          }
+
+          /// Returns a mutable reference to the inner.
+          #[cfg_attr(not(tarpaulin), inline(always))]
+          pub const fn as_inner_mut(&mut self) -> &mut S {
+            match self {
+              $(
+                Self::[<$name:camel>](s) => s,
               )+
             }
           }

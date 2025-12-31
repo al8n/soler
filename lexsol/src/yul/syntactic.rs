@@ -41,7 +41,7 @@ where
   <Token<S::Slice<'inp>> as TokenT<'inp>>::Error: From<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Error>
     + From<<<<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras as State>::Error>,
   <Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos: Logos<'inp, Source = <S as SourceBridge<'inp>>::Logos>,
-  <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras: State,
+  <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras: State + Default,
   S: SourceBridge<'inp>,
 {
   type State = <<Token<S::Slice<'inp>> as TokenBridge<'inp>>::Logos as Logos<'inp>>::Extras;
@@ -51,10 +51,7 @@ where
   type Offset = usize;
 
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn new(input: &'inp Self::Source) -> Self
-  where
-    Self::State: Default,
-  {
+  fn new(input: &'inp Self::Source) -> Self {
     let inner = tokit::logos::Lexer::new(input.to_logos_source());
     Self { input, inner }
   }
@@ -503,29 +500,13 @@ where
   }
 }
 
-impl<'a, S: 'a> IdentifierToken<'a, S> for Token<S>
+impl<'a, S: 'a> IdentifierToken<'a> for Token<S>
 where
   Token<S>: tokit::Token<'a>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_identifier(&self) -> bool {
     matches!(self, Self::Identifier(_))
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn identifier(&self) -> Option<&S> {
-    match self {
-      Self::Identifier(s) => Some(s),
-      _ => None,
-    }
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn try_into_identifier(self) -> Result<S, Self>
-  where
-    Self: Sized,
-  {
-    self.try_unwrap_identifier().map_err(|e| e.input)
   }
 }
 
@@ -589,16 +570,33 @@ where
 
 #[cfg(feature = "evm")]
 #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-impl<S> Require<super::EvmBuiltinFunction<S>> for Token<S> {
-  type Err = Self;
+const _: () = {
+  impl<S> Require<super::EvmBuiltinFunction<S>> for Token<S> {
+    type Err = Self;
 
-  fn require(self) -> Result<super::EvmBuiltinFunction<S>, Self::Err>
-  where
-    Self: Sized,
-  {
-    self.try_unwrap_evm_builtin().map_err(|e| e.input)
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn matched(&self) -> bool {
+      self.is_evm_builtin()
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn require(self) -> Result<super::EvmBuiltinFunction<S>, Self::Err>
+    where
+      Self: Sized,
+    {
+      self.try_unwrap_evm_builtin().map_err(|e| e.input)
+    }
   }
-}
+
+  impl<S> TryFrom<Token<S>> for super::EvmBuiltinFunction<S> {
+    type Error = Token<S>;
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn try_from(value: Token<S>) -> Result<Self, Self::Error> {
+      value.try_unwrap_evm_builtin().map_err(|e| e.input)
+    }
+  }
+};
 
 super::syntax_kind!(
   /// The syntax kinds for Yul

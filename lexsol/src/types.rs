@@ -53,7 +53,7 @@ impl<S> LitBool<S> {
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
     let span = this.span;
     let source = match this.data {
       LitBool::True(s) => s,
@@ -113,7 +113,7 @@ impl<S> LitDecimal<S> {
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
     Ident::new(this.span, this.data.0)
   }
 
@@ -169,7 +169,7 @@ impl<S> LitHexadecimal<S> {
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
     Ident::new(this.span, this.data.0)
   }
 
@@ -241,7 +241,7 @@ impl<S> LitNumber<S> {
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Lang>(this: Spanned<Self>) -> Ident<S, Lang> {
+  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
     let (span, data) = (this.span, this.data);
     let source = match data {
       LitNumber::Decimal(lit) => lit.0,

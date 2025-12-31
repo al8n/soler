@@ -154,7 +154,7 @@ pub enum Token<S> {
   /// Spec: [Yul evm built-in functions](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulEVMBuiltin)
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-  EvmBuiltin(super::EvmBuiltinFunction),
+  EvmBuiltin(super::EvmBuiltinFunction<S>),
 }
 
 /// The kind of Yul lossless token
@@ -369,29 +369,13 @@ where
   }
 }
 
-impl<'a, S: 'a> IdentifierToken<'a, S> for Token<S>
+impl<'a, S: 'a> IdentifierToken<'a> for Token<S>
 where
   Token<S>: tokit::Token<'a>,
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn is_identifier(&self) -> bool {
     matches!(self, Self::Identifier(_))
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn identifier(&self) -> Option<&S> {
-    match self {
-      Self::Identifier(s) => Some(s),
-      _ => None,
-    }
-  }
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn try_into_identifier(self) -> Result<S, Self>
-  where
-    Self: Sized,
-  {
-    self.try_unwrap_identifier().map_err(|e| e.input)
   }
 }
 
@@ -453,16 +437,33 @@ where
 
 #[cfg(feature = "evm")]
 #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-impl<S> Require<super::EvmBuiltinFunction> for Token<S> {
-  type Err = Self;
+const _: () = {
+  impl<S> Require<super::EvmBuiltinFunction<S>> for Token<S> {
+    type Err = Self;
 
-  fn require(self) -> Result<super::EvmBuiltinFunction, Self::Err>
-  where
-    Self: Sized,
-  {
-    self.try_unwrap_evm_builtin().map_err(|e| e.input)
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn matched(&self) -> bool {
+      self.is_evm_builtin()
+    }
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn require(self) -> Result<super::EvmBuiltinFunction<S>, Self::Err>
+    where
+      Self: Sized,
+    {
+      self.try_unwrap_evm_builtin().map_err(|e| e.input)
+    }
   }
-}
+
+  impl<S> TryFrom<Token<S>> for super::EvmBuiltinFunction<S> {
+    type Error = Token<S>;
+
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn try_from(value: Token<S>) -> Result<Self, Self::Error> {
+      value.try_unwrap_evm_builtin().map_err(|e| e.input)
+    }
+  }
+};
 
 super::syntax_kind!(
   /// The syntax kinds for Yul

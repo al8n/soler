@@ -12,14 +12,13 @@ use lexsol::{
     LitBool, LitDecimal, LitHexadecimal,
     punct::{Comma, Dot},
   },
-  yul::{lossless, syntactic, Yul},
+  yul::{Yul, lossless, syntactic},
 };
 use tokit::{
   Token,
   error::{
     IncompleteSyntax, Invalid, Missing, UnclosedBrace, UnclosedParen, UndelimitedBrace,
-    UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnknownLexeme,
-    UnopenedBrace, UnopenedParen,
+    UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnknownLexeme, UnopenedBrace, UnopenedParen,
     token::UnexpectedToken,
   },
   types::{Ident, Keyword},
@@ -67,10 +66,12 @@ pub type MissingDot<Lang = DefaultLang> = Missing<Dot, Lang>;
 pub type InvalidPathSegment<S, Lang = DefaultLang> = Invalid<InvalidPathSegmentKnowledge<S, Lang>>;
 
 /// The invalid function name error.
-pub type InvalidFunctionName<S, Lang = DefaultLang> = Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
+pub type InvalidFunctionName<S, Lang = DefaultLang> =
+  Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
 
 /// The invalid variable name error.
-pub type InvalidVariableName<S, Lang = DefaultLang> = Invalid<InvalidVariableNameKnowledge<S, Lang>>;
+pub type InvalidVariableName<S, Lang = DefaultLang> =
+  Invalid<InvalidVariableNameKnowledge<S, Lang>>;
 
 /// An incomplete single variable declaration error.
 pub type IncompleteSingleVariableDeclaration<Lang = DefaultLang> =
@@ -81,7 +82,8 @@ pub type IncompleteMultipleVariablesDeclaration<Lang = DefaultLang> =
   IncompleteSyntax<MultipleVariablesDeclaration<Lang>>;
 
 /// An incomplete variable declaration error.
-pub type IncompleteVariableDeclaration<Lang = DefaultLang> = IncompleteSyntax<VariableDeclaration<Lang>>;
+pub type IncompleteVariableDeclaration<Lang = DefaultLang> =
+  IncompleteSyntax<VariableDeclaration<Lang>>;
 
 /// An incomplete single target assignment error.
 pub type IncompleteSingleTargetAssignment<Lang = DefaultLang> =
@@ -94,12 +96,16 @@ pub type IncompleteMultipleTargetsAssignment<Lang = DefaultLang> =
 /// A knowledge of invalid function name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidFunctionNameKnowledge<S, Lang = DefaultLang>(pub SemiIdentifierKnowledge<S, Lang>);
+pub struct InvalidFunctionNameKnowledge<S, Lang = DefaultLang>(
+  pub SemiIdentifierKnowledge<S, Lang>,
+);
 
 /// A knowledge of invalid variable name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidVariableNameKnowledge<S, Lang = DefaultLang>(pub SemiIdentifierKnowledge<S, Lang>);
+pub struct InvalidVariableNameKnowledge<S, Lang = DefaultLang>(
+  pub SemiIdentifierKnowledge<S, Lang>,
+);
 
 /// A knowledge of invalid path segment.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
@@ -128,11 +134,11 @@ pub enum SemiIdentifierKnowledge<S, Lang = DefaultLang> {
   LitHexadecimal(Spanned<LitHexadecimal<S>>),
 }
 
-#[derive(Debug, Clone, From, IsVariant, TryUnwrap, Unwrap)]
+#[derive(Clone, From, IsVariant, TryUnwrap, Unwrap)]
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Error<S, T, TK: 'static = syntactic::SyntaxKind, Char = char, StateError = ()> {
+pub enum Error<S, T, TK: Clone + 'static = syntactic::SyntaxKind, Char = char, StateError = ()> {
   /// Lexer error
   Lexer(LexerErrors<Char, StateError>),
   /// Undelimited brace
@@ -186,7 +192,16 @@ pub enum Error<S, T, TK: 'static = syntactic::SyntaxKind, Char = char, StateErro
   Other(Spanned<Message>),
 }
 
-impl<S, T, TK, Char, StateError> Error<S, T, TK, Char, StateError> {
+impl<S, T, TK: Clone + 'static, Char, StateError> core::fmt::Debug
+  for Error<S, T, TK, Char, StateError>
+{
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    todo!()
+  }
+}
+
+impl<S, T, TK: Clone + 'static, Char, StateError> Error<S, T, TK, Char, StateError> {
   /// Creates an end-of-token-stream error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn eot(offset: usize) -> Self {
