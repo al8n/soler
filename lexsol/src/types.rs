@@ -113,7 +113,10 @@ impl<S, Lang: ?Sized> LitDecimal<S, Lang> {
   /// Creates a new decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(lit: S) -> Self {
-    Self { lit, _lang: PhantomData }
+    Self {
+      lit,
+      _lang: PhantomData,
+    }
   }
 
   /// Returns the source of the decimal literal
@@ -140,13 +143,19 @@ impl<S, Lang: ?Sized> LitDecimal<S, Lang> {
   /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitDecimal<U, Lang> {
-    LitDecimal { lit: f(self.lit), _lang: PhantomData }
+    LitDecimal {
+      lit: f(self.lit),
+      _lang: PhantomData,
+    }
   }
 
   /// Returns the unit literal of this decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unit(&self) -> LitDecimal<(), Lang> {
-    LitDecimal { lit: (), _lang: PhantomData }
+    LitDecimal {
+      lit: (),
+      _lang: PhantomData,
+    }
   }
 
   /// Returns the inner source of the decimal literal
@@ -178,7 +187,10 @@ impl<S, Lang: ?Sized> LitHexadecimal<S, Lang> {
   /// Creates a new decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(lit: S) -> Self {
-    Self { lit, _lang: PhantomData }
+    Self {
+      lit,
+      _lang: PhantomData,
+    }
   }
 
   /// Returns the source of the decimal literal
@@ -205,13 +217,19 @@ impl<S, Lang: ?Sized> LitHexadecimal<S, Lang> {
   /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitHexadecimal<U, Lang> {
-    LitHexadecimal { lit: f(self.lit), _lang: PhantomData }
+    LitHexadecimal {
+      lit: f(self.lit),
+      _lang: PhantomData,
+    }
   }
 
   /// Returns the unit literal of this hexadecimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unit(&self) -> LitHexadecimal<(), Lang> {
-    LitHexadecimal { lit: (), _lang: PhantomData }
+    LitHexadecimal {
+      lit: (),
+      _lang: PhantomData,
+    }
   }
 
   /// Returns the inner source of the hexadecimal literal
@@ -337,7 +355,11 @@ pub struct LitHexStr<S = (), Lang: ?Sized = ()> {
 impl<S, Lang: ?Sized> LitHexStr<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   const fn new(delimiter: LitStrDelimiterKind, lit: S) -> Self {
-    Self { delimiter, lit, _lang: PhantomData }
+    Self {
+      delimiter,
+      lit,
+      _lang: PhantomData,
+    }
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -408,7 +430,11 @@ pub struct LitRegularStr<S = (), Lang: ?Sized = ()> {
 impl<S, Lang: ?Sized> LitRegularStr<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   const fn new(delimiter: LitStrDelimiterKind, lit: S) -> Self {
-    Self { delimiter, lit, _lang: PhantomData }
+    Self {
+      delimiter,
+      lit,
+      _lang: PhantomData,
+    }
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]

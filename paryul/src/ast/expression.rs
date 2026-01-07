@@ -1,18 +1,27 @@
 #[cfg(feature = "evm")]
 use lexsol::yul::EvmBuiltinFunction;
 use tokit::{
-  Accumulator, Emitter, Lexer, ParseContext, ParseInput, ParseState, SimpleSpan, Source, Token as TokenT, TryParseInput, emitter::{
-    DelimitedEmitter, SeparatedEmitter, UnexpectedLeadingSeparatorEmitter, UnexpectedTrailingSeparatorEmitter
-  }, error::{UnexpectedEot, token::UnexpectedTrailingDot}, input::InputRef, punct::{Brace, Comma, Dot}, span::{AsSpan, Spanned}, token::DelimiterToken, try_parse_input::{Accept, Decline, ParseAttempt}, types::Ident, utils::Maybe::{Owned, Ref}
+  Accumulator, Emitter, Lexer, ParseContext, ParseInput, ParseState, SimpleSpan, Source,
+  Token as TokenT, TryParseInput,
+  emitter::{
+    DelimitedEmitter, SeparatedEmitter, UnexpectedLeadingSeparatorEmitter,
+    UnexpectedTrailingSeparatorEmitter,
+  },
+  error::{UnexpectedEot, token::UnexpectedTrailingDot},
+  input::InputRef,
+  punct::{Brace, Comma, Dot},
+  span::{AsSpan, Spanned},
+  token::DelimiterToken,
+  try_parse_input::{Accept, Decline, ParseAttempt},
+  types::Ident,
 };
 
 use lexsol::yul::{
-  Lit, Yul, syntactic::{SyntaxKind, Token}
+  Lit, Yul,
+  syntactic::{SyntaxKind, Token},
 };
 
-use crate::{
-  error::{InvalidPathSegment, InvalidPathSegmentData},
-};
+use crate::error::{InvalidPathSegment, InvalidPathSegmentData};
 
 use super::*;
 
@@ -53,8 +62,7 @@ impl<S, Span> Expression<S, Span> {
     L::Source: Source<L::Offset, Slice<'inp> = S>,
     <L::Token as TokenT<'inp>>::Kind: From<SyntaxKind>,
     Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
-    Ctx::Emitter: 
-      DelimitedEmitter<'inp, Brace, L, Yul<SyntaxKind>>
+    Ctx::Emitter: DelimitedEmitter<'inp, Brace, L, Yul<SyntaxKind>>
       + SeparatedEmitter<'inp, Comma, L, Yul<SyntaxKind>>
       + UnexpectedLeadingSeparatorEmitter<'inp, Comma, L, Yul<SyntaxKind>>
       + UnexpectedTrailingSeparatorEmitter<'inp, Comma, L, Yul<SyntaxKind>>
@@ -84,14 +92,12 @@ impl<S, Span> Expression<S, Span> {
       }
     }
 
-    match inp.try_expect_valid(|t, _| {
-      match t.into_data() {
-        Token::Identifier(_) => Ok(true),
-        #[cfg(feature = "evm")]
-        Token::EvmBuiltin(_) => Ok(true),
-        Token::Lit(_) => Ok(true),
-        _ => Ok(false),
-      }
+    match inp.try_expect_valid(|t, _| match t.into_data() {
+      Token::Identifier(_) => Ok(true),
+      #[cfg(feature = "evm")]
+      Token::EvmBuiltin(_) => Ok(true),
+      Token::Lit(_) => Ok(true),
+      _ => Ok(false),
     })? {
       None => Ok(Decline),
       Some(t) => {
@@ -104,7 +110,10 @@ impl<S, Span> Expression<S, Span> {
           _ => unreachable!("token has been validated"),
         };
 
-        let ct = inp.sync_errors()?;
+        let ct = inp.try_expect_valid(|t, _| match t.into_data() {
+          Token::Dot | Token::LParen => Ok(true),
+          _ => Ok(false),
+        })?;
 
         match ct {
           None => match hint {
@@ -114,90 +123,105 @@ impl<S, Span> Expression<S, Span> {
               Ok(Accept(Self::Path(path)))
             }
             #[cfg(feature = "evm")]
-            Hint::EvmBuiltin(e) => {
-              Err(InvalidPathSegment::with_data_of(first_span, InvalidPathSegmentData::EvmBuiltinFunction(e.unit())).into())
-            }
+            Hint::EvmBuiltin(e) => Err(
+              InvalidPathSegment::with_data_of(
+                first_span,
+                InvalidPathSegmentData::EvmBuiltinFunction(e.unit()),
+              )
+              .into(),
+            ),
           },
           Some(ct) => {
-            let tok = ct.as_maybe_ref().map(|t| t.token().copied(), |t| t.token())
-              .into_inner()
-              .into_data();
+            let tok = ct.into_data();
 
             match tok {
-              Token::Dot => {
-                match hint {
-                  #[cfg(feature = "evm")]
-                  Hint::EvmBuiltin(e) => {
-                    Err(InvalidPathSegment::with_data_of(first_span, InvalidPathSegmentData::EvmBuiltinFunction(e.unit())).into())
-                  }
-                  Hint::Ident(ident) => {
-                    let first_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
-                    let segments = vec![first_segment];
-                    let dot = match ct {
-                      Ref(_) => {
-                        inp.next().expect("peeked token is Dot").into_data().expect_token("peeked token is Dot")
-                      },
-                      Owned(t) => {
-                        inp.skip_one();
-                        t.into_token().into_data()
-                      },
-                    };
+              Token::Dot => match hint {
+                #[cfg(feature = "evm")]
+                Hint::EvmBuiltin(e) => Err(
+                  InvalidPathSegment::with_data_of(
+                    first_span,
+                    InvalidPathSegmentData::EvmBuiltinFunction(e.unit()),
+                  )
+                  .into(),
+                ),
+                Hint::Ident(ident) => {
+                  let first_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
+                  let segments = vec![first_segment];
 
-                    PathSegment::try_yul_following
-                      .separated_by_dot()
-                      .collect_with(segments)
-                      .spanned()
-                      .and_then_with(|spanned: Spanned<_, L::Span>, mut state: ParseState<'_, 'inp, '_, L, Ctx, _>| {
+                  PathSegment::try_yul_following
+                    .separated_by_dot()
+                    .collect_with(segments)
+                    .spanned()
+                    .and_then_with(
+                      |spanned: Spanned<_, L::Span>,
+                       mut state: ParseState<'_, 'inp, '_, L, Ctx, _>| {
                         let (mut span, segs) = spanned.into_components();
                         *span.start_mut() = first_span.start();
                         if segs.len() == 1 {
-                          state.emitter().emit_unexpected_trailing_separator(UnexpectedTrailingDot::<L, _>::trailing_dot_of(span.clone(), dot.clone()))?;
+                          state.emitter().emit_unexpected_trailing_separator(
+                            UnexpectedTrailingDot::<L, _>::trailing_dot_of(
+                              span.clone(),
+                              tok.clone(),
+                            ),
+                          )?;
                           Ok(Accept(Self::Path(Path::new(span, segs))))
                         } else {
                           Ok(Accept(Self::Path(Path::new(span, segs))))
-                        }                        
-                      })
-                      .parse_input(inp)
-                  }
+                        }
+                      },
+                    )
+                    .parse_input(inp)
                 }
               },
-              Token::LParen => {
-                Self::try_parse_yul
-                  .separated_by_comma()
-                  .delimited_by(|t: &L::Token| if t.is_open_paren() {
-                    Ok(())
-                  } else {
-                    Err(SyntaxKind::LParen.into())
-                  }, |t: &L::Token| if t.is_close_paren() {
-                    Ok(())
-                  } else {
-                    Err(SyntaxKind::RParen.into())
-                  }, Brace::PHANTOM)
-                  .collect()
-                  .parse_input(inp)
-                  .map(|exprs: Vec<Self>| {
-                    let end = inp.span().end();
-                    let start = first_span.start();
-                    let fn_name = FunctionName::new(Ident::new(first_span, hint.into_data()));
+              Token::LParen => Self::try_parse_yul
+                .separated_by_comma()
+                .delimited_by(
+                  |t: &L::Token| {
+                    if t.is_open_paren() {
+                      Ok(())
+                    } else {
+                      Err(SyntaxKind::LParen.into())
+                    }
+                  },
+                  |t: &L::Token| {
+                    if t.is_close_paren() {
+                      Ok(())
+                    } else {
+                      Err(SyntaxKind::RParen.into())
+                    }
+                  },
+                  Brace::PHANTOM,
+                )
+                .collect()
+                .parse_input(inp)
+                .map(|exprs: Vec<Self>| {
+                  let end = inp.span().end();
+                  let start = first_span.start();
+                  let fn_name = FunctionName::new(Ident::new(first_span, hint.into_data()));
 
-                    Accept(Self::FunctionCall(FunctionCall::new(Span::new(start, end), fn_name, exprs)))
-                  })
-              }
-              _ => {
-                match hint {
-                  Hint::Ident(ident) => {
-                    let path_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
-                    let path = Path::new(first_span, vec![path_segment]);
-                    Ok(Accept(Self::Path(path)))
-                  }
-                  #[cfg(feature = "evm")]
-                  Hint::EvmBuiltin(e) => {
-                    Err(InvalidPathSegment::with_data_of(first_span, InvalidPathSegmentData::EvmBuiltinFunction(e.unit())).into())
-                  }
+                  Accept(Self::FunctionCall(FunctionCall::new(
+                    Span::new(start, end),
+                    fn_name,
+                    exprs,
+                  )))
+                }),
+              _ => match hint {
+                Hint::Ident(ident) => {
+                  let path_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
+                  let path = Path::new(first_span, vec![path_segment]);
+                  Ok(Accept(Self::Path(path)))
                 }
-              }
+                #[cfg(feature = "evm")]
+                Hint::EvmBuiltin(e) => Err(
+                  InvalidPathSegment::with_data_of(
+                    first_span,
+                    InvalidPathSegmentData::EvmBuiltinFunction(e.unit()),
+                  )
+                  .into(),
+                ),
+              },
             }
-          },
+          }
         }
       }
     }

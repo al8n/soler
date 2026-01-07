@@ -101,7 +101,7 @@ impl<S, Span, Lang: ?Sized> PathSegment<S, Span, Lang> {
 
   /// Consume the path segment and return the identifier.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_components(self) -> Ident<S, Span, Lang> {
+  pub fn into_ident(self) -> Ident<S, Span, Lang> {
     self.ident
   }
 
@@ -229,7 +229,12 @@ impl PathSegment<(), (), ()> {
 
 /// A scaffold AST node for a Yul path.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Path<Segment, Span = SimpleSpan, Container = Vec<Segment>, Lang: ?Sized = Yul<SyntaxKind>> {
+pub struct Path<
+  Segment,
+  Span = SimpleSpan,
+  Container = Vec<Segment>,
+  Lang: ?Sized = Yul<SyntaxKind>,
+> {
   span: Span,
   segments: Container,
   _m: PhantomData<Segment>,

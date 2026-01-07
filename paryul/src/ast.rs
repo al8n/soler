@@ -2,10 +2,13 @@ use crate::{error::AstParserError, scaffold::ast};
 
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
-use lexsol::{types::{
-  LitBool, LitDecimal, LitHexadecimal, LitNumber,
-  keywords::{Break, Continue, Leave},
-}, yul::{Yul, syntactic::SyntaxKind}};
+use lexsol::{
+  types::{
+    LitBool, LitDecimal, LitHexadecimal, LitNumber,
+    keywords::{Break, Continue, Leave},
+  },
+  yul::{Yul, syntactic::SyntaxKind},
+};
 use tokit::SimpleSpan;
 // use tokit::{
 //   IdentifierToken, KeywordToken, Lexed, LitToken, LogoStream, Logos, PunctuatorToken, Require,
@@ -23,7 +26,7 @@ pub use expression::Expression;
 // mod block;
 mod expression;
 mod function_call;
-// mod function_name;
+mod function_name;
 // mod ident_list;
 // mod name;
 mod path;
@@ -124,23 +127,32 @@ mod path;
 type DefaultLang = Yul<SyntaxKind>;
 
 /// The path segment type for Yul.
-pub type PathSegment<S, Span = SimpleSpan, Lang = DefaultLang> = ast::path::PathSegment<S, Span, Lang>;
+pub type PathSegment<S, Span = SimpleSpan, Lang = DefaultLang> =
+  ast::path::PathSegment<S, Span, Lang>;
 
 /// The path type of Yul.
 ///
 /// Spec: [Yul Path](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulPath)
-pub type Path<S, Span = SimpleSpan, Lang = DefaultLang> = ast::path::Path<PathSegment<S, Span, Lang>, Span, Vec<PathSegment<S, Span, Lang>>, Lang>;
+pub type Path<S, Span = SimpleSpan, Lang = DefaultLang> =
+  ast::path::Path<PathSegment<S, Span, Lang>, Span, Vec<PathSegment<S, Span, Lang>>, Lang>;
 
 /// The function call name type for Yul.
 ///
 /// Spec: [Yul Function Call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
-pub type FunctionName<S, Span = SimpleSpan, Lang = DefaultLang> = ast::statement::function_call::FunctionName<S, Span, Lang>;
+pub type FunctionName<S, Span = SimpleSpan, Lang = DefaultLang> =
+  ast::statement::function_call::FunctionName<S, Span, Lang>;
 
 /// The function call type for Yul.
 ///
 /// Spec: [Yul Function Call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
 pub type FunctionCall<S, Span = SimpleSpan, Lang = DefaultLang> =
-  ast::statement::function_call::FunctionCall<FunctionName<S, Span, Lang>, Expression<S, Span, Lang>, Span, Vec<Expression<S, Span, Lang>>, Lang>;
+  ast::statement::function_call::FunctionCall<
+    FunctionName<S, Span, Lang>,
+    Expression<S, Span, Lang>,
+    Span,
+    Vec<Expression<S, Span, Lang>>,
+    Lang,
+  >;
 
 // /// The single-target assignment type for Yul.
 // ///

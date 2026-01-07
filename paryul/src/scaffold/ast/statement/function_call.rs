@@ -1,10 +1,7 @@
 use core::marker::PhantomData;
 
 use lexsol::yul::{Yul, syntactic::SyntaxKind};
-use tokit::{
-  SimpleSpan, span::AsSpan, types::Ident
-};
-
+use tokit::{SimpleSpan, span::AsSpan, types::Ident};
 
 /// A scaffold AST node for a Yul function call name.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -32,7 +29,10 @@ impl<S, Span, Lang> FunctionName<S, Span, Lang> {
 
   /// Returns the span of the path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn span(&self) -> Span where Span: Copy {
+  pub const fn span(&self) -> Span
+  where
+    Span: Copy,
+  {
     self.ident.span()
   }
 
@@ -71,7 +71,13 @@ impl<S, Span, Lang> FunctionName<S, Span, Lang> {
 ///
 /// See: [Yul function call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionCall<Name, Expression, Span = SimpleSpan, Container = Vec<Expression>, Lang: ?Sized = Yul<SyntaxKind>> {
+pub struct FunctionCall<
+  Name,
+  Expression,
+  Span = SimpleSpan,
+  Container = Vec<Expression>,
+  Lang: ?Sized = Yul<SyntaxKind>,
+> {
   span: Span,
   name: Name,
   expressions: Container,
@@ -88,7 +94,9 @@ impl<Name, Expression, Span, Container, Lang: ?Sized> AsSpan<Span>
   }
 }
 
-impl<Name, Expression, Span, Container, Lang: ?Sized> FunctionCall<Name, Expression, Span, Container, Lang> {
+impl<Name, Expression, Span, Container, Lang: ?Sized>
+  FunctionCall<Name, Expression, Span, Container, Lang>
+{
   /// Create a new function call.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, name: Name, expressions: Container) -> Self {
@@ -103,7 +111,10 @@ impl<Name, Expression, Span, Container, Lang: ?Sized> FunctionCall<Name, Express
 
   /// Get the span of the function call.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn span(&self) -> Span where Span: Copy {
+  pub const fn span(&self) -> Span
+  where
+    Span: Copy,
+  {
     self.span
   }
 

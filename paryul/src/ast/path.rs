@@ -7,7 +7,6 @@ use tokit::{
   input::InputRef,
   parser::SeparatorHandler,
   punct::Dot,
-  span::Spanned,
   token::IdentifierToken,
   try_parse_input::{Accept, Decline, ParseAttempt},
   types::Ident,
@@ -19,7 +18,7 @@ use lexsol::yul::{
 };
 
 use crate::{
-  error::{InvalidPathSegment, InvalidPathSegmentData},
+  error::InvalidPathSegment,
   scaffold::ast::path::{Path, PathSegment},
 };
 
@@ -33,9 +32,10 @@ impl<S, Span> PathSegment<S, Span> {
     L::Source: Source<L::Offset, Slice<'inp> = S>,
     L::Token: IdentifierToken<'inp>,
     Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
-    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error: From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
+    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error:
+      From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
     S: 'inp,
-    Span: tokit::Span<Offset = L::Offset> + Clone,
+    Span: tokit::Span<Offset = L::Offset>,
   {
     Self::try_yul(
       inp,
@@ -53,9 +53,10 @@ impl<S, Span> PathSegment<S, Span> {
     L::Source: Source<L::Offset, Slice<'inp> = S>,
     L::Token: IdentifierToken<'inp>,
     Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
-    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error: From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
+    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error:
+      From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
     S: 'inp,
-    Span: tokit::Span<Offset = L::Offset> + Clone,
+    Span: tokit::Span<Offset = L::Offset>,
   {
     Self::try_yul(
       inp,
@@ -75,9 +76,10 @@ impl<S, Span> PathSegment<S, Span> {
     L::Source: Source<L::Offset, Slice<'inp> = S>,
     L::Token: IdentifierToken<'inp>,
     Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
-    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error: From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
+    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error:
+      From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
     S: 'inp,
-    Span: tokit::Span<Offset = L::Offset> + Clone,
+    Span: tokit::Span<Offset = L::Offset>,
   {
     let tok = inp.try_expect_valid(|tok, _| {
       Ok(match tok.into_data() {
@@ -96,7 +98,9 @@ impl<S, Span> PathSegment<S, Span> {
         Ok(Accept(match tok {
           Token::Identifier(ident) => PathSegment::new(Ident::new(span, ident)),
           #[cfg(feature = "evm")]
-          Token::EvmBuiltin(evm_fn) if allow_evm_builtin => PathSegment::new(Ident::new(span, evm_fn.into_inner())),
+          Token::EvmBuiltin(evm_fn) if allow_evm_builtin => {
+            PathSegment::new(Ident::new(span, evm_fn.into_inner()))
+          }
           _ => unreachable!("token has been validated"),
         }))
       }
