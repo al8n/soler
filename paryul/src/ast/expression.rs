@@ -1,49 +1,20 @@
+#[cfg(feature = "evm")]
+use lexsol::yul::EvmBuiltinFunction;
 use tokit::{
-  chumsky::token::recovery::emit_error_until_token,
-  error::{ErrorNode, Malformed},
-  utils::{AsSpan, Span},
+  Accumulator, Emitter, Lexer, ParseContext, ParseInput, ParseState, SimpleSpan, Source, Token as TokenT, TryParseInput, emitter::{
+    DelimitedEmitter, SeparatedEmitter, UnexpectedLeadingSeparatorEmitter, UnexpectedTrailingSeparatorEmitter
+  }, error::{UnexpectedEot, token::UnexpectedTrailingDot}, input::InputRef, punct::{Brace, Comma, Dot}, span::{AsSpan, Spanned}, token::DelimiterToken, try_parse_input::{Accept, Decline, ParseAttempt}, types::Ident, utils::Maybe::{Owned, Ref}
 };
 
-use crate::error::AstLexerErrors;
+use lexsol::yul::{
+  Lit, Yul, syntactic::{SyntaxKind, Token}
+};
+
+use crate::{
+  error::{InvalidPathSegment, InvalidPathSegmentData},
+};
 
 use super::*;
-
-/// The tokens that can be used as synchronization points for Yul expressions.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
-#[non_exhaustive]
-#[unwrap(ref, ref_mut)]
-#[try_unwrap(ref, ref_mut)]
-enum ExpressionSyncPointToken<S> {
-  /// Yul literal
-  ///
-  /// Spec: [Yul literals](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulLiteral)
-  Lit(Lit<S>),
-  /// Left parenthesis '(', infer to function call expression, but missing identifier
-  #[try_unwrap(ignore)]
-  #[unwrap(ignore)]
-  #[from(skip)]
-  LParen,
-  SemiIdentifier(SemiIdentifierToken<S>),
-}
-
-impl<S> Require<ExpressionSyncPointToken<S>> for AstToken<S> {
-  type Err = Self;
-
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn require(self) -> Result<ExpressionSyncPointToken<S>, Self::Err>
-  where
-    Self: Sized,
-  {
-    Ok(match self {
-      AstToken::Identifier(ident) => SemiIdentifierToken::Identifier(ident).into(),
-      AstToken::Lit(lit) => lit.into(),
-      AstToken::LParen => ExpressionSyncPointToken::LParen,
-      #[cfg(feature = "evm")]
-      AstToken::EvmBuiltin(name) => SemiIdentifierToken::EvmBuiltin(name).into(),
-      other => return Err(other),
-    })
-  }
-}
 
 /// The expression type for Yul.
 ///
@@ -52,94 +23,183 @@ impl<S> Require<ExpressionSyncPointToken<S>> for AstToken<S> {
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
 #[non_exhaustive]
-pub enum Expression<S> {
+pub enum Expression<S, Span = SimpleSpan, Lang: ?Sized = DefaultLang> {
   /// Yul path
-  Path(Path<S>),
+  Path(Path<S, Span, Lang>),
   /// Yul function call
-  FunctionCall(FunctionCall<S>),
+  FunctionCall(FunctionCall<S, Span, Lang>),
   /// Yul literal
-  Literal(Spanned<Lit<S>>),
-  /// Malformed expression
-  Error(Malformed<crate::syntax::Expression>),
+  Literal(Spanned<Lit<S>, Span>),
 }
 
-impl<S> AsSpan<Span> for Expression<S> {
+impl<S, Span, Lang: ?Sized> AsSpan<Span> for Expression<S, Span, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn as_span(&self) -> &Span {
     match self {
       Self::Path(path) => path.as_span(),
       Self::FunctionCall(fn_call) => fn_call.as_span(),
       Self::Literal(lit) => lit.as_span(),
-      Self::Error(err) => err.span_ref(),
     }
   }
 }
 
-impl<S> Expression<S> {
-  /// Attempts to parse a Yul expression with error recovery.
-  ///
-  /// If the content is not possible to be an expression, returns `None`, and no valid token is consumed.
-  pub fn parser_with_recovery<'a, E>()
-  -> impl Parser<'a, AstTokenizer<'a, S>, Option<Self>, E> + Clone + 'a
+impl<S, Span> Expression<S, Span> {
+  /// Returns a parser for the Yul path.
+  pub fn try_parse_yul<'inp, L, Ctx>(
+    inp: &mut InputRef<'inp, '_, L, Ctx, Yul<SyntaxKind>>,
+  ) -> Result<ParseAttempt<Self>, <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error>
   where
-    S: Clone
-      + ErrorNode
-      + From<<<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>
-      + 'a,
-    AstToken<S>: Token<'a>,
-    <AstToken<S> as Token<'a>>::Logos: Logos<'a, Error = AstLexerErrors<'a, S>>,
-    AstTokenizer<'a, S>: LogoStream<
-        'a,
-        AstToken<S>,
-        Slice = <<<AstToken<S> as Token<'a>>::Logos as Logos<'a>>::Source as Source>::Slice<'a>,
-      >,
-    AstParserError<'a, S>: 'a,
-    E: ParserExtra<'a, AstTokenizer<'a, S>, Error = AstParserError<'a, S>> + 'a,
+    L: Lexer<'inp, Span = Span, Token = Token<S>>,
+    L::Source: Source<L::Offset, Slice<'inp> = S>,
+    <L::Token as TokenT<'inp>>::Kind: From<SyntaxKind>,
+    Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
+    Ctx::Emitter: 
+      DelimitedEmitter<'inp, Brace, L, Yul<SyntaxKind>>
+      + SeparatedEmitter<'inp, Comma, L, Yul<SyntaxKind>>
+      + UnexpectedLeadingSeparatorEmitter<'inp, Comma, L, Yul<SyntaxKind>>
+      + UnexpectedTrailingSeparatorEmitter<'inp, Comma, L, Yul<SyntaxKind>>
+      + SeparatedEmitter<'inp, Dot, L, Yul<SyntaxKind>>
+      + UnexpectedLeadingSeparatorEmitter<'inp, Dot, L, Yul<SyntaxKind>>
+      + UnexpectedTrailingSeparatorEmitter<'inp, Dot, L, Yul<SyntaxKind>>,
+    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error: From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>
+      + From<InvalidPathSegment<L::Span, Yul<SyntaxKind>>>,
+    S: 'inp,
+    Token<S>: DelimiterToken<'inp>,
+    Span: tokit::Span<Offset = L::Offset> + Clone,
   {
-    recursive(move |expr| {
-      custom(move |inp| {
-        let (_, result) = inp.parse(emit_error_until_token(
-          |Spanned { span, data: tok }, _, _| {
-            Some(
-              match <AstToken<S> as Require<ExpressionSyncPointToken<S>>>::require(tok) {
-                Ok(tok) => Ok(Spanned::new(span, tok)),
-                Err(tok) => Err(Spanned::new(span, tok)),
-              },
-            )
-          },
-        ))?;
+    enum Hint<S> {
+      Ident(S),
+      #[cfg(feature = "evm")]
+      EvmBuiltin(EvmBuiltinFunction<S>),
+    }
 
-        let valid_start = inp.cursor();
-        let valid_ckp = inp.save();
+    impl<S> Hint<S> {
+      #[cfg_attr(not(tarpaulin), inline(always))]
+      fn into_data(self) -> S {
+        match self {
+          Self::Ident(ident) => ident,
+          #[cfg(feature = "evm")]
+          Self::EvmBuiltin(f) => f.into_inner(),
+        }
+      }
+    }
 
-        Ok(Some(match result {
-          None => return Err(UnexpectedEot::eot(inp.span_since(&valid_start)).into()),
-          // not a valid expression sync point token, so, we do not consume it.
-          // The reason why we do not construct a malformed expression node here is
-          // that we want the parser to avoid stealing tokens from higher level constructs.
-          // If we construct a malformed expression node here, the expression parser
-          // may consume tokens that belong to the higher level constructs, causing cascading errors.
-          // Hence, we let the higher level parser decide how to handle the unexpected token.
-          Some(Err(_)) => return Ok(None),
-          Some(Ok(Spanned { span, data: tok })) => match tok {
-            ExpressionSyncPointToken::Lit(lit) => {
-              inp.skip();
-              Self::Literal(Spanned::new(span, lit))
+    match inp.try_expect_valid(|t, _| {
+      match t.into_data() {
+        Token::Identifier(_) => Ok(true),
+        #[cfg(feature = "evm")]
+        Token::EvmBuiltin(_) => Ok(true),
+        Token::Lit(_) => Ok(true),
+        _ => Ok(false),
+      }
+    })? {
+      None => Ok(Decline),
+      Some(t) => {
+        let (first_span, tok) = t.into_components();
+        let hint = match tok {
+          Token::Lit(lit) => return Ok(Accept(Self::Literal(Spanned::new(first_span, lit)))),
+          Token::Identifier(ident) => Hint::Ident(ident),
+          #[cfg(feature = "evm")]
+          Token::EvmBuiltin(f) => Hint::EvmBuiltin(f),
+          _ => unreachable!("token has been validated"),
+        };
+
+        let ct = inp.sync_errors()?;
+
+        match ct {
+          None => match hint {
+            Hint::Ident(ident) => {
+              let path_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
+              let path = Path::new(first_span, vec![path_segment]);
+              Ok(Accept(Self::Path(path)))
             }
-            _ => {
-              let fncall = inp.parse(FunctionCall::parser_with_recovery_inner(expr.clone()))?;
-              match fncall {
-                Some(fncall) => Self::FunctionCall(fncall),
-                None => {
-                  inp.rewind(valid_ckp);
-                  let path: Path<S> = inp.parse(Path::parser_with_recovery())?;
-                  Self::Path(path)
+            #[cfg(feature = "evm")]
+            Hint::EvmBuiltin(e) => {
+              Err(InvalidPathSegment::with_data_of(first_span, InvalidPathSegmentData::EvmBuiltinFunction(e.unit())).into())
+            }
+          },
+          Some(ct) => {
+            let tok = ct.as_maybe_ref().map(|t| t.token().copied(), |t| t.token())
+              .into_inner()
+              .into_data();
+
+            match tok {
+              Token::Dot => {
+                match hint {
+                  #[cfg(feature = "evm")]
+                  Hint::EvmBuiltin(e) => {
+                    Err(InvalidPathSegment::with_data_of(first_span, InvalidPathSegmentData::EvmBuiltinFunction(e.unit())).into())
+                  }
+                  Hint::Ident(ident) => {
+                    let first_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
+                    let segments = vec![first_segment];
+                    let dot = match ct {
+                      Ref(_) => {
+                        inp.next().expect("peeked token is Dot").into_data().expect_token("peeked token is Dot")
+                      },
+                      Owned(t) => {
+                        inp.skip_one();
+                        t.into_token().into_data()
+                      },
+                    };
+
+                    PathSegment::try_yul_following
+                      .separated_by_dot()
+                      .collect_with(segments)
+                      .spanned()
+                      .and_then_with(|spanned: Spanned<_, L::Span>, mut state: ParseState<'_, 'inp, '_, L, Ctx, _>| {
+                        let (mut span, segs) = spanned.into_components();
+                        *span.start_mut() = first_span.start();
+                        if segs.len() == 1 {
+                          state.emitter().emit_unexpected_trailing_separator(UnexpectedTrailingDot::<L, _>::trailing_dot_of(span.clone(), dot.clone()))?;
+                          Ok(Accept(Self::Path(Path::new(span, segs))))
+                        } else {
+                          Ok(Accept(Self::Path(Path::new(span, segs))))
+                        }                        
+                      })
+                      .parse_input(inp)
+                  }
+                }
+              },
+              Token::LParen => {
+                Self::try_parse_yul
+                  .separated_by_comma()
+                  .delimited_by(|t: &L::Token| if t.is_open_paren() {
+                    Ok(())
+                  } else {
+                    Err(SyntaxKind::LParen.into())
+                  }, |t: &L::Token| if t.is_close_paren() {
+                    Ok(())
+                  } else {
+                    Err(SyntaxKind::RParen.into())
+                  }, Brace::PHANTOM)
+                  .collect()
+                  .parse_input(inp)
+                  .map(|exprs: Vec<Self>| {
+                    let end = inp.span().end();
+                    let start = first_span.start();
+                    let fn_name = FunctionName::new(Ident::new(first_span, hint.into_data()));
+
+                    Accept(Self::FunctionCall(FunctionCall::new(Span::new(start, end), fn_name, exprs)))
+                  })
+              }
+              _ => {
+                match hint {
+                  Hint::Ident(ident) => {
+                    let path_segment = PathSegment::new(Ident::new(first_span.clone(), ident));
+                    let path = Path::new(first_span, vec![path_segment]);
+                    Ok(Accept(Self::Path(path)))
+                  }
+                  #[cfg(feature = "evm")]
+                  Hint::EvmBuiltin(e) => {
+                    Err(InvalidPathSegment::with_data_of(first_span, InvalidPathSegmentData::EvmBuiltinFunction(e.unit())).into())
+                  }
                 }
               }
             }
           },
-        }))
-      })
-    })
+        }
+      }
+    }
   }
 }

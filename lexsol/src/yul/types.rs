@@ -25,11 +25,11 @@ pub enum LitStrKind {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitStr<S = ()> {
+pub enum LitStr<S = (), Lang: ?Sized = ()> {
   /// Non-empty string literal
-  Regular(LitRegularStr<S>),
+  Regular(LitRegularStr<S, Lang>),
   /// Hex string literal
-  Hex(LitHexStr<S>),
+  Hex(LitHexStr<S, Lang>),
 }
 
 impl core::fmt::Display for LitStr {
@@ -123,13 +123,13 @@ impl<S> LitStr<S> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum Lit<S = ()> {
+pub enum Lit<S = (), Lang: ?Sized = ()> {
   /// The boolean literal
-  Boolean(LitBool<S>),
+  Boolean(LitBool<S, Lang>),
   /// The string literal
-  String(LitStr<S>),
+  String(LitStr<S, Lang>),
   /// The number literal
-  Number(LitNumber<S>),
+  Number(LitNumber<S, Lang>),
 }
 
 impl core::fmt::Display for Lit {

@@ -18,10 +18,7 @@ use tokit::{
   types::Ident,
 };
 
-use lexsol::yul::{
-  Yul,
-  syntactic::SyntaxKind,
-};
+use lexsol::yul::{Yul, syntactic::SyntaxKind};
 
 /// A segment of a path of Yul.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -232,21 +229,21 @@ impl PathSegment<(), (), ()> {
 
 /// A scaffold AST node for a Yul path.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Path<Segment, Span = SimpleSpan, Container = Vec<Segment>, Lang = Yul<SyntaxKind>> {
+pub struct Path<Segment, Span = SimpleSpan, Container = Vec<Segment>, Lang: ?Sized = Yul<SyntaxKind>> {
   span: Span,
   segments: Container,
   _m: PhantomData<Segment>,
   _lang: PhantomData<Lang>,
 }
 
-impl<Segment, Span, Container, Lang> AsSpan<Span> for Path<Segment, Span, Container, Lang> {
+impl<Segment, Span, Container, Lang: ?Sized> AsSpan<Span> for Path<Segment, Span, Container, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn as_span(&self) -> &Span {
     self.span_ref()
   }
 }
 
-impl<S, Span, Container, Lang> Path<PathSegment<S, Span, Lang>, Span, Container, Lang> {
+impl<S, Span, Container, Lang: ?Sized> Path<PathSegment<S, Span, Lang>, Span, Container, Lang> {
   /// Returns `true` if all segments in the path are valid.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn is_valid(&self) -> bool
@@ -275,7 +272,7 @@ impl<S, Span, Container, Lang> Path<PathSegment<S, Span, Lang>, Span, Container,
   }
 }
 
-impl<Segment, Span, Container, Lang> Path<Segment, Span, Container, Lang> {
+impl<Segment, Span, Container, Lang: ?Sized> Path<Segment, Span, Container, Lang> {
   /// Create a new path.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, segments: Container) -> Self {
@@ -332,4 +329,3 @@ impl<Segment, Span, Container, Lang> Path<Segment, Span, Container, Lang> {
     self.segments.as_ref().is_empty()
   }
 }
-

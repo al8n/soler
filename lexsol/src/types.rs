@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
 use tokit::{span::Spanned, types::Ident};
 
@@ -95,26 +97,29 @@ pub enum LitNumberKind {
 /// - [Yul decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulDecimalNumber)
 /// - [Solidity decimal number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.DecimalNumber)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitDecimal<S = ()>(S);
+pub struct LitDecimal<S = (), Lang: ?Sized = ()> {
+  lit: S,
+  _lang: PhantomData<Lang>,
+}
 
-impl core::fmt::Display for LitDecimal<()> {
+impl<Lang: ?Sized> core::fmt::Display for LitDecimal<(), Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     write!(f, "decimal number literal")
   }
 }
 
-impl<S> LitDecimal<S> {
+impl<S, Lang: ?Sized> LitDecimal<S, Lang> {
   /// Creates a new decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(lit: S) -> Self {
-    Self(lit)
+    Self { lit, _lang: PhantomData }
   }
 
   /// Returns the source of the decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn source_ref(&self) -> &S {
-    &self.0
+    &self.lit
   }
 
   /// Returns the source of the decimal literal
@@ -123,31 +128,31 @@ impl<S> LitDecimal<S> {
   where
     S: Copy,
   {
-    self.0
+    self.lit
   }
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
-    Ident::new(this.span, this.data.0)
+  pub fn into_identifier<Span>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
+    Ident::new(this.span, this.data.lit)
   }
 
   /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitDecimal<U> {
-    LitDecimal(f(self.0))
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitDecimal<U, Lang> {
+    LitDecimal { lit: f(self.lit), _lang: PhantomData }
   }
 
   /// Returns the unit literal of this decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unit(&self) -> LitDecimal<()> {
-    LitDecimal(())
+  pub const fn unit(&self) -> LitDecimal<(), Lang> {
+    LitDecimal { lit: (), _lang: PhantomData }
   }
 
   /// Returns the inner source of the decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn into_data(self) -> S {
-    self.0
+    self.lit
   }
 }
 
@@ -157,26 +162,29 @@ impl<S> LitDecimal<S> {
 ///   - [Yul hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulHexNumber)
 ///   - [Solidity Hex number literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexNumber)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitHexadecimal<S = ()>(S);
+pub struct LitHexadecimal<S = (), Lang: ?Sized = ()> {
+  lit: S,
+  _lang: PhantomData<Lang>,
+}
 
-impl core::fmt::Display for LitHexadecimal {
+impl<Lang: ?Sized> core::fmt::Display for LitHexadecimal<(), Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     write!(f, "hexadecimal number literal")
   }
 }
 
-impl<S> LitHexadecimal<S> {
+impl<S, Lang: ?Sized> LitHexadecimal<S, Lang> {
   /// Creates a new decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(lit: S) -> Self {
-    Self(lit)
+    Self { lit, _lang: PhantomData }
   }
 
   /// Returns the source of the decimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn source_ref(&self) -> &S {
-    &self.0
+    &self.lit
   }
 
   /// Returns the source of the decimal literal
@@ -185,31 +193,31 @@ impl<S> LitHexadecimal<S> {
   where
     S: Copy,
   {
-    self.0
+    self.lit
   }
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
-    Ident::new(this.span, this.data.0)
+  pub fn into_identifier<Span>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
+    Ident::new(this.span, this.data.lit)
   }
 
   /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitHexadecimal<U> {
-    LitHexadecimal(f(self.0))
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitHexadecimal<U, Lang> {
+    LitHexadecimal { lit: f(self.lit), _lang: PhantomData }
   }
 
   /// Returns the unit literal of this hexadecimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unit(&self) -> LitHexadecimal<()> {
-    LitHexadecimal(())
+  pub const fn unit(&self) -> LitHexadecimal<(), Lang> {
+    LitHexadecimal { lit: (), _lang: PhantomData }
   }
 
   /// Returns the inner source of the hexadecimal literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn into_data(self) -> S {
-    self.0
+    self.lit
   }
 }
 
@@ -226,11 +234,11 @@ impl<S> LitHexadecimal<S> {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitNumber<S = ()> {
+pub enum LitNumber<S = (), Lang: ?Sized = ()> {
   /// Decimal number literal
-  Decimal(LitDecimal<S>),
+  Decimal(LitDecimal<S, Lang>),
   /// Hexadecimal number literal
-  Hexadecimal(LitHexadecimal<S>),
+  Hexadecimal(LitHexadecimal<S, Lang>),
 }
 
 impl core::fmt::Display for LitNumber<()> {
@@ -242,21 +250,21 @@ impl core::fmt::Display for LitNumber<()> {
   }
 }
 
-impl<S> From<LitNumber<S>> for LitNumberKind {
+impl<S, Lang: ?Sized> From<LitNumber<S, Lang>> for LitNumberKind {
   #[inline]
-  fn from(num: LitNumber<S>) -> Self {
+  fn from(num: LitNumber<S, Lang>) -> Self {
     num.kind()
   }
 }
 
-impl<S> From<&LitNumber<S>> for LitNumberKind {
+impl<S, Lang: ?Sized> From<&LitNumber<S, Lang>> for LitNumberKind {
   #[inline]
-  fn from(num: &LitNumber<S>) -> Self {
+  fn from(num: &LitNumber<S, Lang>) -> Self {
     num.kind()
   }
 }
 
-impl<S> LitNumber<S> {
+impl<S, Lang: ?Sized> LitNumber<S, Lang> {
   /// Returns the kind of the number literal
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn kind(&self) -> LitNumberKind {
@@ -268,18 +276,18 @@ impl<S> LitNumber<S> {
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
+  pub fn into_identifier<Span>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
     let (span, data) = (this.span, this.data);
     let source = match data {
-      LitNumber::Decimal(lit) => lit.0,
-      LitNumber::Hexadecimal(lit) => lit.0,
+      LitNumber::Decimal(lit) => lit.lit,
+      LitNumber::Hexadecimal(lit) => lit.lit,
     };
     Ident::new(span, source)
   }
 
   /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitNumber<U> {
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitNumber<U, Lang> {
     match self {
       Self::Decimal(s) => LitNumber::Decimal(s.map(f)),
       Self::Hexadecimal(s) => LitNumber::Hexadecimal(s.map(f)),
@@ -288,7 +296,7 @@ impl<S> LitNumber<S> {
 
   /// Returns the unit literal of this number literal
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unit(&self) -> LitNumber<()> {
+  pub const fn unit(&self) -> LitNumber<(), Lang> {
     match self {
       Self::Decimal(d) => LitNumber::Decimal(d.unit()),
       Self::Hexadecimal(h) => LitNumber::Hexadecimal(h.unit()),
@@ -320,15 +328,16 @@ pub enum LitStrDelimiterKind {
 ///
 /// Spec: [hex string](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.HexString)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitHexStr<S = ()> {
+pub struct LitHexStr<S = (), Lang: ?Sized = ()> {
   delimiter: LitStrDelimiterKind,
   lit: S,
+  _lang: PhantomData<Lang>,
 }
 
-impl<S> LitHexStr<S> {
+impl<S, Lang: ?Sized> LitHexStr<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   const fn new(delimiter: LitStrDelimiterKind, lit: S) -> Self {
-    Self { delimiter, lit }
+    Self { delimiter, lit, _lang: PhantomData }
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]
@@ -390,15 +399,16 @@ impl<S> LitHexStr<S> {
 /// - [Solidity non-empty string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.NonEmptyStringLiteral)
 /// - [Yul string literal](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityLexer.YulStringLiteral)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct LitRegularStr<S = ()> {
+pub struct LitRegularStr<S = (), Lang: ?Sized = ()> {
   delimiter: LitStrDelimiterKind,
   lit: S,
+  _lang: PhantomData<Lang>,
 }
 
-impl<S> LitRegularStr<S> {
+impl<S, Lang: ?Sized> LitRegularStr<S, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   const fn new(delimiter: LitStrDelimiterKind, lit: S) -> Self {
-    Self { delimiter, lit }
+    Self { delimiter, lit, _lang: PhantomData }
   }
 
   #[cfg_attr(not(tarpaulin), inline(always))]

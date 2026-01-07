@@ -1,48 +1,29 @@
 use core::marker::PhantomData;
 
-#[cfg(feature = "evm")]
-use lexsol::yul::EvmBuiltinFunction;
-#[cfg(feature = "evm")]
+use lexsol::yul::{Yul, syntactic::SyntaxKind};
 use tokit::{
-  Require,
-  error::{UnexpectedEot, UnexpectedToken},
-  utils::Spanned,
+  SimpleSpan, span::AsSpan, types::Ident
 };
 
-use tokit::{
-  IdentifierToken, Lexed, LogoStream, Logos, PunctuatorToken, Source, Token,
-  chumsky::{
-    Parseable, Parser,
-    container::Container as ChumskyContainer,
-    extra::ParserExtra,
-    prelude::*,
-    token::punct::{comma, paren_close, paren_open},
-  },
-  syntax::Language,
-  types::Ident,
-  utils::{AsSpan, Span},
-};
-
-use crate::{SyntaxKind, YUL};
 
 /// A scaffold AST node for a Yul function call name.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionName<S, Lang = YUL> {
-  ident: Ident<S, Lang>,
+pub struct FunctionName<S, Span = SimpleSpan, Lang: ?Sized = Yul<SyntaxKind>> {
+  ident: Ident<S, Span, Lang>,
   _lang: PhantomData<Lang>,
 }
 
-impl<S, Lang> From<Ident<S, Lang>> for FunctionName<S, Lang> {
+impl<S, Span, Lang> From<Ident<S, Span, Lang>> for FunctionName<S, Span, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
-  fn from(ident: Ident<S, Lang>) -> Self {
+  fn from(ident: Ident<S, Span, Lang>) -> Self {
     Self::new(ident)
   }
 }
 
-impl<S, Lang> FunctionName<S, Lang> {
+impl<S, Span, Lang> FunctionName<S, Span, Lang> {
   /// Create a new path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn new(ident: Ident<S, Lang>) -> Self {
+  pub const fn new(ident: Ident<S, Span, Lang>) -> Self {
     Self {
       ident,
       _lang: PhantomData,
@@ -51,20 +32,20 @@ impl<S, Lang> FunctionName<S, Lang> {
 
   /// Returns the span of the path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn span(&self) -> Span {
+  pub const fn span(&self) -> Span where Span: Copy {
     self.ident.span()
   }
 
   /// Get the identifier of the path segment.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn ident(&self) -> &Ident<S, Lang> {
+  pub const fn ident(&self) -> &Ident<S, Span, Lang> {
     &self.ident
   }
 
   /// Consume the name and return the span and identifier.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_components(self) -> (Span, Ident<S, Lang>) {
-    (self.ident.span(), self.ident)
+  pub fn into_ident(self) -> Ident<S, Span, Lang> {
+    self.ident
   }
 
   /// Returns `true` if the function name is a valid function name.
@@ -86,93 +67,11 @@ impl<S, Lang> FunctionName<S, Lang> {
   }
 }
 
-#[cfg(not(feature = "evm"))]
-impl<'a, S, I, T, Lang, Error> Parseable<'a, I, T, Error> for FunctionName<S, Lang>
-where
-  T: IdentifierToken<'a>,
-  T::Logos: Logos<'a>,
-  <T::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
-  Lang: Language,
-  Lang::SyntaxKind: From<SyntaxKind> + 'a,
-  Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
-    + From<UnexpectedEot>
-    + 'a,
-{
-  fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-  where
-    Self: Sized + 'a,
-    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-    T: Token<'a>,
-    Error: 'a,
-    E: ParserExtra<'a, I, Error = Error> + 'a,
-  {
-    tokit::chumsky::token::identifier_slice(|| SyntaxKind::Identifier.into()).map(
-      |ident: Spanned<S>| {
-        let (span, ident) = ident.into_components();
-        FunctionName::new(Ident::new(span, ident))
-      },
-    )
-  }
-}
-
-#[cfg(feature = "evm")]
-impl<'a, S, I, T, Lang, Error> Parseable<'a, I, T, Error> for FunctionName<S, Lang>
-where
-  T: IdentifierToken<'a> + Require<EvmBuiltinFunction, Err = T>,
-  T::Logos: Logos<'a>,
-  <T::Logos as Logos<'a>>::Source: Source<Slice<'a> = S>,
-  Lang: Language,
-  Lang::SyntaxKind: From<SyntaxKind> + 'a,
-  Error: From<<T::Logos as Logos<'a>>::Error>
-    + From<UnexpectedToken<'a, T, Lang::SyntaxKind>>
-    + From<UnexpectedEot>
-    + 'a,
-{
-  fn parser<E>() -> impl Parser<'a, I, Self, E> + Clone
-  where
-    Self: Sized + 'a,
-    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-    T: Token<'a>,
-    Error: 'a,
-    E: ParserExtra<'a, I, Error = Error> + 'a,
-  {
-    custom(|inp| {
-      let before = inp.cursor();
-      let tok: Option<Lexed<'_, T>> = inp.next();
-      match tok {
-        None => Err(UnexpectedEot::eot(inp.span_since(&before)).into()),
-        Some(Lexed::Error(err)) => Err(err.into()),
-        Some(Lexed::Token(Spanned { span, data: tok })) => {
-          let ident = match tok.try_into_identifier() {
-            Ok(ident) => Ident::new(span, ident),
-            Err(tok) => match tok.require() {
-              Ok(_) => Ident::new(span, inp.slice(&before..&inp.cursor())),
-              Err(tok) => {
-                return Err(
-                  UnexpectedToken::expected_one_with_found(
-                    span,
-                    tok,
-                    SyntaxKind::FunctionName.into(),
-                  )
-                  .into(),
-                );
-              }
-            },
-          };
-
-          Ok(FunctionName::new(ident))
-        }
-      }
-    })
-  }
-}
-
 /// A scaffold AST node for a Yul function call.
 ///
 /// See: [Yul function call](https://docs.soliditylang.org/en/latest/grammar.html#syntax-rule-SolidityParser.yulFunctionCall)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct FunctionCall<Name, Expression, Container = Vec<Expression>, Lang = YUL> {
+pub struct FunctionCall<Name, Expression, Span = SimpleSpan, Container = Vec<Expression>, Lang: ?Sized = Yul<SyntaxKind>> {
   span: Span,
   name: Name,
   expressions: Container,
@@ -180,8 +79,8 @@ pub struct FunctionCall<Name, Expression, Container = Vec<Expression>, Lang = YU
   _lang: PhantomData<Lang>,
 }
 
-impl<Name, Expression, Container, Lang> AsSpan<Span>
-  for FunctionCall<Name, Expression, Container, Lang>
+impl<Name, Expression, Span, Container, Lang: ?Sized> AsSpan<Span>
+  for FunctionCall<Name, Expression, Span, Container, Lang>
 {
   #[cfg_attr(not(tarpaulin), inline(always))]
   fn as_span(&self) -> &Span {
@@ -189,7 +88,7 @@ impl<Name, Expression, Container, Lang> AsSpan<Span>
   }
 }
 
-impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container, Lang> {
+impl<Name, Expression, Span, Container, Lang: ?Sized> FunctionCall<Name, Expression, Span, Container, Lang> {
   /// Create a new function call.
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn new(span: Span, name: Name, expressions: Container) -> Self {
@@ -204,7 +103,7 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
 
   /// Get the span of the function call.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn span(&self) -> Span {
+  pub const fn span(&self) -> Span where Span: Copy {
     self.span
   }
 
@@ -239,36 +138,5 @@ impl<Name, Expression, Container, Lang> FunctionCall<Name, Expression, Container
     Container: AsRef<[Expression]>,
   {
     self.expressions.as_ref()
-  }
-
-  /// Returns a parser for the FunctionCall with the given expression parser.
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn parser<'a, I, T, Error, E>(
-    expression_parser: impl Parser<'a, I, Expression, E> + Clone,
-  ) -> impl Parser<'a, I, Self, E> + Clone
-  where
-    T: PunctuatorToken<'a>,
-    Name: Parseable<'a, I, T, Error>,
-    Error:
-      From<<T::Logos as Logos<'a>>::Error> + From<UnexpectedToken<'a, T, Lang::SyntaxKind>> + 'a,
-    Container: ChumskyContainer<Expression>,
-    Lang: Language,
-    Lang::SyntaxKind: From<SyntaxKind> + 'a,
-    Self: Sized + 'a,
-    I: LogoStream<'a, T, Slice = <<<T>::Logos as Logos<'a>>::Source as Source>::Slice<'a>>,
-    T: Token<'a>,
-    E: ParserExtra<'a, I, Error = Error> + 'a,
-  {
-    Name::parser()
-      .then(
-        expression_parser
-          .separated_by(comma(|| SyntaxKind::Comma.into()))
-          .collect::<Container>()
-          .delimited_by(
-            paren_open(|| SyntaxKind::LParen.into()),
-            paren_close(|| SyntaxKind::RParen.into()),
-          ),
-      )
-      .map_with(|(name, expressions), exa| Self::new(exa.span(), name, expressions))
   }
 }

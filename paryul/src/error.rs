@@ -61,15 +61,16 @@ pub type MissingComma<Span = SimpleSpan, Lang = DefaultLang> = Missing<Comma, Sp
 pub type MissingDot<Span = SimpleSpan, Lang = DefaultLang> = Missing<Dot, Span, Lang>;
 
 /// The invalid path segment error.
-pub type InvalidPathSegment<Span = SimpleSpan, Lang = DefaultLang> = Invalid<InvalidPathSegmentData, Span, Lang>;
+pub type InvalidPathSegment<Span = SimpleSpan, Lang = DefaultLang> =
+  Invalid<InvalidPathSegmentData, Span, Lang>;
 
 /// The invalid function name error.
-pub type InvalidFunctionName<S, Lang = DefaultLang> =
-  Invalid<InvalidFunctionNameKnowledge<S, Lang>>;
+pub type InvalidFunctionName<Span = SimpleSpan, Lang = DefaultLang> =
+  Invalid<InvalidFunctionNameData, Span, Lang>;
 
 /// The invalid variable name error.
-pub type InvalidVariableName<S, Lang = DefaultLang> =
-  Invalid<InvalidVariableNameKnowledge<S, Lang>>;
+pub type InvalidVariableName<Span = SimpleSpan, Lang = DefaultLang> =
+  Invalid<InvalidVariableNameData, Span, Lang>;
 
 /// An incomplete single variable declaration error.
 pub type IncompleteSingleVariableDeclaration<Lang = DefaultLang> =
@@ -91,20 +92,15 @@ pub type IncompleteSingleTargetAssignment<Lang = DefaultLang> =
 pub type IncompleteMultipleTargetsAssignment<Lang = DefaultLang> =
   IncompleteSyntax<MultipleTargetsAssignment<Lang>>;
 
-/// A knowledge of invalid function name.
+/// A knowledge of invalid function name data.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidFunctionNameKnowledge<S, Lang = DefaultLang>(
-  pub SemiIdentifierKnowledge<S, Lang>,
-);
+pub struct InvalidFunctionNameData(pub InvalidIdentifierData);
 
-/// A knowledge of invalid variable name.
+/// A knowledge of invalid variable name data.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
 #[repr(transparent)]
-pub struct InvalidVariableNameKnowledge<S, Lang = DefaultLang>(
-  pub SemiIdentifierKnowledge<S, Lang>,
-);
-
+pub struct InvalidVariableNameData(pub InvalidIdentifierData);
 
 /// Invalid path segment knowledge.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
@@ -127,21 +123,19 @@ pub enum InvalidPathSegmentData {
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum SemiIdentifierKnowledge<S, Lang = DefaultLang> {
+pub enum InvalidIdentifierData {
   /// EVM builtin function
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-  EvmBuiltinFunction(Spanned<lexsol::yul::EvmBuiltinFunction<S>>),
-  /// The identifier, some language may reserve certain identifiers as contextual keywords
-  Identifier(Ident<S, Lang>),
+  EvmBuiltinFunction(lexsol::yul::EvmBuiltinFunction),
   /// The keyword
-  Keyword(Keyword<S, Lang>),
+  Keyword(&'static str),
   /// The boolean literal
-  LitBool(Spanned<LitBool<S>>),
-  /// The decimal literal
-  LitDecimal(Spanned<LitDecimal<S>>),
-  /// The hexadecimal literal
-  LitHexadecimal(Spanned<LitHexadecimal<S>>),
+  LitBool(LitBool),
+  /// The number literal
+  LitDecimal(LitDecimal),
+  /// The hexadecimal number literal
+  LitHexadecimal(LitHexadecimal),
 }
 
 #[derive(Clone, From, IsVariant, TryUnwrap, Unwrap)]

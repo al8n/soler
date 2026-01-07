@@ -1,7 +1,12 @@
-use tokit::{error::ErrorNode, parser::Expect, span::Span, types::IdentList};
+use tokit::{
+  error::{ErrorNode, Invalid},
+  parser::Expect,
+  span::Span,
+  types::IdentList,
+};
 
 use crate::{
-  error::{AstLexerErrors, AstParserError, SemiIdentifierKnowledge, TrailingComma},
+  error::{AstLexerErrors, AstParserError, InvalidIdentifierData, TrailingComma},
   scaffold::ast::name::Name,
 };
 
@@ -16,7 +21,7 @@ use tokit::{
   input::InputRef,
   parser::SeparatorHandler,
   punct::Dot,
-  span::{AsSpan, SimpleSpan},
+  span::Spanned,
   token::IdentifierToken,
   try_parse_input::{Accept, Decline, ParseAttempt},
   types::Ident,
@@ -28,51 +33,106 @@ use lexsol::yul::{
   syntactic::{SyntaxKind, Token},
 };
 
-// pub fn try_parse_yul_ident<'inp, S, L, Ctx>(
-//   inp: &mut InputRef<'inp, '_, L, Ctx, Yul<SyntaxKind>>,
-// ) -> Result<
-//   ParseAttempt<Ident<S, L::Span, Yul<SyntaxKind>>>,
-//   <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error,
-// >
-// where
-//   L: Lexer<'inp, Token = Token<S>>,
-//   L::Source: Source<L::Offset, Slice<'inp> = S>,
-//   L::Token: IdentifierToken<'inp>,
-//   Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
-//   Ctx::Emitter: SeparatedEmitter<'inp, Dot, L, Yul<SyntaxKind>>
-//     + UnexpectedLeadingSeparatorEmitter<'inp, Dot, L, Yul<SyntaxKind>>
-//     + UnexpectedTrailingSeparatorEmitter<'inp, Dot, L, Yul<SyntaxKind>>,
-//   <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error:
-//     From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
-//   S: 'inp,
-// {
-//   inp.try_expect_valid(|t, _| {
-//     t.data().is_semi_identifier()
-//   })
-//   .and_then(|tok| match tok {
-//     None => Ok(Decline),
-//     Some(tok) => {
-//       let (span, tok) = tok.into_components();
-//       Ok(Accept(match tok {
-//         Token::Identifier(ident) => Ident::new(span, ident),
-//         // #[cfg(feature = "evm")]
-//         // Token::EvmBuiltin(evm_fn) => {
-//         //   let _ = inp.emitter().emit_error(AstParserError::)?;
-//         //   Ident::new(
-//         //     span,
-//         //     evm_fn.into_inner(),
-//         //   )
-//         // },
-//         _ => {
-//           let _ = inp.emitter().emit_error(err)?;
-//           Ident::error(
-//             span,
-//           )
-//         }
-//       }))
-//     },
-//   })
-// }
+/// m
+pub(crate) fn try_parse_yul_ident<'inp, S, E, L, Ctx>(
+  inp: &mut InputRef<'inp, '_, L, Ctx, Yul<SyntaxKind>>,
+) -> Result<
+  ParseAttempt<Ident<S, L::Span, Yul<SyntaxKind>>>,
+  <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error,
+>
+where
+  L: Lexer<'inp, Token = Token<S>>,
+  L::Source: Source<L::Offset, Slice<'inp> = S>,
+  L::Token: IdentifierToken<'inp>,
+  Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
+  <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error:
+    From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>> + From<Invalid<E, L::Span, Yul<SyntaxKind>>>,
+  E: From<InvalidIdentifierData>,
+  S: 'inp,
+{
+  let tok = inp.try_expect_valid(|tok, emitter| {
+    #[cfg_attr(not(tarpaulin), inline(always))]
+    fn invalid_path_segment<Span, E>(span: Span, data: E) -> Invalid<E, Span, Yul<SyntaxKind>> {
+      Invalid::with_data_of(span, data)
+    }
+
+    let (span, tok) = tok.into_components();
+
+    macro_rules! emit_ret {
+      ($data:expr) => {{
+        emitter.emit_error(Spanned::new(
+          span.clone(),
+          Invalid::with_data_of(span.clone(), $data).into(),
+        ))?;
+        true
+      }};
+      (@kw($name:literal)) => {
+        emit_ret!(E::from(InvalidIdentifierData::Keyword($name)))
+      };
+      (@lit_bool($val:expr)) => {
+        emit_ret!(E::from(InvalidIdentifierData::LitBool($val)))
+      };
+      (@evm_builtin($val:expr)) => {
+        emit_ret!(E::from(InvalidIdentifierData::EvmBuiltinFunction($val)))
+      };
+    }
+
+    Ok(match tok {
+      Token::Identifier(_) => true,
+      Token::Leave => emit_ret!(@kw("leave")),
+      Token::Continue => emit_ret!(@kw("continue")),
+      Token::Break => emit_ret!(@kw("break")),
+      Token::Switch => emit_ret!(@kw("switch")),
+      Token::Case => emit_ret!(@kw("case")),
+      Token::Default => emit_ret!(@kw("default")),
+      Token::Function => emit_ret!(@kw("function")),
+      Token::Let => emit_ret!(@kw("let")),
+      Token::If => emit_ret!(@kw("if")),
+      Token::For => emit_ret!(@kw("for")),
+      Token::Lit(lexsol::yul::Lit::Boolean(lit)) => emit_ret!(@lit_bool(lit.unit())),
+      #[cfg(feature = "evm")]
+      Token::EvmBuiltin(e) => emit_ret!(@evm_builtin(e.unit())),
+      _ => false,
+    })
+  })?;
+
+  match tok {
+    None => Ok(Decline),
+    Some(t) => {
+      let (span, tok) = t.into_components();
+
+      Ok(Accept(match tok {
+        Token::Identifier(ident) => Ident::new(span, ident),
+        Token::Leave
+        | Token::Continue
+        | Token::Break
+        | Token::Switch
+        | Token::Case
+        | Token::Default
+        | Token::Function
+        | Token::Let
+        | Token::If
+        | Token::For => {
+          let mut ident = Ident::new(span, inp.slice());
+          ident.mark_error();
+          ident
+        }
+        #[cfg(feature = "evm")]
+        Token::EvmBuiltin(evm_fn) => {
+          let mut ident = Ident::new(span, evm_fn.into_inner());
+          ident.mark_error();
+          ident
+        }
+        Token::Lit(lit) => {
+          let mut ident = Ident::new(span, lit.into_data());
+          ident.mark_error();
+          ident
+        }
+        _ => unreachable!("token has been validated"),
+      }))
+    }
+  }
+}
 
 // pub fn try_parse_yul_ident_list<'inp, S, L, Container, Ctx>(
 //   inp: &mut InputRef<'inp, '_, L, Ctx, Yul<SyntaxKind>>,
@@ -149,3 +209,6 @@ use lexsol::yul::{
 //     .map(|idents| IdentList::new(idents.span, idents.data))
 //   }
 // }
+
+#[test]
+fn t() {}
