@@ -1,7 +1,8 @@
 use tokit::{
+  SimpleSpan,
   error::ErrorContainer,
   logos::{Lexer, Logos, Source},
-  utils::{Lexeme, PositionedChar, SimpleSpan},
+  utils::{Lexeme, PositionedChar},
 };
 
 use crate::{

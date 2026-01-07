@@ -1,7 +1,8 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use tokit::{
   error::{DefaultContainer, UnexpectedEot, UnknownLexeme},
-  utils::{CharLen, Lexeme, Message, SimpleSpan, human_display::DisplayHuman},
+  span::SimpleSpan,
+  utils::{CharLen, Lexeme, Message, human_display::DisplayHuman},
 };
 
 use crate::{

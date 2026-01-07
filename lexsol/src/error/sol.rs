@@ -4,9 +4,10 @@ use tokit::{
     DefaultContainer, FixedUnicodeEscapeError, HexEscapeError, IncompleteFixedUnicodeEscape,
     IncompleteHexEscape, Unclosed, UnexpectedEot, UnexpectedLexeme, UnknownLexeme,
   },
+  span::{SimpleSpan, Spanned},
   utils::{
-    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, SimpleSpan, Spanned,
-    human_display::DisplayHuman, knowledge::LineTerminator,
+    CharLen, EscapedLexeme, Lexeme, Message, PositionedChar, human_display::DisplayHuman,
+    knowledge::LineTerminator,
   },
 };
 

@@ -5,7 +5,7 @@ macro_rules! token {
       use tokit::{
         logos::Logos,
         lexer::Lexable,
-        utils::{SimpleSpan, recursion_tracker::{RecursionLimitExceeded, RecursionLimiter, RecursionTracker}},
+        SimpleSpan, state::recursion_tracker::{RecursionLimitExceeded, RecursionLimiter, RecursionTracker},
       };
 
       use crate::{

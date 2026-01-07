@@ -8,10 +8,7 @@ pub use lexsol::{
 
 use derive_more::{From, Into, IsVariant, TryUnwrap, Unwrap};
 use lexsol::{
-  types::{
-    LitBool, LitDecimal, LitHexadecimal,
-    punct::{Comma, Dot},
-  },
+  types::{LitBool, LitDecimal, LitHexadecimal},
   yul::{Yul, lossless, syntactic},
 };
 use tokit::{
@@ -21,10 +18,11 @@ use tokit::{
     UndelimitedParen, UnexpectedEot, UnexpectedSuffix, UnknownLexeme, UnopenedBrace, UnopenedParen,
     token::UnexpectedToken,
   },
+  punct::{Comma, Dot},
+  span::{SimpleSpan, Spanned},
+  state::{recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded},
   types::{Ident, Keyword},
-  utils::{
-    Message, SimpleSpan, Spanned, recursion_tracker::RecursionLimitExceeded, tracker::LimitExceeded,
-  },
+  utils::Message,
 };
 
 use crate::syntax::*;
@@ -57,13 +55,13 @@ pub type TrailingComma<Char> = UnexpectedSuffix<Char, Comma>;
 pub type TrailingDot<Char> = UnexpectedSuffix<Char, Dot>;
 
 /// A missing comma error.
-pub type MissingComma<Lang = DefaultLang> = Missing<Comma, Lang>;
+pub type MissingComma<Span = SimpleSpan, Lang = DefaultLang> = Missing<Comma, Span, Lang>;
 
 /// A missing dot error.
-pub type MissingDot<Lang = DefaultLang> = Missing<Dot, Lang>;
+pub type MissingDot<Span = SimpleSpan, Lang = DefaultLang> = Missing<Dot, Span, Lang>;
 
 /// The invalid path segment error.
-pub type InvalidPathSegment<S, Lang = DefaultLang> = Invalid<InvalidPathSegmentKnowledge<S, Lang>>;
+pub type InvalidPathSegment<Span = SimpleSpan, Lang = DefaultLang> = Invalid<InvalidPathSegmentData, Span, Lang>;
 
 /// The invalid function name error.
 pub type InvalidFunctionName<S, Lang = DefaultLang> =
@@ -107,10 +105,22 @@ pub struct InvalidVariableNameKnowledge<S, Lang = DefaultLang>(
   pub SemiIdentifierKnowledge<S, Lang>,
 );
 
-/// A knowledge of invalid path segment.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, From, Into)]
-#[repr(transparent)]
-pub struct InvalidPathSegmentKnowledge<S, Lang = DefaultLang>(pub SemiIdentifierKnowledge<S, Lang>);
+
+/// Invalid path segment knowledge.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
+#[non_exhaustive]
+#[unwrap(ref, ref_mut)]
+#[try_unwrap(ref, ref_mut)]
+pub enum InvalidPathSegmentData {
+  /// EVM builtin function
+  #[cfg(feature = "evm")]
+  #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
+  EvmBuiltinFunction(lexsol::yul::EvmBuiltinFunction),
+  /// The keyword
+  Keyword(&'static str),
+  /// The boolean literal
+  LitBool(LitBool),
+}
 
 /// A knowledge of semi-identifier, which means it seems like an identifier but is not.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, From, IsVariant, TryUnwrap, Unwrap)]
@@ -121,7 +131,7 @@ pub enum SemiIdentifierKnowledge<S, Lang = DefaultLang> {
   /// EVM builtin function
   #[cfg(feature = "evm")]
   #[cfg_attr(docsrs, doc(cfg(feature = "evm")))]
-  EvmBuiltinFunction(Spanned<lexsol::yul::EvmBuiltinFunction>),
+  EvmBuiltinFunction(Spanned<lexsol::yul::EvmBuiltinFunction<S>>),
   /// The identifier, some language may reserve certain identifiers as contextual keywords
   Identifier(Ident<S, Lang>),
   /// The keyword
@@ -218,7 +228,7 @@ impl<S, T, TK: Clone + 'static, Char, StateError> Error<S, T, TK, Char, StateErr
 
   /// Creates a missing comma error with the given span.
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn missing_comma(err: Missing<Comma, DefaultLang>) -> Self {
+  pub const fn missing_comma(err: MissingComma) -> Self {
     Self::MissingComma(err)
   }
 

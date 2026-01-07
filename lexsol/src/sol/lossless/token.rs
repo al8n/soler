@@ -5,7 +5,7 @@ macro_rules! token {
       use tokit::{
         lexer::Lexable,
         logos::{Logos, Lexer},
-        utils::tracker::{LimitExceeded, Limiter, Tracker},
+        state::tracker::{LimitExceeded, Limiter, Tracker},
         error::ErrorContainer,
       };
 

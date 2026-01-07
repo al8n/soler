@@ -1,11 +1,17 @@
 use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
-use tokit::{types::Ident, utils::Spanned};
+use tokit::{span::Spanned, types::Ident};
 
 /// The keywords
 pub mod keywords;
 
 /// The punctuators
 pub mod punct;
+
+/// The `true` literal
+pub type LitTrue<S = (), Lang = ()> = tokit::types::LitTrue<S, (), Lang>;
+
+/// The `false` literal
+pub type LitFalse<S = (), Lang = ()> = tokit::types::LitFalse<S, (), Lang>;
 
 /// The boolean literal
 ///
@@ -16,11 +22,11 @@ pub mod punct;
 #[non_exhaustive]
 #[unwrap(ref, ref_mut)]
 #[try_unwrap(ref, ref_mut)]
-pub enum LitBool<S = ()> {
+pub enum LitBool<S = (), Lang: ?Sized = ()> {
   /// The `true` literal
-  True(S),
+  True(LitTrue<S, Lang>),
   /// The `false` literal
-  False(S),
+  False(LitFalse<S, Lang>),
 }
 
 impl core::fmt::Display for LitBool {
@@ -32,32 +38,41 @@ impl core::fmt::Display for LitBool {
   }
 }
 
-impl<S> LitBool<S> {
+impl<S, Lang: ?Sized> LitBool<S, Lang> {
   /// Map the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitBool<U> {
+  pub fn map<U>(self, f: impl FnOnce(S) -> U) -> LitBool<U, Lang> {
     match self {
-      Self::True(s) => LitBool::True(f(s)),
-      Self::False(s) => LitBool::False(f(s)),
+      Self::True(s) => LitBool::True(s.map_data(f)),
+      Self::False(s) => LitBool::False(s.map_data(f)),
     }
   }
 
   /// Returns the unit literal of this boolean literal
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub const fn unit(&self) -> LitBool<()> {
+  pub const fn unit(&self) -> LitBool<(), Lang> {
     match self {
-      Self::True(_) => LitBool::True(()),
-      Self::False(_) => LitBool::False(()),
+      Self::True(_) => LitBool::True(LitTrue::unit()),
+      Self::False(_) => LitBool::False(LitFalse::unit()),
+    }
+  }
+
+  /// Returns the inner source of the boolean literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    match self {
+      Self::True(s) => s.into_data(),
+      Self::False(s) => s.into_data(),
     }
   }
 
   /// Converts into ident
   #[cfg_attr(not(tarpaulin), inline(always))]
-  pub fn into_identifier<Span, Lang>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
+  pub fn into_identifier<Span>(this: Spanned<Self, Span>) -> Ident<S, Span, Lang> {
     let span = this.span;
     let source = match this.data {
-      LitBool::True(s) => s,
-      LitBool::False(s) => s,
+      LitBool::True(s) => s.into_data(),
+      LitBool::False(s) => s.into_data(),
     };
     Ident::new(span, source)
   }
@@ -128,6 +143,12 @@ impl<S> LitDecimal<S> {
   pub const fn unit(&self) -> LitDecimal<()> {
     LitDecimal(())
   }
+
+  /// Returns the inner source of the decimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    self.0
+  }
 }
 
 /// The hexadecimal number literal for Yul or Solidity
@@ -183,6 +204,12 @@ impl<S> LitHexadecimal<S> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub const fn unit(&self) -> LitHexadecimal<()> {
     LitHexadecimal(())
+  }
+
+  /// Returns the inner source of the hexadecimal literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    self.0
   }
 }
 
@@ -267,6 +294,15 @@ impl<S> LitNumber<S> {
       Self::Hexadecimal(h) => LitNumber::Hexadecimal(h.unit()),
     }
   }
+
+  /// Returns the inner source of the number literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    match self {
+      Self::Decimal(d) => d.into_data(),
+      Self::Hexadecimal(h) => h.into_data(),
+    }
+  }
 }
 
 /// The string literal delimiter kind
@@ -332,6 +368,12 @@ impl<S> LitHexStr<S> {
     LitHexStr::new(self.delimiter, ())
   }
 
+  /// Returns the inner source of the hex string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    self.lit
+  }
+
   /// Maps the inner source to another source
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<F, U>(self, f: F) -> LitHexStr<U>
@@ -387,6 +429,12 @@ impl<S> LitRegularStr<S> {
   where
     S: Copy,
   {
+    self.lit
+  }
+
+  /// Returns the inner source of the string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
     self.lit
   }
 

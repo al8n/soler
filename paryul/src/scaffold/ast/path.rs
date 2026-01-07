@@ -4,22 +4,23 @@ use core::marker::PhantomData;
 use lexsol::yul::EvmBuiltinFunction;
 #[cfg(feature = "evm")]
 use tokit::{
-  Emitter, Lexer, ParseContext, Require, TryParseInput,
-  lexer::InputRef,
+  Require,
   utils::Maybe::{Owned, Ref},
 };
 
 use tokit::{
-  Source,
+  Emitter, Lexer, ParseContext, Source,
   error::UnexpectedEot,
-  lexer::IdentifierToken,
+  input::InputRef,
+  span::{AsSpan, SimpleSpan},
+  token::IdentifierToken,
+  try_parse_input::{Accept, Decline, ParseAttempt},
   types::Ident,
-  utils::{AsSpan, SimpleSpan},
 };
 
 use lexsol::yul::{
   Yul,
-  syntactic::{SyntaxKind, Token},
+  syntactic::SyntaxKind,
 };
 
 /// A segment of a path of Yul.
@@ -27,6 +28,17 @@ use lexsol::yul::{
 pub struct PathSegment<S, Span = SimpleSpan, Lang: ?Sized = Yul<SyntaxKind>> {
   ident: Ident<S, Span, Lang>,
   _lang: PhantomData<Lang>,
+}
+
+impl PathSegment<(), (), ()> {
+  /// Returns a parser for the `PathSegment`.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub const fn parser() -> Self {
+    Self {
+      ident: Ident::new((), ()),
+      _lang: PhantomData,
+    }
+  }
 }
 
 impl<S, Span, Lang: ?Sized> AsSpan<Span> for PathSegment<S, Span, Lang> {
@@ -78,7 +90,7 @@ impl<S, Span, Lang: ?Sized> PathSegment<S, Span, Lang> {
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn bump(&mut self, by: &Span::Offset) -> &mut Self
   where
-    Span: tokit::lexer::Span,
+    Span: tokit::Span,
   {
     self.ident.span_mut().bump(by);
     self
@@ -115,35 +127,6 @@ impl<S, Span, Lang: ?Sized> PathSegment<S, Span, Lang> {
   }
 }
 
-impl<'inp, L, Ctx, Lang>
-  TryParseInput<
-    'inp,
-    L,
-    PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Lang>,
-    Ctx,
-    Lang,
-  > for PathSegment<(), (), ()>
-where
-  L: Lexer<'inp>,
-  L::Source: Source<L::Offset>,
-  L::Token: IdentifierToken<'inp>
-    + Require<EvmBuiltinFunction<<L::Source as Source<L::Offset>>::Slice<'inp>>, Err = L::Token>,
-  Ctx: ParseContext<'inp, L, Lang>,
-  <Ctx::Emitter as Emitter<'inp, L, Lang>>::Error: From<UnexpectedEot<L::Offset, Lang>>,
-  Lang: ?Sized,
-{
-  #[cfg_attr(not(tarpaulin), inline(always))]
-  fn try_parse_input(
-    &mut self,
-    inp: &mut InputRef<'inp, '_, L, Ctx, Lang>,
-  ) -> Result<
-    Option<PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Lang>>,
-    <Ctx::Emitter as Emitter<'inp, L, Lang>>::Error,
-  > {
-    Self::try_parse_of(inp)
-  }
-}
-
 impl PathSegment<(), ()> {
   /// A parser for the PathSegment for Yul.
   ///
@@ -152,7 +135,9 @@ impl PathSegment<(), ()> {
   pub fn try_parse<'inp, L, Ctx>(
     inp: &mut InputRef<'inp, '_, L, Ctx, Yul<SyntaxKind>>,
   ) -> Result<
-    Option<PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Yul<SyntaxKind>>>,
+    ParseAttempt<
+      PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Yul<SyntaxKind>>,
+    >,
     <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error,
   >
   where
@@ -176,7 +161,7 @@ impl PathSegment<(), (), ()> {
   pub fn try_parse_of<'inp, L, Ctx, Lang>(
     inp: &mut InputRef<'inp, '_, L, Ctx, Lang>,
   ) -> Result<
-    Option<PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Lang>>,
+    ParseAttempt<PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Lang>>,
     <Ctx::Emitter as Emitter<'inp, L, Lang>>::Error,
   >
   where
@@ -189,7 +174,7 @@ impl PathSegment<(), (), ()> {
     Lang: ?Sized,
   {
     let end = inp.cursor().as_inner().clone();
-    let tok = inp.sync_until_token()?;
+    let tok = inp.sync_errors()?;
     match tok {
       None => Err(UnexpectedEot::eot_of(end).into()),
       Some(ct) => Ok(match ct {
@@ -197,27 +182,27 @@ impl PathSegment<(), (), ()> {
           let (span, tok) = ct.into_token().into_components();
           if tok.is_identifier() {
             inp.skip_one();
-            return Ok(Some(PathSegment::new(Ident::new(span, inp.slice()))));
+            return Ok(Accept(PathSegment::new(Ident::new(span, inp.slice()))));
           }
 
           if let Ok(ebf) = tok.require() {
             inp.skip_one();
-            return Ok(Some(PathSegment::new(Ident::new(span, ebf.into_inner()))));
+            return Ok(Accept(PathSegment::new(Ident::new(span, ebf.into_inner()))));
           }
 
-          None
+          Decline
         }
         Ref(ct) => {
           let (span, tok) = ct.into_token().into_components();
 
           if !(tok.is_identifier() || tok.matched()) {
-            return Ok(None);
+            return Ok(Decline);
           }
 
           let span = span.clone();
           inp.skip_one();
 
-          Some(PathSegment::new(Ident::new(span, inp.slice())))
+          Accept(PathSegment::new(Ident::new(span, inp.slice())))
         }
       }),
     }
@@ -230,7 +215,7 @@ impl PathSegment<(), (), ()> {
   pub fn try_parse_of<'inp, L, Ctx, Lang>(
     inp: &mut InputRef<'inp, '_, L, Ctx, Lang>,
   ) -> Result<
-    Option<PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Lang>>,
+    ParseAttempt<PathSegment<<L::Source as Source<L::Offset>>::Slice<'inp>, L::Span, Lang>>,
     <Ctx::Emitter as Emitter<'inp, L, Lang>>::Error,
   >
   where
@@ -348,38 +333,3 @@ impl<Segment, Span, Container, Lang> Path<Segment, Span, Container, Lang> {
   }
 }
 
-impl<S, Span, Container> Path<PathSegment<S, Span>, Span, Container> {
-  /// Returns a parser for the Yul path.
-  pub fn yul<'inp, L, Ctx>(
-    inp: &mut InputRef<'inp, '_, L, Ctx, Yul<SyntaxKind>>,
-  ) -> Result<Option<Self>, <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error>
-  where
-    L: Lexer<'inp, Span = Span, Token = Token<S>>,
-    L::Source: Source<L::Offset, Slice<'inp> = S>,
-    L::Token: IdentifierToken<'inp>,
-    Ctx: ParseContext<'inp, L, Yul<SyntaxKind>>,
-    <Ctx::Emitter as Emitter<'inp, L, Yul<SyntaxKind>>>::Error:
-      From<UnexpectedEot<L::Offset, Yul<SyntaxKind>>>,
-    Container: Default + tokit::container::Container<PathSegment<S, Span>>,
-  {
-    let cursor = inp.cursor().clone();
-    let leading = Ident::try_parse_of(inp)?;
-
-    match leading {
-      None => Ok(None),
-      Some(l) => {
-        let mut container = Container::default();
-        container.push(PathSegment::new(l));
-        loop {
-          let seg = PathSegment::try_parse_of(inp)?;
-          match seg {
-            None => return Ok(Some(Path::new(inp.span_since(&cursor), container))),
-            Some(seg) => {
-              container.push(seg);
-            }
-          }
-        }
-      }
-    }
-  }
-}

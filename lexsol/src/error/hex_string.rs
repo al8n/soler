@@ -1,10 +1,10 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 
 use tokit::{
+  SimpleSpan,
   error::{Unclosed, UnexpectedLexeme},
   utils::{
-    Lexeme, Message, PositionedChar, SimpleSpan, human_display::DisplayHuman,
-    knowledge::LineTerminator,
+    Lexeme, Message, PositionedChar, human_display::DisplayHuman, knowledge::LineTerminator,
   },
 };
 

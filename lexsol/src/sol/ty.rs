@@ -6,6 +6,7 @@ pub use int::*;
 pub use keywords::*;
 pub use reserved::*;
 pub use string::*;
+use tokit::types::{LitFalse, LitTrue};
 pub use uint::*;
 
 use crate::types::{LitBool, LitDecimal, LitHexStr, LitHexadecimal, LitNumber, LitRegularStr};
@@ -75,11 +76,11 @@ impl<S> core::convert::From<LitUnicodeStr<S>> for Lit<S> {
 impl<S> Lit<S> {
   #[inline]
   pub(super) const fn lit_true(s: S) -> Self {
-    Self::Boolean(LitBool::True(s))
+    Self::Boolean(LitBool::True(LitTrue::with_data((), s)))
   }
   #[inline]
   pub(super) const fn lit_false(s: S) -> Self {
-    Self::Boolean(LitBool::False(s))
+    Self::Boolean(LitBool::False(LitFalse::with_data((), s)))
   }
 
   #[inline]

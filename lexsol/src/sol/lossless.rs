@@ -4,9 +4,7 @@ use crate::{SourceBridge, TokenBridge, error::sol as error, sol::Solidity};
 
 use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 use tokit::{
-  Source, State, Token as TokenT,
-  logos::Logos,
-  utils::{SimpleSpan, tracker::LimitExceeded},
+  SimpleSpan, Source, State, Token as TokenT, logos::Logos, state::tracker::LimitExceeded,
 };
 
 use token::token;
@@ -21,7 +19,7 @@ pub type Lexer<'a, S = &'a str> = Lexsol<'a, S, Token<<S as Source<usize>>::Slic
 /// The char type used for the syntactic token.
 pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as Source<usize>>::Slice<
   'a,
-> as tokit::lexer::source::Slice<'a>>::Char;
+> as tokit::Slice<'a>>::Char;
 /// The error type for lexing based on syntactic [`Token`].
 pub type Error<'a, S> = error::Error<SyntaxKind, Char<'a, S>, LimitExceeded>;
 /// A collection of errors for syntactic [`Token`].

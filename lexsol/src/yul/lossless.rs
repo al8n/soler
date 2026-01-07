@@ -3,11 +3,12 @@ use token::token;
 #[cfg(feature = "evm")]
 use tokit::Require;
 use tokit::{
-  lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
-  utils::{cmp::Equivalent, tracker::LimitExceeded},
+  state::tracker::LimitExceeded,
+  token::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
+  utils::cmp::Equivalent,
 };
 
-use super::Lit;
+use super::{Lexyul, Lit};
 
 use crate::{
   error::yul as error,
@@ -19,12 +20,12 @@ mod str;
 mod token;
 
 /// The syntactic lexer for Yul.
-pub type Lexer<'a, S = &'a str> = tokit::lexer::LogosLexer<'a, Token<S>>;
+pub type Lexer<'a, S = &'a str> = Lexyul<'a, S, Token<<S as tokit::Source<usize>>::Slice<'a>>>;
 
 /// The char type used for the syntactic token.
 pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as tokit::Source<usize>>::Slice<
   'a,
-> as tokit::lexer::source::Slice<'a>>::Char;
+> as tokit::Slice<'a>>::Char;
 /// The error type for lexing based on lossless [`Token`].
 pub type Error<'a, S> = error::Error<Char<'a, S>, LimitExceeded>;
 /// A collection of errors for lossless [`Token`].

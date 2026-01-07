@@ -1,7 +1,8 @@
 use derive_more::{From, IsVariant, TryUnwrap, Unwrap};
 use tokit::{
+  SimpleSpan,
   error::{IncompleteToken, Malformed, UnexpectedSuffix},
-  utils::{Lexeme, SimpleSpan, human_display::DisplayHuman},
+  utils::{Lexeme, human_display::DisplayHuman},
 };
 
 use crate::Lxr;

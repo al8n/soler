@@ -3,10 +3,11 @@ use derive_more::{Display, IsVariant, TryUnwrap, Unwrap};
 #[cfg(feature = "evm")]
 use tokit::Require;
 use tokit::{
-  Source, State, Token as TokenT,
-  lexer::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
+  SimpleSpan, Source, State, Token as TokenT,
   logos::Logos,
-  utils::{SimpleSpan, cmp::Equivalent, recursion_tracker::RecursionLimitExceeded},
+  state::recursion_tracker::RecursionLimitExceeded,
+  token::{IdentifierToken, KeywordToken, LitToken, OperatorToken, PunctuatorToken},
+  utils::cmp::Equivalent,
 };
 
 use token::token;
@@ -29,7 +30,7 @@ pub type Lexer<'a, S = &'a str> = Lexyul<'a, S, Token<<S as Source<usize>>::Slic
 /// The char type used for the syntactic token.
 pub type Char<'a, S> = <<<Lexer<'a, S> as tokit::Lexer<'a>>::Source as Source<usize>>::Slice<
   'a,
-> as tokit::lexer::source::Slice<'a>>::Char;
+> as tokit::Slice<'a>>::Char;
 /// The error type for lexing based on syntactic [`Token`].
 pub type Error<'a, S> = error::Error<Char<'a, S>, RecursionLimitExceeded>;
 /// A collection of errors for syntactic [`Token`].

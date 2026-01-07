@@ -14,8 +14,8 @@ extern crate std;
 /// The scaffold AST/CST nodes for Yul-like languages.
 pub mod scaffold;
 
-// /// The AST nodes for Yul language.
-// pub mod ast;
+/// The AST nodes for Yul language.
+pub mod ast;
 
 // /// The CST nodes for Yul language.
 // pub mod cst;

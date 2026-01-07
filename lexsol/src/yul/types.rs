@@ -1,4 +1,5 @@
 use derive_more::{Display, From, IsVariant, TryUnwrap, Unwrap};
+use tokit::types::{LitFalse, LitTrue};
 
 use crate::types::{
   LitBool, LitDecimal, LitHexStr, LitHexadecimal, LitNumber, LitRegularStr, LitStrDelimiterKind,
@@ -93,6 +94,15 @@ impl<S> LitStr<S> {
     }
   }
 
+  /// Returns the inner source of the string literal
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    match self {
+      Self::Regular(non_empty) => non_empty.into_data(),
+      Self::Hex(hex) => hex.into_data(),
+    }
+  }
+
   /// Maps the inner type to another type
   #[cfg_attr(not(tarpaulin), inline(always))]
   pub fn map<F, U>(self, f: F) -> LitStr<U>
@@ -150,11 +160,12 @@ impl<S> From<LitHexStr<S>> for Lit<S> {
 impl<S> Lit<S> {
   #[inline]
   pub(super) const fn lit_true(s: S) -> Self {
-    Self::Boolean(LitBool::True(s))
+    Self::Boolean(LitBool::True(LitTrue::with_data((), s)))
   }
+
   #[inline]
   pub(super) const fn lit_false(s: S) -> Self {
-    Self::Boolean(LitBool::False(s))
+    Self::Boolean(LitBool::False(LitFalse::with_data((), s)))
   }
 
   #[inline]
@@ -197,6 +208,16 @@ impl<S> Lit<S> {
       Self::Boolean(b) => Lit::Boolean(b.map(f)),
       Self::String(s) => Lit::String(s.map(f)),
       Self::Number(n) => Lit::Number(n.map(f)),
+    }
+  }
+
+  /// Consumes the literal and returns the inner.
+  #[cfg_attr(not(tarpaulin), inline(always))]
+  pub fn into_data(self) -> S {
+    match self {
+      Self::Boolean(b) => b.into_data(),
+      Self::String(s) => s.into_data(),
+      Self::Number(n) => n.into_data(),
     }
   }
 
